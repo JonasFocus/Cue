@@ -15,7 +15,11 @@ cd "$(dirname "$0")/.."
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set (expected in .env)}"
 
 psql_run() {
-  docker compose exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" \
+  # client-min-messages=warning drops the "already exists, skipping" NOTICEs
+  # that idempotent migrations emit on every run.
+  docker compose exec -T \
+    -e PGPASSWORD="$POSTGRES_PASSWORD" \
+    -e PGOPTIONS="--client-min-messages=warning" \
     postgres psql -U cue -d cue -v ON_ERROR_STOP=1 "$@"
 }
 

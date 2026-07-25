@@ -3,17 +3,55 @@
 #
 #   npm run ship                  push already-committed work and deploy
 #   npm run ship "fix: the thing" commit everything with that message, then ship
+#   npm run ship -- --verbose     same, but stream every command's output
 #
 # Checks run locally first, on purpose: a type error caught here costs seconds,
-# the same error caught on the VPS costs a ~90s rebuild and leaves you staring
-# at a failed deploy.
+# the same error caught on the VPS costs a ~90s rebuild and leaves a broken
+# commit on main.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 HOST="${CUE_HOST:-root@172.236.109.208}"
-MESSAGE="${1:-}"
 
-bold() { printf '\033[1m%s\033[0m\n' "$1"; }
+VERBOSE=false
+MESSAGE=""
+for arg in "$@"; do
+  case "$arg" in
+    --verbose|-v) VERBOSE=true ;;
+    *) MESSAGE="$arg" ;;
+  esac
+done
+
+step() { printf '\033[1m%s\033[0m\n' "$1"; }
+
+# Runs a command quietly and only shows its output if it fails. Deploy logs are
+# noise on the happy path and the first thing you want on the unhappy one.
+run() {
+  local label="$1"
+  shift
+  local log
+  log="$(mktemp)"
+  printf '  %-22s' "$label"
+
+  if [ "$VERBOSE" = true ]; then
+    echo
+    if ! "$@"; then
+      echo "✗ $label failed" >&2
+      exit 1
+    fi
+    return
+  fi
+
+  if "$@" >"$log" 2>&1; then
+    printf '\033[32mok\033[0m\n'
+    rm -f "$log"
+  else
+    printf '\033[31mfailed\033[0m\n\n'
+    tail -40 "$log" >&2
+    rm -f "$log"
+    exit 1
+  fi
+}
 
 branch="$(git rev-parse --abbrev-ref HEAD)"
 if [ "$branch" != "main" ]; then
@@ -31,23 +69,22 @@ if [ -n "$dirty" ] && [ -z "$MESSAGE" ]; then
   exit 1
 fi
 
-bold "▸ checking"
-npx tsc --noEmit
-npm run --silent lint
-npm run --silent test >/dev/null
-npm run --silent build >/dev/null
-echo "  types, lint, tests and build all pass"
+step "▸ checking"
+run "types"  npx tsc --noEmit
+run "lint"   npm run --silent lint
+run "tests"  npm run --silent test
+run "build"  npm run --silent build
 
 if [ -n "$dirty" ]; then
-  bold "▸ committing"
+  step "▸ committing"
   git add -A
   git commit -q -m "$MESSAGE"
-  echo "  $(git rev-parse --short HEAD) $MESSAGE"
+  echo "  $(git rev-parse --short HEAD)  $MESSAGE"
 fi
 
-bold "▸ pushing"
-git push --quiet origin main
-echo "  origin/main is at $(git rev-parse --short HEAD)"
+step "▸ pushing"
+run "origin/main" git push origin main
 
-bold "▸ deploying"
-ssh -o StrictHostKeyChecking=accept-new "$HOST" '/opt/cue/scripts/deploy.sh'
+step "▸ deploying"
+ssh -o StrictHostKeyChecking=accept-new "$HOST" \
+  "/opt/cue/scripts/deploy.sh$([ "$VERBOSE" = true ] && echo ' --verbose')"

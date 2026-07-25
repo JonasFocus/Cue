@@ -2,15 +2,43 @@
 # Deploys whatever is on origin/main. Run this ON the VPS:
 #
 #   ssh root@172.236.109.208 '/opt/cue/scripts/deploy.sh'
+#   ssh root@172.236.109.208 '/opt/cue/scripts/deploy.sh --verbose'
 #
-# Idempotent and safe to re-run. Does not touch .env — secrets live only on
-# the box and are never in the repo.
+# Idempotent and safe to re-run. Never touches .env — secrets live only on the
+# box and are never in the repo.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-REPO_DIR="$(pwd)"
+VERBOSE=false
+[ "${1:-}" = "--verbose" ] && VERBOSE=true
 
-echo "▸ deploying $REPO_DIR"
+step() { printf '\033[1m%s\033[0m\n' "$1"; }
+
+# Quiet on success, full log on failure. A successful docker build has nothing
+# in it you need; a failed one has everything.
+run() {
+  local label="$1"
+  shift
+  local log
+  log="$(mktemp)"
+  printf '  %-22s' "$label"
+
+  if [ "$VERBOSE" = true ]; then
+    echo
+    "$@" || { echo "✗ $label failed" >&2; exit 1; }
+    return
+  fi
+
+  if "$@" >"$log" 2>&1; then
+    printf '\033[32mok\033[0m\n'
+    rm -f "$log"
+  else
+    printf '\033[31mfailed\033[0m\n\n'
+    tail -40 "$log" >&2
+    rm -f "$log"
+    exit 1
+  fi
+}
 
 if [ ! -f .env ]; then
   echo "✗ .env missing — refusing to deploy without secrets" >&2
@@ -19,45 +47,52 @@ fi
 
 before="$(git rev-parse --short HEAD 2>/dev/null || echo none)"
 
-echo "▸ fetching origin/main"
-git fetch --quiet origin main
+step "▸ deploying"
+run "fetch" git fetch --quiet origin main
 git reset --hard --quiet origin/main
-
 after="$(git rev-parse --short HEAD)"
+
 if [ "$before" = "$after" ]; then
-  echo "  already at $after — rebuilding anyway"
+  echo "  $after (unchanged, rebuilding)"
 else
   echo "  $before → $after"
   git --no-pager log --oneline "$before..$after" 2>/dev/null | sed 's/^/    /' || true
 fi
 
-echo "▸ building"
-docker compose build app
+run "build" docker compose build app
+run "start" docker compose up -d
 
-echo "▸ starting"
-docker compose up -d
-
-echo "▸ waiting for postgres"
+# Postgres must be accepting connections before migrations run.
 for _ in $(seq 1 30); do
   docker compose exec -T postgres pg_isready -U cue -d cue >/dev/null 2>&1 && break
   sleep 2
 done
 
-echo "▸ migrations"
-./scripts/migrate.sh
+printf '  %-22s' "migrations"
+migration_log="$(mktemp)"
+if ./scripts/migrate.sh >"$migration_log" 2>&1; then
+  printf '\033[32m%s\033[0m\n' "$(grep -oE 'up to date|applied [0-9]+' "$migration_log" | tail -1)"
+  rm -f "$migration_log"
+else
+  printf '\033[31mfailed\033[0m\n\n'
+  cat "$migration_log" >&2
+  rm -f "$migration_log"
+  exit 1
+fi
 
-echo "▸ waiting for app health"
-healthy=false
+printf '  %-22s' "health"
 for _ in $(seq 1 30); do
   if [ "$(docker compose ps app --format '{{.Health}}' 2>/dev/null)" = "healthy" ]; then
+    printf '\033[32mok\033[0m\n'
     healthy=true
     break
   fi
   sleep 2
 done
 
-if [ "$healthy" != true ]; then
-  echo "✗ app did not become healthy — last 30 log lines:" >&2
+if [ "${healthy:-false}" != true ]; then
+  printf '\033[31mfailed\033[0m\n\n'
+  echo "app never became healthy — last 30 log lines:" >&2
   docker compose logs app --tail 30 >&2
   exit 1
 fi
@@ -65,11 +100,14 @@ fi
 # Build cache grows ~400MB per deploy and is never reclaimed on its own. Cap it
 # by size, not age: an age filter never catches cache that is always fresh, so
 # frequent deploys would grow it without bound.
-echo "▸ pruning build cache"
 docker builder prune --force --max-used-space 2GB >/dev/null 2>&1 || true
 docker image prune --force >/dev/null 2>&1 || true
 
-echo
-docker compose ps --format 'table {{.Service}}\t{{.Status}}'
-echo
-echo "✓ deployed $after — https://staging.cue.krevo.io"
+down="$(docker compose ps --format '{{.Service}} {{.State}}' | grep -cv running || true)"
+if [ "$down" -gt 0 ]; then
+  echo
+  echo "⚠ some services are not running:" >&2
+  docker compose ps --format 'table {{.Service}}\t{{.Status}}' >&2
+fi
+
+printf '\033[32m✓ deployed %s\033[0m — https://staging.cue.krevo.io\n' "$after"
