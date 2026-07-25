@@ -97,7 +97,7 @@ export async function services(): Promise<ServiceHealth[]> {
   );
 }
 
-function readHealth(status: string): ServiceHealth["health"] {
+export function readHealth(status: string): ServiceHealth["health"] {
   if (status.includes("(healthy)")) return "healthy";
   if (status.includes("(unhealthy)")) return "unhealthy";
   if (status.includes("health: starting")) return "starting";
@@ -118,7 +118,7 @@ const UPTIME_UNITS: Record<string, number> = {
    second API call per container just to read StartedAt.
    Real shapes: "Up 4 minutes", "Up About a minute", "Up About an hour",
    "Up Less than a second", "Up 2 years", "Exited (0) 3 minutes ago". */
-function uptimeFrom(status: string): number {
+export function uptimeFrom(status: string): number {
   // Anchored at the start so "Exited (0) 3 minutes ago" — a *downtime* — can
   // never be read as uptime by the unanchored duration part of the pattern.
   const m = /^Up (?:About |Less than )?(?:(\d+|an?) )?(second|minute|hour|day|week|month|year)/.exec(

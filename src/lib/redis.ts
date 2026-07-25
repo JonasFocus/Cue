@@ -35,19 +35,28 @@ export const redis = (globalThis.cueRedis ??= createRedis());
  * and get 2x the quota. That is fine for waitlist spam. Swap for a sliding
  * window if this ever guards something that costs money per call.
  */
+/* The structural slice of the client `rateLimit` actually uses, so a test can
+   pass a fake without standing up Redis. */
+export type RateLimitClient = {
+  readonly isOpen: boolean;
+  incr(key: string): Promise<number>;
+  expire(key: string, seconds: number, mode: "NX"): Promise<unknown>;
+};
+
 export async function rateLimit(
   key: string,
   limit: number,
   windowSeconds: number,
+  client: RateLimitClient = redis,
 ): Promise<{ ok: boolean; remaining: number }> {
   try {
-    if (!redis.isOpen) return { ok: true, remaining: limit };
-    const hits = await redis.incr(key);
+    if (!client.isOpen) return { ok: true, remaining: limit };
+    const hits = await client.incr(key);
     // NX (set only when there is no TTL) unconditionally rather than on the
     // first hit: if the EXPIRE after an INCR is ever lost, `hits === 1` never
     // recurs and the key would sit without a TTL forever, locking that caller
     // out permanently. This costs the same round trip and self-heals.
-    await redis.expire(key, windowSeconds, "NX");
+    await client.expire(key, windowSeconds, "NX");
     return { ok: hits <= limit, remaining: Math.max(0, limit - hits) };
   } catch (err) {
     // Fail open: Redis being down must not stop people joining the waitlist.
