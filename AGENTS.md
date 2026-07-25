@@ -28,18 +28,45 @@ This version has breaking changes — APIs, conventions, and file structure may 
   payment product, or invoicing tool. Reject scope that drifts toward those.
 - Cue is not a law firm and gives no legal advice. Keep that disclaimer in the
   footer and avoid claiming legal enforceability beyond the audit record.
+- The public site must not advertise `/console`. It is the operator's ops
+  surface, signup is disabled, and a visitor can never get in — a "Sign in" link
+  in the nav promises a customer account system that does not exist. The
+  operator reaches it by bookmark.
+- Describe unbuilt behaviour in the future tense on the public site. Present
+  tense on the signing, PDF, email, and audit features reads as a claim that
+  they work today.
 
 ## Current state
 
-- **Only the marketing landing page exists.** There is no auth, no database, no
-  signing flow, and no Stripe. `src/app/page.tsx` composes the whole site.
-- Testimonials in `src/components/testimonials.tsx` are **clearly labelled
-  placeholders**. Replace them with sourced, attributable quotes from real early
-  users, or delete the section, before the public launch. Never present invented
-  quotes as real.
+What exists:
+
+- **The marketing landing page.** `src/app/page.tsx` composes it from
+  `src/components/*`. Its only working action is the waitlist.
+- **The waitlist.** `src/app/actions.ts` (`"use server"`) validates the email,
+  rate-limits on a salted hash of the client IP through Redis, and inserts into
+  the Postgres `waitlist` table. It sends no mail — no email provider is wired.
+- **An operator-only console** at `/console`, guarded by Better Auth
+  (`src/lib/auth.ts`) with `disableSignUp: true`. The single operator account is
+  seeded by `scripts/seed-operator.mjs`. It reads waitlist stats and container
+  health. It is **not** a customer account system.
+- **Four API routes**: `/api/auth/[...all]` (Better Auth), `/api/health`
+  (operator-gated probes), `/api/ping` (container liveness), `/api/waitlist`
+  (operator-gated guest list and status PATCH).
+- **SQL migrations** in `db/migrations/`, applied by `scripts/migrate.sh`.
+- **Legal pages** at `/legal/privacy` and `/legal/terms`. They must keep
+  describing exactly what `actions.ts` and `db.ts` do, and nothing more. No
+  compliance claims (GDPR, SOC 2, DPO) — none have been done.
+
+What does not exist, and must not be described as if it did: the signing flow,
+templates, PDF rendering, the audit record, customer accounts, object storage,
+a background worker, an email provider, and Stripe.
+
 - Pricing is static. Per the launch billing decision in `solution.md`, define the
   Free, Creator, and Studio plans in the product but **do not wire Stripe for
   version one**.
+- Placeholder testimonials were **deleted** on 2026-07-25 rather than shipped.
+  If a testimonial section returns, every quote must be sourced and attributable
+  to a real named user who agreed to it. Never present invented quotes as real.
 
 ## Runtime and stack
 
@@ -48,10 +75,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - `next/font` supplies Geist (headings) and Inter (body). Do not add font
   packages; the CSS reads `--font-geist` and `--font-inter`.
 - `lucide-react` is the only icon dependency.
-- Planned additions per `solution.md`, none of which exist yet: Better Auth,
-  PostgreSQL, Redis, a PDF/reminder worker, S3-compatible storage, and a
-  transactional email provider. Deployment target is a single DigitalOcean VPS
-  behind Caddy, not Vercel.
+- Runtime dependencies beyond React and Next: `better-auth` (console sessions),
+  `pg` (`src/lib/db.ts`, one pooled client stashed on `globalThis`), and `redis`
+  (`src/lib/redis.ts`, rate limiting only — it fails open).
+- `src/lib/docker.ts` reads container health from a read-only
+  docker-socket-proxy over HTTP. The app never touches `/var/run/docker.sock`.
+- Still planned per `solution.md` and not started: a PDF/reminder worker,
+  S3-compatible object storage, a transactional email provider, and error and
+  uptime monitoring.
+- Deployment is Docker Compose behind Caddy on a single VPS, never Vercel.
+  `solution.md` recommends DigitalOcean; the box actually in use is a Linode
+  (see Deployment). Nothing in the stack depends on the provider.
 
 ## Design system
 
@@ -76,8 +110,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Follow file-local style. Use `@/` imports for `src/` modules, keep strict
   typing, and do not silence errors with `any` or broad casts.
 - Prefer Server Components. Add `"use client"` only for browser APIs, local
-  interaction, or client hooks. Today that is `Nav`, `Flow`, `Steps`,
-  `Testimonials`, and `Reveal`.
+  interaction, or client hooks. Today that is seven files: `nav.tsx`,
+  `flow.tsx` (`Flow` and `Steps`), `reveal.tsx`, `anim-host.tsx`,
+  `waitlist.tsx`, `console/dashboard.tsx`, and `console/login/form.tsx`.
 - Reach for native platform features before dependencies. The FAQ uses native
   `<details>` rather than an accordion library; keep that instinct.
 - Do not add dependencies without asking first. Suggest, then wait.
@@ -96,6 +131,7 @@ npm run lint
 npx tsc --noEmit
 npm run test      # node:test, no framework — see src/lib/waitlist.test.ts
 npm run build
+npm run ship      # verify → commit → push → deploy to staging (see Deployment)
 ```
 
 Tests use Node's built-in runner, so there is no test dependency. Put pure
@@ -121,8 +157,9 @@ does not become healthy.
   never in the repo and never in a chat window.
 - Schema changes go in `db/migrations/NNN_name.sql` and are applied by
   `scripts/migrate.sh`, which tracks them in `schema_migrations`. Write them to
-  be safe to re-run. `db/init.sql` only executes on a **fresh** Postgres volume,
-  so it is not a migration path for an existing database.
+  be safe to re-run. `db/migrations/` is the only schema path; a Postgres
+  entrypoint `init.sql` would run solely on a fresh volume, which is why it was
+  removed.
 - SSH is key-only; password authentication is disabled.
 - Postgres and Redis are on an `internal: true` network with no published ports
   and no egress. The app reads container health through a read-only

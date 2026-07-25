@@ -9,7 +9,9 @@
   --cue-panel: #ffffff;
   --cue-ink: #000000;
   --cue-ink-soft: #4a4a4a;
-  --cue-muted: #888888;
+  /* 4.97:1 on --cue-bg, 5.33:1 on --cue-panel — WCAG AA for body text.
+     The old #888888 was 3.31:1 and failed everywhere it was used. */
+  --cue-muted: #6b6b6b;
   --cue-line: #eaeaea;
   --cue-line-soft: #f0f0f0;
   --cue-tint: #eaf1fe;
@@ -159,7 +161,8 @@
 
 .cue a:focus-visible,
 .cue button:focus-visible,
-.cue summary:focus-visible {
+.cue summary:focus-visible,
+.cue-table-wrap:focus-visible {
   outline: 2px solid var(--cue-accent);
   outline-offset: 3px;
 }
@@ -755,12 +758,17 @@
 
 /* ── Scroll reveal (paired with the shared <Reveal /> wrapper) ── */
 
-.cue-reveal {
-  opacity: 0;
-  transform: translateY(14px);
-  transition:
-    opacity 480ms var(--cue-ease),
-    transform 480ms var(--cue-ease);
+/* The hidden state only exists where JS can undo it. Without scripting the
+   IntersectionObserver never runs, so six of nine sections would stay at
+   opacity 0 forever. */
+@media (scripting: enabled) {
+  .cue-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 480ms var(--cue-ease),
+      transform 480ms var(--cue-ease);
+  }
 }
 
 .cue-reveal.is-visible {
@@ -925,12 +933,8 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 640px) {
-  .cue-grid-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
+/* Both grids carry exactly three cards, so a two-column step always orphans
+   the third. One column until all three fit. */
 @media (min-width: 1000px) {
   .cue-grid-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1218,13 +1222,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 700px) {
-  .cue-price-grid {
-    gap: 20px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 /* Three tiers (Free / Creator / Studio) need a tighter track than the
    two-card layout this system was originally built for. */
 @media (min-width: 940px) {
@@ -1414,75 +1411,6 @@
   background: #f5f5f5;
 }
 
-/* ── Testimonials ── */
-
-.cue-quote {
-  margin-inline: auto;
-  margin-top: 38px;
-  max-width: 500px;
-  border-radius: var(--cue-r-card);
-  border: 1px solid var(--cue-line);
-  background: var(--cue-panel);
-  padding: 34px;
-  box-shadow: var(--cue-shadow-card);
-  min-height: 360px;
-}
-
-.cue-quote-head {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.cue-avatar {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--cue-tint);
-  color: var(--cue-accent-deep);
-  font-family: var(--font-geist), sans-serif;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.cue-stars {
-  display: flex;
-  gap: 6px;
-  margin-top: 26px;
-  color: var(--cue-star);
-}
-
-.cue-quote-body {
-  margin-top: 22px;
-  font-size: 17px;
-  line-height: 1.6;
-}
-
-.cue-quote-nav {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.cue-quote-nav button {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--cue-line);
-  background: var(--cue-panel);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
-  transition: background-color 180ms var(--cue-ease);
-}
-
-.cue-quote-nav button:hover {
-  background: #f2f2f2;
-}
-
 /* ── FAQ ── */
 
 .cue-faq {
@@ -1576,6 +1504,29 @@
 }
 
 /* ── Waitlist form ── */
+
+/* Skip link: visually hidden until focused, then a real, visible control.
+   Keyboard users otherwise tab through the whole nav on every page. */
+.cue-skip:focus {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 10px 16px;
+  overflow: visible;
+  clip-path: none;
+  border-radius: var(--cue-r-pill);
+  background: var(--cue-panel);
+  color: var(--cue-ink);
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: var(--cue-shadow-card);
+  outline: 2px solid var(--cue-accent);
+  outline-offset: 2px;
+}
 
 .cue-sr-only {
   position: absolute;
@@ -1912,7 +1863,7 @@
   }
 }
 
-.cue-footer-col h4 {
+.cue-footer-col h3 {
   font-size: 15px;
   color: var(--cue-muted);
   font-weight: 400;
@@ -2667,6 +2618,10 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    /* Without this, `both`-filled keyframes hold at opacity 0 for their inline
+       delay and then snap in — a staggered flash for reduced-motion users. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
   }
 
   .cue-reveal {

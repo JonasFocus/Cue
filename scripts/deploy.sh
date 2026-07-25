@@ -12,6 +12,19 @@ cd "$(dirname "$0")/.."
 VERBOSE=false
 [ "${1:-}" = "--verbose" ] && VERBOSE=true
 
+# One deploy at a time. Two overlapping runs share a git tree, an image tag and
+# a database — the second one's `git reset` would yank the tree out from under
+# the first one's build. Re-exec under an exclusive lock; exit 75 means busy.
+LOCK=/var/lock/cue-deploy.lock
+if [ -z "${CUE_DEPLOY_LOCKED:-}" ]; then
+  lock_status=0
+  CUE_DEPLOY_LOCKED=1 flock -n -E 75 "$LOCK" "$0" "$@" || lock_status=$?
+  if [ "$lock_status" -eq 75 ]; then
+    echo "✗ another deploy is already running (lock: $LOCK)" >&2
+  fi
+  exit "$lock_status"
+fi
+
 step() { printf '\033[1m%s\033[0m\n' "$1"; }
 
 # Quiet on success, full log on failure. A successful docker build has nothing
@@ -40,6 +53,55 @@ run() {
   fi
 }
 
+# True once the app container reports healthy, false after ~60s of waiting.
+wait_healthy() {
+  for _ in $(seq 1 30); do
+    if [ "$(docker compose ps app --format '{{.Health}}' 2>/dev/null)" = "healthy" ]; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+# Last-resort recovery: put the tree back on the previous commit and rebuild, so
+# a failed deploy ends with the box serving the last known-good code instead of
+# a broken container. Called exactly once, from the health-failure path, and it
+# never calls back into the deploy — there is no loop to run away with.
+#
+# Migrations are NOT reversed (there are no down-migrations). That is safe while
+# migrations stay additive, which is also what makes rolling code back safe.
+rollback() {
+  echo "⚠ rolling back to $before" >&2
+
+  if [ "$before" = none ] || [ "$before" = "$after" ]; then
+    echo "✗ nothing to roll back to — the tree was already at $after" >&2
+    return 1
+  fi
+
+  git reset --hard --quiet "$before" || { echo "✗ rollback checkout failed" >&2; return 1; }
+
+  local log
+  log="$(mktemp)"
+  # timeout so a wedged build cannot leave the owner staring at a dead terminal.
+  if ! timeout 900 docker compose build app >"$log" 2>&1; then
+    echo "✗ rollback build failed:" >&2
+    tail -20 "$log" >&2
+    rm -f "$log"
+    return 1
+  fi
+  if ! timeout 300 docker compose up -d >"$log" 2>&1; then
+    echo "✗ rollback start failed:" >&2
+    tail -20 "$log" >&2
+    rm -f "$log"
+    return 1
+  fi
+  rm -f "$log"
+
+  wait_healthy || { echo "✗ $before is not healthy either" >&2; return 1; }
+  return 0
+}
+
 # The deploy pulls new code, which rewrites THIS FILE while bash is executing
 # it. Bash reads scripts incrementally by byte offset, so a length change
 # mid-run can make it resume at garbage. Wrapping everything in a function
@@ -65,7 +127,12 @@ main() {
   fi
 
   run "build" docker compose build app
-  run "start" docker compose up -d
+
+  # Order matters: migrations first, THEN the new image. Starting the app first
+  # gave new code a window of serving requests against the old schema — fine
+  # while migrations are additive, a 500 on every request the first time a
+  # migration adds a column the new code reads.
+  run "database" docker compose up -d postgres redis
 
   # Postgres must be accepting connections before migrations run.
   for _ in $(seq 1 30); do
@@ -85,20 +152,24 @@ main() {
     exit 1
   fi
 
-  printf '  %-22s' "health"
-  for _ in $(seq 1 30); do
-    if [ "$(docker compose ps app --format '{{.Health}}' 2>/dev/null)" = "healthy" ]; then
-      printf '\033[32mok\033[0m\n'
-      healthy=true
-      break
-    fi
-    sleep 2
-  done
+  run "start" docker compose up -d
 
-  if [ "${healthy:-false}" != true ]; then
+  printf '  %-22s' "health"
+  if wait_healthy; then
+    printf '\033[32mok\033[0m\n'
+  else
     printf '\033[31mfailed\033[0m\n\n'
-    echo "app never became healthy — last 30 log lines:" >&2
+    # Original failure first: the rollback output must never bury the reason.
+    echo "app never became healthy at $after — last 30 log lines:" >&2
     docker compose logs app --tail 30 >&2
+    echo >&2
+
+    if rollback; then
+      printf '\033[33m⚠ deploy of %s failed — rolled back to %s, staging is serving the previous commit\033[0m\n' "$after" "$before" >&2
+    else
+      printf '\033[31m✗ deploy of %s failed AND rollback failed — staging is down, recover by hand:\033[0m\n' "$after" >&2
+      echo "    cd /opt/cue && git log --oneline -5 && docker compose ps" >&2
+    fi
     exit 1
   fi
 
@@ -107,6 +178,15 @@ main() {
   # frequent deploys would grow it without bound.
   docker builder prune --force --max-used-space 2GB >/dev/null 2>&1 || true
   docker image prune --force >/dev/null 2>&1 || true
+
+  # `image prune` only reclaims *dangling* images, so tagged leftovers from
+  # renamed or retired services (cue-tools, cue-tools-cli — 2.8GB) sit there
+  # forever. Only cue-* images are considered, so base images the next build
+  # needs stay put, and `docker image rm` without --force refuses to touch an
+  # image any container still references, including the live one.
+  docker image ls --format '{{.Repository}}:{{.Tag}}' \
+    | grep '^cue-' \
+    | xargs -r docker image rm >/dev/null 2>&1 || true
 
   down="$(docker compose ps --format '{{.Service}} {{.State}}' | grep -cv running || true)"
   if [ "$down" -gt 0 ]; then

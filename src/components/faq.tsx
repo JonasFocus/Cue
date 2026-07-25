@@ -5,26 +5,34 @@ import { Waitlist } from "./waitlist";
 /* ponytail: native <details> — no accordion state, no library, keyboard and
    find-in-page work for free. */
 
+/* Every answer about the product itself is in the future tense on purpose: none
+   of the signing, PDF, email, or audit features are built yet. The only thing
+   this site does today is take a waitlist address. */
+
 const FAQS = [
   {
-    q: "Is a Cue legally binding?",
-    a: "Cue records the signer's identity, their consent, timestamps, and delivery events, then freezes the agreement as an immutable snapshot with a document hash. That audit record is what makes an electronic signature defensible. Cue is not a law firm, so use your own agreement terms or have a lawyer review your template.",
+    q: "Can I use Cue today?",
+    a: "Not yet. Cue is being built, and this page is ahead of it — there is nothing to sign in to. The waitlist is the whole product for now: leave your email and you will hear from us the day it opens, once.",
   },
   {
-    q: "Does my client need an account?",
-    a: "No. They open the secure link, read the agreement on whatever device they are holding, and sign. There is nothing to download, install, or register for.",
+    q: "Will a Cue be legally binding?",
+    a: "That is the design. Each Cue will record the signer's identity, their consent, timestamps, and delivery events, then freeze the agreement as an immutable snapshot with a document hash — that kind of audit record is what makes an electronic signature defensible. Cue is not a law firm and gives no legal advice, so use your own agreement terms or have a lawyer review your template.",
   },
   {
-    q: "What does the free plan actually include?",
-    a: "Five sent Cues in total, not five per month. Every one of them includes the standard templates, the final PDF, and the full audit trail. No card is required to start.",
+    q: "Will my client need an account?",
+    a: "No. The plan is a secure link they open on whatever device they are holding, with nothing to download, install, or register for.",
   },
   {
-    q: "What happens after a Cue is signed?",
-    a: "Cue renders a final PDF, stores the signed record with its audit trail, and emails a copy to you and your client. The agreement is sealed at that point and cannot be edited.",
+    q: "What will the free plan include?",
+    a: "Five sent Cues in total, not five per month, each with the standard templates, the final PDF, and the full audit trail. No card at signup. Pricing is the current plan, not a promise — it can change before launch.",
   },
   {
-    q: "Can I use my own agreement wording?",
-    a: "Yes. Start from one of the templates and edit it, or paste in the terms you already use. Saved templates and custom branding are part of the Creator plan.",
+    q: "What will happen after a Cue is signed?",
+    a: "Cue will render a final PDF, store the signed record with its audit trail, and email a copy to you and your client. Once sealed, the agreement cannot be edited.",
+  },
+  {
+    q: "Will I be able to use my own agreement wording?",
+    a: "Yes — start from a template and edit it, or paste in the terms you already use. Saved templates and custom branding are planned for the Creator plan.",
   },
 ];
 
@@ -61,14 +69,16 @@ export function Faq() {
   );
 }
 
+/* Root-relative, not bare hashes: the footer also renders on /legal/*, where
+   "#features" resolves against that page and goes nowhere. */
 const FOOTER_LINKS = [
   {
     heading: "Product",
     links: [
-      { href: "#features", label: "Features" },
-      { href: "#pricing", label: "Pricing" },
-      { href: "#steps", label: "How it works" },
-      { href: "#faq", label: "FAQ" },
+      { href: "/#features", label: "Features" },
+      { href: "/#pricing", label: "Pricing" },
+      { href: "/#steps", label: "How it works" },
+      { href: "/#faq", label: "FAQ" },
     ],
   },
   {
@@ -97,8 +107,9 @@ export function Cta() {
                 className="cue-lede"
                 style={{ marginInline: "auto", maxWidth: "52ch" }}
               >
-                Five agreements free, no card required. Your next client can sign
-                before the deposit conversation even starts.
+                Cue is still being built. Leave your email and you will hear from
+                us the day it opens — your first five agreements will be free, no
+                card required.
               </p>
               <div style={{ marginTop: 28 }}>
                 <Waitlist />
@@ -131,7 +142,13 @@ export function Footer() {
 
           {FOOTER_LINKS.map((col) => (
             <div className="cue-footer-col" key={col.heading}>
-              <h4>{col.heading}</h4>
+              {/* h3, not h4: the page has no h3 above it, so h4 skipped a
+                  level. design.css still styles `.cue-footer-col h4`, hence the
+                  inline copy of those three rules — drop it when that selector
+                  is renamed. */}
+              <h3>
+                {col.heading}
+              </h3>
               <ul>
                 {col.links.map((l) => (
                   <li key={l.href}>

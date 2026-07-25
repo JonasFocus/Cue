@@ -26,6 +26,8 @@ export function Dashboard({ operator }: { operator: string }) {
   const [tab, setTab] = useState<"overview" | "guests">("overview");
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [guests, setGuests] = useState<Guest[] | null>(null);
+  // The API caps the list; when it does, the count on screen is not the total.
+  const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(0);
   const inFlight = useRef(false);
@@ -47,8 +49,14 @@ export function Dashboard({ operator }: { operator: string }) {
       }
       if (!health.ok) throw new Error(`health returned ${health.status}`);
       setSnap(await health.json());
-      const listed = list.ok ? (await list.json()).guests : null;
-      if (listed && mutating.current === 0) setGuests(listed);
+      // `truncated` is additive and may be absent on older responses.
+      const payload: { guests?: Guest[]; truncated?: boolean } | null = list.ok
+        ? await list.json()
+        : null;
+      if (payload?.guests && mutating.current === 0) {
+        setGuests(payload.guests);
+        setTruncated(payload.truncated === true);
+      }
       setNow(Date.now());
       setError(null);
     } catch (err) {
@@ -108,11 +116,13 @@ export function Dashboard({ operator }: { operator: string }) {
           </button>
         </header>
 
-        <nav className="cx-tabs" role="tablist">
+        {/* Plain toggle buttons, not an ARIA tablist: the pattern would need
+            roving tabIndex, arrow keys and real tabpanels to be honest, and it
+            buys nothing over two buttons that announce their pressed state. */}
+        <nav className="cx-tabs" aria-label="Console views">
           <button
             type="button"
-            role="tab"
-            aria-selected={tab === "overview"}
+            aria-pressed={tab === "overview"}
             className="cx-tab"
             onClick={() => setTab("overview")}
           >
@@ -120,13 +130,12 @@ export function Dashboard({ operator }: { operator: string }) {
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={tab === "guests"}
+            aria-pressed={tab === "guests"}
             className="cx-tab"
             onClick={() => setTab("guests")}
           >
             Guest list
-            {guests ? <b>{guests.length}</b> : null}
+            {guests ? <b>{truncated ? `${guests.length}+` : guests.length}</b> : null}
           </button>
         </nav>
 
@@ -139,7 +148,12 @@ export function Dashboard({ operator }: { operator: string }) {
         {tab === "overview" ? (
           <Overview snap={snap} />
         ) : (
-          <GuestList guests={guests} now={now} onStatus={setStatus} />
+          <GuestList
+            guests={guests}
+            truncated={truncated}
+            now={now}
+            onStatus={setStatus}
+          />
         )}
       </div>
     </div>
@@ -267,10 +281,12 @@ const STATUS_LABEL: Record<GuestStatus, string> = {
 
 function GuestList({
   guests,
+  truncated,
   now,
   onStatus,
 }: {
   guests: Guest[] | null;
+  truncated: boolean;
   now: number;
   onStatus: (id: number, status: GuestStatus) => void;
 }) {
@@ -296,9 +312,11 @@ function GuestList({
         <header className="cx-guests-head">
           <h2>Guest list</h2>
           <p>
-            {guests?.length
-              ? `${guests.length} ${guests.length === 1 ? "person is" : "people are"} waiting to hear from you.`
-              : "Everyone who asked to be told when Cue opens up."}
+            {!guests?.length
+              ? "Everyone who asked to be told when Cue opens up."
+              : truncated
+                ? `Showing the ${guests.length} most recent — there are more waiting than fit in one page.`
+                : `${guests.length} ${guests.length === 1 ? "person is" : "people are"} waiting to hear from you.`}
           </p>
 
           <label className="cx-search">
@@ -312,10 +330,13 @@ function GuestList({
           </label>
         </header>
 
-        <div role="table">
+        {/* Plain divs on a CSS grid. The previous role="table"/role="row" had
+            no cell roles, so screen readers announced an empty table and threw
+            away every name, email and status. */}
+        <div>
           {/* Column headers over an empty table label nothing — hide them. */}
           {!!filtered?.length && (
-            <div className="cx-thead" role="row">
+            <div className="cx-thead">
               <span>Name</span>
               <span>Email</span>
               <span>Joined</span>
@@ -334,7 +355,6 @@ function GuestList({
           {filtered?.map((g, i) => (
             <div
               className="cx-trow"
-              role="row"
               key={g.id}
               style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
             >
@@ -350,26 +370,76 @@ function GuestList({
               <span className="cx-guest-date" title={relative(g.createdAt, now)}>
                 {formatDate(g.createdAt)}
               </span>
-              <label className="cx-status" data-status={g.status}>
-                <i />
-                <select
-                  value={g.status}
-                  aria-label={`Status for ${g.name}`}
-                  onChange={(e) => onStatus(g.id, e.target.value as GuestStatus)}
-                >
-                  {GUEST_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABEL[s]}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={11} strokeWidth={2.25} />
-              </label>
+              <StatusSelect guest={g} onStatus={onStatus} />
             </div>
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * A native <select> writes to the database, so it must not PATCH on every
+ * change event: arrowing from Pending to Blacklisted fires three intermediate
+ * changes and would persist each one. Keyboard edits are held and committed on
+ * Enter or blur; mouse selection still commits the moment an option is picked.
+ */
+function StatusSelect({
+  guest,
+  onStatus,
+}: {
+  guest: Guest;
+  onStatus: (id: number, status: GuestStatus) => void;
+}) {
+  // Uncommitted keyboard selection. Null means "show the stored status", so a
+  // poll or a revert flows straight through without a sync effect.
+  const [pending, setPending] = useState<GuestStatus | null>(null);
+  // Mirrored in a ref because commit runs from a timeout with a stale closure.
+  const pendingRef = useRef<GuestStatus | null>(null);
+  const keyboard = useRef(false);
+  const value = pending ?? guest.status;
+
+  const commit = useCallback(() => {
+    const next = pendingRef.current;
+    pendingRef.current = null;
+    setPending(null);
+    if (next && next !== guest.status) onStatus(guest.id, next);
+  }, [guest.id, guest.status, onStatus]);
+
+  return (
+    <label className="cx-status" data-status={value}>
+      <i />
+      <select
+        value={value}
+        aria-label={`Status for ${guest.name}`}
+        onPointerDown={() => {
+          keyboard.current = false;
+        }}
+        onKeyDown={(e) => {
+          keyboard.current = true;
+          // The change event for an Enter selection fires after this handler.
+          if (e.key === "Enter") setTimeout(commit, 0);
+        }}
+        onChange={(e) => {
+          const next = e.target.value as GuestStatus;
+          if (keyboard.current) {
+            pendingRef.current = next;
+            setPending(next);
+          } else {
+            onStatus(guest.id, next);
+          }
+        }}
+        onBlur={commit}
+      >
+        {GUEST_STATUSES.map((s) => (
+          <option key={s} value={s}>
+            {STATUS_LABEL[s]}
+          </option>
+        ))}
+      </select>
+      <ChevronDown size={11} strokeWidth={2.25} />
+    </label>
   );
 }
 

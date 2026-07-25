@@ -86,5 +86,28 @@ step "▸ pushing"
 run "origin/main" git push origin main
 
 # deploy.sh prints its own "▸ deploying" header.
-ssh -o StrictHostKeyChecking=accept-new "$HOST" \
-  "/opt/cue/scripts/deploy.sh$([ "$VERBOSE" = true ] && echo ' --verbose')"
+#
+# The deploy runs detached (setsid, own session, stdin closed) and we tail its
+# log. A sleeping laptop or a dropped wifi kills this ssh, not the deploy —
+# which used to be able to die between starting containers and migrating. The
+# heredoc is quoted so nothing expands locally; the flag arrives as $1.
+ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 \
+  "$HOST" bash -s -- "$([ "$VERBOSE" = true ] && echo '--verbose')" <<'REMOTE'
+set -uo pipefail
+log=/var/log/cue-deploy.log
+status=/var/log/cue-deploy.status
+rm -f "$status"
+: >"$log" # exist before tail -f attaches; the child truncates the same inode
+
+setsid --fork bash -c "/opt/cue/scripts/deploy.sh ${1:-} >'$log' 2>&1; echo \$? >'$status'" \
+  </dev/null >/dev/null 2>&1
+
+# Stream it back. If this ssh dies the deploy keeps going; reconnect with
+#   ssh root@… 'tail -f /var/log/cue-deploy.log'
+tail -f -n +1 "$log" 2>/dev/null &
+tail_pid=$!
+while [ ! -f "$status" ]; do sleep 1; done
+sleep 1
+kill "$tail_pid" 2>/dev/null || true
+exit "$(cat "$status")"
+REMOTE

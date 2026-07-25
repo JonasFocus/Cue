@@ -21,8 +21,13 @@ export async function joinWaitlist(
     .trim()
     .slice(0, 120);
 
-  // Honeypot: a real person never fills a hidden field.
-  if (String(formData.get("company") ?? "")) {
+  // Honeypot. Named so no autofill heuristic recognises it: the old name
+  // `company` maps to the `organization` autocomplete token, which password
+  // managers happily filled — silently discarding real signups with a success
+  // message and no trace. Still answers "ok" so a bot learns nothing, but the
+  // trap is now observable in the logs.
+  if (String(formData.get("cue_ref") ?? "")) {
+    console.warn("[waitlist] honeypot tripped", { email: email || "(none)" });
     return { status: "ok", message: "You're on the list." };
   }
 

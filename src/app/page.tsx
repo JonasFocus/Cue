@@ -3,14 +3,16 @@ import { Hero } from "@/components/hero";
 import { Statement, Features, Capability } from "@/components/sections";
 import { Flow, Steps } from "@/components/flow";
 import { Pricing } from "@/components/pricing";
-import { Testimonials } from "@/components/testimonials";
 import { Faq, Cta, Footer } from "@/components/faq";
 
 export default function HomePage() {
   return (
     <>
+      <a href="#main" className="cue-sr-only cue-skip">
+        Skip to content
+      </a>
       <Nav />
-      <main>
+      <main id="main">
         <Hero />
         <Statement />
         <Features />
@@ -18,7 +20,6 @@ export default function HomePage() {
         <Capability />
         <Steps />
         <Pricing />
-        <Testimonials />
         <Faq />
         <Cta />
       </main>

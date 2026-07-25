@@ -76,7 +76,7 @@ export function Waitlist() {
       {/* Honeypot — hidden from people, irresistible to bots. */}
       <input
         type="text"
-        name="company"
+        name="cue_ref"
         tabIndex={-1}
         autoComplete="off"
         aria-hidden

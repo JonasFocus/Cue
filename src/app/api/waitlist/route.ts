@@ -18,8 +18,10 @@ export async function GET() {
   }
 
   try {
+    // Spread rather than nest, so the existing `{ guests }` shape is unchanged
+    // and `truncated`/`limit` are additive for the console to pick up.
     return NextResponse.json(
-      { guests: await guestList() },
+      { ...(await guestList()) },
       { headers: { "cache-control": "no-store" } },
     );
   } catch (err) {

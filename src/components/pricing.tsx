@@ -144,7 +144,14 @@ export function Pricing() {
         </Reveal>
 
         <Reveal>
-          <div className="cue-table-wrap">
+          {/* Scrolls horizontally under ~600px, so it has to be reachable and
+              scrollable from the keyboard. */}
+          <div
+            className="cue-table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Plan comparison"
+          >
             <table className="cue-table">
               <thead>
                 <tr>

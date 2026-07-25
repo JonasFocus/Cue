@@ -11,11 +11,34 @@ staging.cue.krevo.io {
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
 		X-Robots-Tag "noindex, nofollow"
+
+		# Without HSTS only the 308 forces HTTPS, and an on-path attacker strips
+		# that on first contact — before any cookie for the operator login is
+		# protected. Subdomains included because this is a *.krevo.io host.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+		# 'unsafe-inline' is required: the App Router emits inline bootstrap
+		# scripts and inline style, and there is no nonce plumbing in the app.
+		# So script-src is not an XSS defence yet — frame-ancestors, base-uri,
+		# object-src and form-action are, and they cost nothing.
+		# Upgrade path: nonces via middleware, then drop 'unsafe-inline'.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
+
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy same-origin
+
 		-Server
+		-X-Powered-By
 	}
 
 	reverse_proxy app:3000 {
 		header_up X-Real-IP {remote_host}
+
+		# A deploy recreates the app container; without this every request in
+		# that window is a 502. Caddy holds the request and retries the upstream
+		# until it answers, so the restart is invisible to users.
+		lb_try_duration 30s
+		lb_try_interval 250ms
 	}
 
 	log {

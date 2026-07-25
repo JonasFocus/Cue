@@ -30,6 +30,15 @@ export function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <header className="cue-nav" data-stuck="false" ref={headerRef}>
       <div className="cue-shell">
@@ -50,15 +59,18 @@ export function Nav() {
           </nav>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Secondary on purpose: the hero's waitlist CTA is the one action
-                this page is asking for, so the nav must not compete with it. */}
-            <Link href="/console/login" className="cue-btn cue-btn-light cue-nav-cta">
-              Sign in
-            </Link>
+            {/* There is no customer sign-in yet — /console is the operator's ops
+                surface with signup disabled, so linking it here promised an
+                account nobody can have. Interest is the only real action on this
+                page. Light styling keeps it from competing with the hero CTA. */}
+            <a href="#waitlist" className="cue-btn cue-btn-light cue-nav-cta">
+              Join the waitlist
+            </a>
             <button
               type="button"
               className="cue-nav-toggle"
               aria-expanded={open}
+              aria-controls="cue-nav-sheet"
               aria-label={open ? "Close menu" : "Open menu"}
               onClick={() => setOpen((v) => !v)}
             >
@@ -68,7 +80,7 @@ export function Nav() {
         </div>
 
         {open && (
-          <nav className="cue-nav-sheet">
+          <nav className="cue-nav-sheet" id="cue-nav-sheet">
             {LINKS.map((l) => (
               <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
                 {l.label}

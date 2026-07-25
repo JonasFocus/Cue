@@ -13,9 +13,7 @@ export type ServiceHealth = {
   status: string;
   health: "healthy" | "unhealthy" | "starting" | "none";
   uptimeSeconds: number;
-  cpuPercent: number;
   memoryUsedMb: number;
-  memoryLimitMb: number;
   image: string;
 };
 
@@ -40,15 +38,7 @@ type ContainerSummary = {
 };
 
 type StatsSample = {
-  cpu_stats?: CpuStats;
-  precpu_stats?: CpuStats;
-  memory_stats?: { usage?: number; limit?: number };
-};
-
-type CpuStats = {
-  cpu_usage?: { total_usage?: number };
-  system_cpu_usage?: number;
-  online_cpus?: number;
+  memory_stats?: { usage?: number };
 };
 
 async function dockerGet<T>(path: string, timeoutMs = 6000): Promise<T | null> {
@@ -76,9 +66,14 @@ export async function services(): Promise<ServiceHealth[]> {
     mine.map(async (c) => {
       const service = c.Labels["com.docker.compose.service"] ?? c.Names[0] ?? "?";
       // Stats only exist for running containers; asking for a dead one hangs.
+      // one-shot=true is what keeps this cheap: without it Docker sleeps ~1s
+      // per container to produce a CPU delta, so a 5s poll spent ~5s of wall
+      // time here. We only read memory, so the delta is dead weight.
       const stats =
         c.State === "running"
-          ? await dockerGet<StatsSample>(`/containers/${c.Id}/stats?stream=false`)
+          ? await dockerGet<StatsSample>(
+              `/containers/${c.Id}/stats?stream=false&one-shot=true`,
+            )
           : null;
 
       return {
@@ -89,9 +84,7 @@ export async function services(): Promise<ServiceHealth[]> {
         status: c.Status,
         health: readHealth(c.Status),
         uptimeSeconds: c.State === "running" ? uptimeFrom(c.Status) : 0,
-        cpuPercent: cpuPercent(stats),
         memoryUsedMb: Math.round((stats?.memory_stats?.usage ?? 0) / 1048576),
-        memoryLimitMb: Math.round((stats?.memory_stats?.limit ?? 0) / 1048576),
         image: c.Image,
       };
     }),
@@ -111,32 +104,29 @@ function readHealth(status: string): ServiceHealth["health"] {
   return "none";
 }
 
-/* Docker only gives us "Up 4 minutes" as prose. Parse it rather than adding a
-   second API call per container just to read StartedAt. */
-function uptimeFrom(status: string): number {
-  const m = status.match(/Up (?:About )?(?:(\d+) )?(second|minute|hour|day|week|month)/);
-  if (!m) return 0;
-  const n = Number(m[1] ?? 1);
-  const unit = m[2]!;
-  const secs: Record<string, number> = {
-    second: 1,
-    minute: 60,
-    hour: 3600,
-    day: 86400,
-    week: 604800,
-    month: 2592000,
-  };
-  return n * (secs[unit] ?? 0);
-}
+const UPTIME_UNITS: Record<string, number> = {
+  second: 1,
+  minute: 60,
+  hour: 3600,
+  day: 86400,
+  week: 604800,
+  month: 2592000,
+  year: 31536000,
+};
 
-function cpuPercent(s: StatsSample | null): number {
-  if (!s?.cpu_stats || !s.precpu_stats) return 0;
-  const cpuDelta =
-    (s.cpu_stats.cpu_usage?.total_usage ?? 0) -
-    (s.precpu_stats.cpu_usage?.total_usage ?? 0);
-  const sysDelta =
-    (s.cpu_stats.system_cpu_usage ?? 0) - (s.precpu_stats.system_cpu_usage ?? 0);
-  if (cpuDelta <= 0 || sysDelta <= 0) return 0;
-  const cores = s.cpu_stats.online_cpus || 1;
-  return Math.round(((cpuDelta / sysDelta) * cores * 100 + Number.EPSILON) * 10) / 10;
+/* Docker only gives us "Up 4 minutes" as prose. Parse it rather than adding a
+   second API call per container just to read StartedAt.
+   Real shapes: "Up 4 minutes", "Up About a minute", "Up About an hour",
+   "Up Less than a second", "Up 2 years", "Exited (0) 3 minutes ago". */
+function uptimeFrom(status: string): number {
+  // Anchored at the start so "Exited (0) 3 minutes ago" — a *downtime* — can
+  // never be read as uptime by the unanchored duration part of the pattern.
+  const m = /^Up (?:About |Less than )?(?:(\d+|an?) )?(second|minute|hour|day|week|month|year)/.exec(
+    status,
+  );
+  if (!m) return 0;
+  const count = m[1];
+  // "a"/"an" and a bare unit ("Up 2 years" vs "Up About a minute") both mean 1.
+  const n = count && /^\d+$/.test(count) ? Number(count) : 1;
+  return n * (UPTIME_UNITS[m[2]!] ?? 0);
 }

@@ -97,7 +97,7 @@ The main business risk is customer acquisition and retention, not hosting cost. 
 
 ### Hosting recommendation
 
-Launch on a single DigitalOcean VPS with Docker Compose. Start with a 4 GB RAM, 2 vCPU machine. It is sufficient for an early application with PostgreSQL, the web service, Redis, and a modest background worker while remaining easy to understand and operate.
+Launch on a single VPS with Docker Compose. Start with a 4 GB RAM, 2 vCPU machine. (This recommendation named DigitalOcean; staging in fact runs on a Linode VPS. Nothing in the stack depends on the provider.) It is sufficient for an early application with PostgreSQL, the web service, Redis, and a modest background worker while remaining easy to understand and operate.
 
 Run Caddy in front of the app for HTTPS, routing, and basic rate limiting. Keep PostgreSQL private to the server. Store PDFs and uploads in object storage, not on the VPS disk.
 

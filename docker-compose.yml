@@ -8,11 +8,17 @@ x-logging: &logging
     max-size: "10m"
     max-file: "3"
 
+# Memory ceilings. Without them one runaway process is a host-wide OOM event and
+# the kernel picks its victim by global oom_score — which can be Postgres, the
+# one container here whose loss is unrecoverable. A cgroup limit turns "the box
+# dies" into "the offending container dies". Totals: 2.4G of 3.8G, leaving ~1.4G
+# for `next build` (which runs outside these cgroups) and the host itself.
 services:
   caddy:
     logging: *logging
     image: caddy:2-alpine
     restart: unless-stopped
+    mem_limit: 256m # idles at ~44MB; the rest is TLS handshakes and log buffers
     ports:
       - "80:80"
       - "443:443"
@@ -32,6 +38,13 @@ services:
       args:
         PUBLIC_URL: ${PUBLIC_URL}
     restart: unless-stopped
+    # Runs at 56-65MB today. 768m is ~12x that: room for traffic, PDF work, and
+    # a leak to be visible in the console before the cgroup kills it.
+    mem_limit: 768m
+    volumes:
+      # Written by the host health watchdog (cue-health.timer), read-only here
+      # so the console can surface the last check without a socket or a cron.
+      - /var/lib/cue:/var/lib/cue:ro
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://cue:${POSTGRES_PASSWORD}@postgres:5432/cue
@@ -52,13 +65,18 @@ services:
     logging: *logging
     image: postgres:17-alpine
     restart: unless-stopped
+    # 128MB shared_buffers + WAL buffers + per-connection work_mem, with room to
+    # spare. There are no backups, so this container must never be the one that
+    # dies: the negative oom_score_adj makes the kernel pick any other process
+    # first if the host runs out of memory outside these cgroups (e.g. a build).
+    mem_limit: 1g
+    oom_score_adj: -500
     environment:
       POSTGRES_USER: cue
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: cue
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cue -d cue"]
       interval: 10s
@@ -73,6 +91,9 @@ services:
     logging: *logging
     image: redis:7-alpine
     restart: unless-stopped
+    # Idles at ~2MB. maxmemory is deliberately not set: nothing writes to Redis
+    # yet, and evicting queued jobs is worse than a visible restart.
+    mem_limit: 256m
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
     volumes:
       - redisdata:/data
@@ -90,6 +111,7 @@ services:
     logging: *logging
     image: tecnativa/docker-socket-proxy:0.3.0
     restart: unless-stopped
+    mem_limit: 64m # a HAProxy shim; idles at ~2MB
     environment:
       CONTAINERS: 1
       POST: 0

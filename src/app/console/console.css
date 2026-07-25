@@ -183,7 +183,7 @@
   color: var(--dim);
 }
 
-.cx-tab[aria-selected="true"] {
+.cx-tab[aria-pressed="true"] {
   color: var(--ink);
 }
 
@@ -197,7 +197,7 @@
   transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-.cx-tab[aria-selected="true"]::after {
+.cx-tab[aria-pressed="true"]::after {
   transform: scaleX(1);
 }
 
@@ -477,6 +477,13 @@
   outline: none;
 }
 
+/* The wrapper carries the ring, since the input's own outline is suppressed so
+   the pill stays the focus object. --line is invisible on --bg (1.23:1). */
+.cx-search:has(input:focus-visible) {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgb(139 124 246 / 0.4);
+}
+
 .cx-search input::placeholder {
   color: var(--faint);
 }
@@ -583,6 +590,14 @@
   background: rgb(255 255 255 / 0.03);
 }
 
+/* This select is the only control that writes to the database, and its own
+   outline is suppressed below — the pill has to show focus loudly, and
+   differently from hover. */
+.cx-status:has(select:focus-visible) {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgb(139 124 246 / 0.4);
+}
+
 .cx-status i {
   width: 5px;
   height: 5px;
@@ -672,5 +687,9 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    /* cxIn fills `both` and rows carry inline delays up to 390ms — without
+       this they sit invisible, then snap in one by one. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
   }
 }

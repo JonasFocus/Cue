@@ -41,7 +41,27 @@ const TABS = [
 
 export function Flow() {
   const [active, setActive] = useState(0);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const current = TABS[active];
+
+  // Manual activation is not needed here — each panel is already rendered
+  // client-side, so following focus costs nothing.
+  const onTabKey = (e: React.KeyboardEvent<HTMLButtonElement>, i: number) => {
+    const next =
+      e.key === "ArrowRight" || e.key === "ArrowDown"
+        ? (i + 1) % TABS.length
+        : e.key === "ArrowLeft" || e.key === "ArrowUp"
+          ? (i - 1 + TABS.length) % TABS.length
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? TABS.length - 1
+              : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    setActive(next);
+    tabRefs.current[next]?.focus();
+  };
 
   return (
     <section className="cue-section">
@@ -61,9 +81,14 @@ export function Flow() {
               role="tab"
               id={`cue-tab-${i}`}
               aria-selected={i === active}
-              aria-controls={`cue-panel-${i}`}
+              aria-controls="cue-flow-panel"
+              tabIndex={i === active ? 0 : -1}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
               className="cue-tab"
               onClick={() => setActive(i)}
+              onKeyDown={(e) => onTabKey(e, i)}
             >
               {t.tab}
             </button>
@@ -74,7 +99,7 @@ export function Flow() {
           key={active}
           className="cue-tabpanel"
           role="tabpanel"
-          id={`cue-panel-${active}`}
+          id="cue-flow-panel"
           aria-labelledby={`cue-tab-${active}`}
         >
           <div className="cue-tabpanel-copy">
