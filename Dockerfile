@@ -9,6 +9,11 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# The landing page is statically prerendered, so its metadata (canonical URL,
+# og:url, og:image base) is baked at build time and PUBLIC_URL must be present
+# here, not only at runtime.
+ARG PUBLIC_URL
+ENV PUBLIC_URL=$PUBLIC_URL
 # Fonts are fetched at build time by next/font; the build also needs to not
 # fail on a missing DATABASE_URL, so nothing here may touch the database.
 ENV NEXT_TELEMETRY_DISABLED=1

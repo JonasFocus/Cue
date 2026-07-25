@@ -29,12 +29,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        PUBLIC_URL: ${PUBLIC_URL}
     restart: unless-stopped
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://cue:${POSTGRES_PASSWORD}@postgres:5432/cue
       REDIS_URL: redis://redis:6379
       DOCKER_API: http://dockerproxy:2375
+      PUBLIC_URL: ${PUBLIC_URL}
       BETTER_AUTH_URL: ${PUBLIC_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       IP_SALT: ${IP_SALT}
