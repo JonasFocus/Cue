@@ -20,11 +20,17 @@ function createPool() {
     connectionString: process.env.DATABASE_URL,
     max: 10,
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    // Invariant: statement_timeout < connectionTimeoutMillis. A query must not
+    // be allowed to hold a connection for longer than another request is
+    // willing to wait to acquire one — inverted, the first symptom of database
+    // slowness is pool-acquire failures from perfectly healthy requests rather
+    // than the timeout of the query actually causing it, which sends you
+    // debugging the wrong thing.
+    connectionTimeoutMillis: 10_000,
     // With max:10 and no cap, one stuck query holds a connection forever and
     // ten of them starve every request in the process, including Better Auth's
     // session lookup. Better to fail the one query loudly.
-    statement_timeout: 10_000,
+    statement_timeout: 8_000,
   });
 
   // pg-pool emits 'error' when an *idle* client dies — which happens on every
@@ -169,4 +175,37 @@ export async function setGuestStatus(
     status: r.status,
     createdAt: r.created_at.toISOString(),
   };
+}
+
+/* ponytail: a single COUNT over the existing created_at index, not a token
+   bucket. Two concurrent inserts can both read a count just under the ceiling
+   and both land, so the real bound is CEILING + in-flight requests — fine for a
+   backstop whose job is to turn "unbounded" into "bounded". Swap for a counter
+   table with SELECT FOR UPDATE if the exact number ever matters. */
+const HOURLY_SIGNUP_CEILING = 200;
+
+/**
+ * Global hourly cap on waitlist inserts, enforced in Postgres.
+ *
+ * The per-IP limiter in redis.ts fails open on purpose — Redis being down must
+ * not stop people joining. That is the right call for a rate limit and the
+ * wrong one for an abuse ceiling: it leaves the only unauthenticated write in
+ * the product with no bound at all during exactly the outage an attacker would
+ * notice. This backstop lives in the database the write already goes to, so it
+ * holds whether or not Redis is up.
+ */
+export async function signupCeilingReached(): Promise<boolean> {
+  try {
+    const { rows } = await pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM waitlist
+        WHERE created_at >= now() - interval '1 hour'`,
+    );
+    return Number(rows[0]?.n ?? 0) >= HOURLY_SIGNUP_CEILING;
+  } catch (err) {
+    // Fail OPEN on a database error: the insert immediately after would fail
+    // anyway, and returning "ceiling reached" here would turn a transient blip
+    // into a misleading "too many attempts" for a legitimate signup.
+    console.error("[db] signup ceiling check", (err as Error).message);
+    return false;
+  }
 }

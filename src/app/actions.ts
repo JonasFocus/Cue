@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
-import { pool } from "@/lib/db";
+import { pool, signupCeilingReached } from "@/lib/db";
 import { rateLimit } from "@/lib/redis";
 import { isValidEmail, normaliseEmail } from "@/lib/waitlist";
 
@@ -58,6 +58,15 @@ export async function joinWaitlist(
     .update(`${ip}:${salt}`)
     .digest("hex")
     .slice(0, 32);
+
+  // Two bounds, deliberately different in their failure direction. The per-IP
+  // limiter below fails OPEN when Redis is down, because a cache outage must
+  // not stop legitimate signups. This global ceiling is enforced in Postgres,
+  // so a Redis outage cannot leave the only public write path unbounded.
+  if (await signupCeilingReached()) {
+    console.warn("[waitlist] hourly signup ceiling reached", { ipHash });
+    return { status: "error", message: "Too many attempts. Try again later." };
+  }
 
   const limit = await rateLimit(`wl:${ipHash}`, 5, 3600);
   if (!limit.ok) {
