@@ -4,9 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, LogOut, PenLine, Search } from "lucide-react";
 import type { ServiceHealth } from "@/lib/docker";
 import type { Guest, WaitlistStats } from "@/lib/db";
+import type { Probe } from "@/app/api/health/route";
 import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
-
-type Probe = { ok: boolean; latencyMs: number; detail: string };
 
 /* Built from the server's own types rather than hand-copied. A local copy
    drifted once already — it kept declaring `today` and `latest` after the API
@@ -148,7 +147,13 @@ export function Dashboard({ operator }: { operator: string }) {
             Console<span>staging.cue.krevo.io</span>
           </span>
           <span className="cx-who">{operator}</span>
-          <button className="cx-signout" onClick={signOut} type="button" title="Sign out">
+          <button
+            className="cx-signout"
+            onClick={signOut}
+            type="button"
+            aria-label="Sign out"
+            title="Sign out"
+          >
             <LogOut size={13} strokeWidth={2} />
           </button>
         </header>
@@ -495,8 +500,20 @@ function StatusSelect({
     if (next && next !== guest.status) onStatus(guest.id, next);
   }, [guest.id, guest.status, onStatus]);
 
+  /* Escape abandons the selection. Without this the uncommitted value survived
+     every 5s poll, so the console could display `blacklisted` for a guest the
+     database still had as `pending`, with nothing on screen to say so. */
+  const abandon = useCallback(() => {
+    pendingRef.current = null;
+    setPending(null);
+  }, []);
+
   return (
-    <label className="cx-status" data-status={value}>
+    <label
+      className="cx-status"
+      data-status={value}
+      data-unsaved={pending !== null || undefined}
+    >
       <i />
       <select
         value={value}
@@ -508,6 +525,7 @@ function StatusSelect({
           keyboard.current = true;
           // The change event for an Enter selection fires after this handler.
           if (e.key === "Enter") setTimeout(commit, 0);
+          if (e.key === "Escape") abandon();
         }}
         onChange={(e) => {
           const next = e.target.value as GuestStatus;

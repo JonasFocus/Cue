@@ -686,6 +686,20 @@
   background: var(--faint);
 }
 
+/* An uncommitted keyboard selection must not be indistinguishable from a saved
+   one — that is how the console ends up quietly lying about a guest. */
+.cx-status[data-unsaved] {
+  border-color: var(--violet);
+  background: rgb(139 124 246 / 0.1);
+}
+
+.cx-status[data-unsaved]::after {
+  content: "unsaved";
+  margin-left: 2px;
+  font-size: 10px;
+  color: var(--violet);
+}
+
 .cx-status select {
   appearance: none;
   border: 0;

@@ -941,7 +941,8 @@
 }
 
 .cue-proof-pill[data-tone="ok"] {
-  background: var(--cue-accent);
+  /* --cue-accent is 3.59:1 against white at this size; -deep is 5.43:1. */
+  background: var(--cue-accent-deep);
   color: #fff;
 }
 
@@ -2329,7 +2330,7 @@
   }
 
   .cue-mock-thead span:nth-child(4),
-  .cue-mock-row .cue-mock-col:last-of-type {
+  .cue-mock-row .cue-mock-col:nth-child(4) {
     display: none;
   }
 }
@@ -2403,7 +2404,10 @@
   }
 
   .cue-mock-face,
-  .cue-mock-icon-btn {
+  .cue-mock-icon-btn,
+  /* The header's trailing spacer cell pairs with .cue-mock-face; hiding one
+     without the other desyncs the row from its own column headings. */
+  .cue-mock-thead span:nth-child(5) {
     display: none;
   }
 }
