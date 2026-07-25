@@ -87,7 +87,9 @@ export function Cta() {
     <section id="cta" className="cue-section" style={{ paddingBottom: 0 }}>
       <div className="cue-shell">
         <Reveal>
-          <div className="cue-cta">
+          {/* Anchor the whole card, not the input inside it: targeting the
+              field scrolls the heading up behind the sticky nav. */}
+          <div className="cue-cta" id="waitlist">
             <div className="cue-cta-grid" aria-hidden />
             <div style={{ position: "relative" }}>
               <h2 className="cue-h2">{"Send the Cue.\nGet the yes."}</h2>
@@ -99,7 +101,7 @@ export function Cta() {
                 before the deposit conversation even starts.
               </p>
               <div style={{ marginTop: 28 }}>
-                <Waitlist id="waitlist" />
+                <Waitlist />
               </div>
             </div>
           </div>

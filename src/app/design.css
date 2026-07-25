@@ -1434,6 +1434,9 @@
 /* ── CTA ── */
 
 .cue-cta {
+  /* Clears the 64px sticky nav plus breathing room, so jumping to #waitlist
+     lands the card under the header instead of behind it. */
+  scroll-margin-top: 88px;
   position: relative;
   border-radius: var(--cue-r-card);
   border: 1px solid var(--cue-line);

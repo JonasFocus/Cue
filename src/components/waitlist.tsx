@@ -27,12 +27,12 @@ function Submit() {
   );
 }
 
-export function Waitlist({ id }: { id?: string }) {
+export function Waitlist() {
   const [state, action] = useActionState(joinWaitlist, INITIAL);
 
   if (state.status === "ok") {
     return (
-      <div className="cue-waitlist-done" id={id} role="status">
+      <div className="cue-waitlist-done" role="status">
         <span className="cue-waitlist-tick">
           <Check size={14} strokeWidth={3} />
         </span>
@@ -45,7 +45,7 @@ export function Waitlist({ id }: { id?: string }) {
   }
 
   return (
-    <form className="cue-waitlist" action={action} id={id}>
+    <form className="cue-waitlist" action={action}>
       <label className="cue-sr-only" htmlFor="cue-waitlist-name">
         Your name (optional)
       </label>
