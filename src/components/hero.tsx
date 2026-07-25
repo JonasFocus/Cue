@@ -117,7 +117,7 @@ export function Hero() {
       <div className="cue-shell cue-hero-copy" style={{ position: "relative" }}>
         <div style={rise(40)}>
           <span className="cue-badge">
-            <span>New</span>
+            <span>Beta</span>
             <span>Built for photographers and videographers</span>
           </span>
         </div>

@@ -58,32 +58,32 @@ export function Waitlist() {
         placeholder="Your name (optional)"
       />
 
-      <div className="cue-waitlist-row">
-        <label className="cue-sr-only" htmlFor="cue-waitlist-email">
-          Email address
-        </label>
-        <input
-          id="cue-waitlist-email"
-          className="cue-input"
-          type="email"
-          name="email"
-          required
-          autoComplete="email"
-          placeholder="you@studio.com"
-          aria-invalid={state.status === "error"}
-          aria-describedby={state.status === "error" ? "cue-waitlist-err" : undefined}
-        />
-        {/* Honeypot — hidden from people, irresistible to bots. */}
-        <input
-          type="text"
-          name="company"
-          tabIndex={-1}
-          autoComplete="off"
-          aria-hidden
-          className="cue-honeypot"
-        />
-        <Submit />
-      </div>
+      <label className="cue-sr-only" htmlFor="cue-waitlist-email">
+        Email address
+      </label>
+      <input
+        id="cue-waitlist-email"
+        className="cue-input cue-waitlist-email"
+        type="email"
+        name="email"
+        required
+        autoComplete="email"
+        placeholder="you@studio.com"
+        aria-invalid={state.status === "error"}
+        aria-describedby={state.status === "error" ? "cue-waitlist-err" : undefined}
+      />
+
+      {/* Honeypot — hidden from people, irresistible to bots. */}
+      <input
+        type="text"
+        name="company"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden
+        className="cue-honeypot"
+      />
+
+      <Submit />
 
       {state.status === "error" && (
         <p className="cue-waitlist-msg" id="cue-waitlist-err" role="alert">
