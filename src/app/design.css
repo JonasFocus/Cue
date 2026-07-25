@@ -781,6 +781,22 @@
 
 /* ── Challenge / statement ── */
 
+.cue-statement-section {
+  padding-block: 56px 40px;
+}
+
+@media (min-width: 768px) {
+  .cue-statement-section {
+    padding-block: 72px 48px;
+  }
+}
+
+.cue-statement-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .cue-statement {
   margin-inline: auto;
   max-width: 620px;
@@ -797,8 +813,108 @@
 }
 
 .cue-statement-ink {
-  margin-top: 72px;
+  margin-top: 28px;
   color: var(--cue-ink);
+}
+
+/* Compact Sent → Opened → Signed strip under the core line. */
+.cue-proof {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px 22px;
+  margin-top: 32px;
+  width: min(100%, 520px);
+  min-height: 56px;
+  padding: 12px 18px;
+  border-radius: var(--cue-r-card);
+  border: 1px solid var(--cue-line);
+  background: var(--cue-panel);
+  box-shadow: var(--cue-shadow-card);
+}
+
+.cue-proof-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cue-ink);
+}
+
+.cue-proof-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--cue-tint);
+  color: var(--cue-accent-deep);
+  font-size: 10px;
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: 0.02em;
+}
+
+.cue-proof-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cue-proof-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cue-proof-sep {
+  color: var(--cue-muted);
+  flex: none;
+}
+
+.cue-proof-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: var(--cue-r-pill);
+  font-size: 11px;
+  font-weight: 500;
+  background: #f0f0f0;
+  color: var(--cue-ink-soft);
+}
+
+.cue-proof-pill[data-tone="sent"] {
+  background: var(--cue-tint);
+  color: var(--cue-accent-deep);
+}
+
+.cue-proof-pill[data-tone="wait"] {
+  background: #fff4e5;
+  color: #9a5b00;
+}
+
+.cue-proof-pill[data-tone="ok"] {
+  background: var(--cue-accent);
+  color: #fff;
+}
+
+/* ── Features ── */
+
+.cue-features-section {
+  padding-block: 64px 56px;
+}
+
+@media (min-width: 768px) {
+  .cue-features-section {
+    padding-block: 88px 80px;
+  }
+}
+
+.cue-features-top {
+  margin-top: 32px;
 }
 
 /* ── Feature cards ── */
