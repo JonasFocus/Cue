@@ -92,14 +92,14 @@ run "origin/main" git push origin main
 # which used to be able to die between starting containers and migrating. The
 # heredoc is quoted so nothing expands locally; the flag arrives as $1.
 ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 \
-  "$HOST" bash -s -- "$([ "$VERBOSE" = true ] && echo '--verbose')" "$HOST" <<'REMOTE'
+  "$HOST" bash -s -- "$HOST" "$([ "$VERBOSE" = true ] && echo '--verbose')" <<'REMOTE'
 set -uo pipefail
 log=/var/log/cue-deploy.log
 status=/var/log/cue-deploy.status
 rm -f "$status"
 : >"$log" # exist before tail -f attaches; the child truncates the same inode
 
-setsid --fork bash -c "/opt/cue/scripts/deploy.sh ${1:-} >'$log' 2>&1; echo \$? >'$status'" \
+setsid --fork bash -c "/opt/cue/scripts/deploy.sh ${2:-} >'$log' 2>&1; echo \$? >'$status'" \
   </dev/null >/dev/null 2>&1
 
 # Stream it back. If this ssh dies the deploy keeps going; reconnect with
@@ -112,7 +112,7 @@ tail_pid=$!
 # terminal with no idea the deploy is gone. Give up on either signal: the
 # process disappearing, or 30 minutes — well past the ~3 min a real deploy
 # takes, including a rollback rebuild.
-host="${2:-the box}"
+host="${1:-the box}"
 give_up() {
   kill "$tail_pid" 2>/dev/null || true
   echo >&2
@@ -127,7 +127,15 @@ while [ ! -f "$status" ]; do
   waited=$((waited + 1))
   # 15s of grace so this cannot fire before the deploy has even started.
   if [ "$waited" -ge 15 ] && ! pgrep -f '/opt/cue/scripts/deploy.sh' >/dev/null 2>&1; then
-    give_up "the deploy process is gone and never wrote a result."
+    # The wrapper writes the status file AFTER deploy.sh exits, so "process
+    # gone" and "no status file" are both briefly true on a perfectly healthy
+    # finish. Re-check before calling it a failure — this raced and reported a
+    # successful deploy as dead.
+    for _ in 1 2 3 4 5; do
+      sleep 1
+      [ -f "$status" ] && break
+    done
+    [ -f "$status" ] || give_up "the deploy process is gone and never wrote a result."
   fi
   [ "$waited" -ge 1800 ] && give_up "no result after 30 minutes — the deploy is stuck or dead."
 done
