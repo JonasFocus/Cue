@@ -313,21 +313,42 @@
 .cue-badge {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 14px 6px 6px;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 12px 4px 4px;
   border-radius: var(--cue-r-pill);
   border: 1px solid var(--cue-line);
   background: var(--cue-panel);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
 }
 
 .cue-badge span:first-child {
-  padding: 3px 10px;
+  flex: none;
+  padding: 3px 9px;
   border-radius: var(--cue-r-pill);
   background: #f0f0f0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
+}
+
+.cue-badge span:last-child {
+  text-wrap: balance;
+}
+
+@media (min-width: 768px) {
+  .cue-badge {
+    gap: 10px;
+    padding: 6px 14px 6px 6px;
+    font-size: 14px;
+  }
+
+  .cue-badge span:first-child {
+    padding: 3px 10px;
+    font-size: 13px;
+  }
 }
 
 .cue-h1 {
@@ -1433,6 +1454,313 @@
     linear-gradient(to bottom, rgb(0 134 255 / 0.08) 1px, transparent 1px);
   background-size: 88px 88px;
   mask-image: radial-gradient(80% 100% at 50% 100%, #000 10%, transparent 80%);
+}
+
+/* ── Waitlist form ── */
+
+.cue-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cue-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cue-waitlist {
+  margin-inline: auto;
+  max-width: 460px;
+}
+
+.cue-waitlist-name {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.cue-waitlist-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 560px) {
+  .cue-waitlist-row {
+    flex-direction: row;
+  }
+}
+
+.cue-input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  border-radius: var(--cue-r-pill);
+  border: 1px solid var(--cue-line);
+  background: var(--cue-panel);
+  font: inherit;
+  font-size: 15px;
+  color: var(--cue-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  transition:
+    border-color 180ms var(--cue-ease),
+    box-shadow 180ms var(--cue-ease);
+}
+
+.cue-input::placeholder {
+  color: var(--cue-muted);
+}
+
+.cue-input:focus-visible {
+  outline: none;
+  border-color: var(--cue-accent);
+  box-shadow: 0 0 0 3px rgb(0 134 255 / 0.16);
+}
+
+.cue-input[aria-invalid="true"] {
+  border-color: #e5484d;
+  box-shadow: 0 0 0 3px rgb(229 72 77 / 0.13);
+}
+
+.cue-waitlist-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+}
+
+.cue-waitlist-btn:disabled {
+  opacity: 0.72;
+  cursor: progress;
+}
+
+.cue-spin {
+  animation: cueSpin 800ms linear infinite;
+}
+
+@keyframes cueSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cue-waitlist-msg {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #c2282c;
+}
+
+.cue-waitlist-done {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-inline: auto;
+  max-width: 460px;
+  padding: 18px 20px;
+  border-radius: var(--cue-r-card);
+  border: 1px solid rgb(0 134 255 / 0.28);
+  background: var(--cue-tint-soft);
+  text-align: left;
+  animation: cueRise 500ms var(--cue-ease) both;
+}
+
+.cue-waitlist-done strong {
+  font-weight: 500;
+}
+
+.cue-waitlist-done p {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--cue-muted);
+}
+
+.cue-waitlist-tick {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--cue-accent);
+  color: #fff;
+}
+
+/* Nav sign-in sits quieter than a primary CTA — smaller, lighter, no shadow. */
+.cue-nav-cta {
+  padding: 9px 18px;
+  font-size: 14px;
+}
+
+/* ── Console sign-in ──
+   Light, and deliberately built from the landing-page primitives (.cue-input,
+   .cue-btn, cueRise, the hero orb and grid) so the operator surface reads as
+   the same product. The dashboard behind it is dark; this doorway is not. */
+
+.cue-auth {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.cue-auth-card {
+  position: relative;
+  width: 100%;
+  max-width: 390px;
+  padding: 34px 32px 30px;
+  border-radius: var(--cue-r-card);
+  border: 1px solid var(--cue-line);
+  background: var(--cue-panel);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 30px 60px -30px rgb(4 46 92 / 0.28);
+  animation: cueAuthCard 700ms var(--cue-ease) both;
+}
+
+@keyframes cueAuthCard {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+}
+
+/* Children rise in sequence behind the card itself. */
+.cue-auth-card > * {
+  animation: cueRise 620ms var(--cue-ease) both;
+}
+
+.cue-auth-card > *:nth-child(1) {
+  animation-delay: 90ms;
+}
+.cue-auth-card > *:nth-child(2) {
+  animation-delay: 150ms;
+}
+.cue-auth-card > *:nth-child(3) {
+  animation-delay: 210ms;
+}
+.cue-auth-card > *:nth-child(4) {
+  animation-delay: 270ms;
+}
+.cue-auth-card > *:nth-child(5) {
+  animation-delay: 330ms;
+}
+.cue-auth-card > *:nth-child(6) {
+  animation-delay: 390ms;
+}
+
+.cue-auth-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cue-auth-chip {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: var(--cue-r-pill);
+  background: var(--cue-tint);
+  color: var(--cue-accent-deep);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.cue-auth-title {
+  margin-top: 26px;
+  font-size: 25px;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.cue-auth-sub {
+  margin-top: 9px;
+  font-size: 14.5px;
+  color: var(--cue-muted);
+}
+
+.cue-auth-field {
+  display: block;
+  margin-top: 18px;
+}
+
+.cue-auth-field > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cue-ink-soft);
+}
+
+.cue-auth-field .cue-input {
+  width: 100%;
+  border-radius: var(--cue-r-sm);
+}
+
+.cue-auth-submit {
+  width: 100%;
+  margin-top: 24px;
+}
+
+.cue-auth-err {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 11px 14px;
+  border-radius: var(--cue-r-sm);
+  border: 1px solid rgb(229 72 77 / 0.28);
+  background: #fef2f2;
+  color: #c2282c;
+  font-size: 13.5px;
+  animation: cueShake 420ms var(--cue-ease) both;
+}
+
+/* A small, once-only nudge — enough to notice, not enough to be a toy. */
+@keyframes cueShake {
+  0% {
+    transform: translateX(0);
+  }
+  22% {
+    transform: translateX(-5px);
+  }
+  44% {
+    transform: translateX(4px);
+  }
+  66% {
+    transform: translateX(-2px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.cue-auth-foot {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--cue-line-soft);
+  text-align: center;
+  font-size: 13px;
+  color: var(--cue-muted);
+}
+
+.cue-auth-foot a {
+  color: var(--cue-ink-soft);
+  transition: color 160ms var(--cue-ease);
+}
+
+.cue-auth-foot a:hover {
+  color: var(--cue-accent-deep);
 }
 
 /* ── Footer ── */

@@ -130,7 +130,7 @@ export function Pricing() {
 
                 <div className="cue-price-foot">
                   <a
-                    href="#cta"
+                    href="#waitlist"
                     className={`cue-btn cue-btn-block ${
                       plan.tone === "accent" ? "cue-btn-accent" : "cue-btn-dark"
                     }`}

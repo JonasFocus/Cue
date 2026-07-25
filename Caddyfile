@@ -1,0 +1,27 @@
+{
+	email jonasbubela@gmail.com
+}
+
+staging.cue.krevo.io {
+	encode zstd gzip
+
+	# The console is not for search engines, and neither is staging as a whole.
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+
+	reverse_proxy app:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

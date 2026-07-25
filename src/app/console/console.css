@@ -1,0 +1,624 @@
+/* Console surface.
+   The marketing tokens in design.css are light-only and scoped to .cue on
+   <body>; everything here lives under .cx and overrides that outright.
+
+   Design intent: one focal gradient object per view, a lot of air around it,
+   near-monochrome everywhere else. No bordered-box grids, no uppercase
+   micro-labels, no progress meters — those are what made the first pass read
+   as a stock telemetry dashboard instead of a considered surface. */
+
+.cx {
+  --bg: #0a0a0b;
+  --panel: #121214;
+  --line: #212124;
+  --hair: #1a1a1d;
+  --ink: #f2f2f4;
+  --dim: #9a9aa4;
+  --faint: #62626c;
+
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --violet: #8b7cf6;
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+  position: relative;
+  z-index: 0;
+  min-height: 100vh;
+  padding: 0 24px 120px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.cx::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--bg);
+}
+
+/* design.css paints every heading under .cue — which sits on <body> — with
+   --cue-ink (black). Without this, console headings render near-invisible on
+   the dark surface. Reclaim them explicitly. */
+.cx :where(h1, h2, h3, h4) {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* A single narrow column. The air around it is the design. */
+.cx-col {
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+/* ── Dithered gradient ──
+   The reference look: soft blurred colour blobs under a fine halftone dot
+   grid. Two layers — colour, then the dot mask that gives it its print-like
+   texture. Every hero surface reuses this one class. */
+
+.cx-dither {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(46% 78% at 20% 26%, #ff8a3d 0%, transparent 58%),
+    radial-gradient(42% 72% at 54% 8%, #ff5c8a 0%, transparent 56%),
+    radial-gradient(48% 84% at 84% 62%, #4b7bff 0%, transparent 58%),
+    radial-gradient(56% 92% at 30% 96%, #ffd36e 0%, transparent 60%),
+    linear-gradient(146deg, #7fd6f7 0%, #9b7ef0 100%);
+  /* The blobs are drawn hard-edged then blurred, rather than being soft
+     gradients to begin with — that is what gives the reference its melted,
+     printed look. Saturation stays near 1: the colour should read as pigment,
+     not as a screen. */
+  filter: blur(14px) saturate(1.12);
+  transform: scale(1.14);
+}
+
+.cx-dither[data-tone="cool"] {
+  background:
+    radial-gradient(46% 78% at 22% 22%, #9b7ef0 0%, transparent 58%),
+    radial-gradient(44% 74% at 66% 8%, #5fd3e8 0%, transparent 56%),
+    radial-gradient(50% 86% at 88% 70%, #5fd39b 0%, transparent 58%),
+    radial-gradient(52% 88% at 28% 98%, #7fb8f7 0%, transparent 60%),
+    linear-gradient(146deg, #7c86e8 0%, #4fc3d9 100%);
+}
+
+/* Halftone dot grid, sitting above the blur so it stays crisp. */
+.cx-art {
+  position: relative;
+  overflow: hidden;
+}
+
+.cx-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgb(0 0 0 / 0.19) 1px,
+    transparent 0
+  );
+  background-size: 3px 3px;
+}
+
+/* ── Masthead ── */
+
+.cx-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 0 22px;
+}
+
+.cx-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.cx-wordmark {
+  margin-right: auto;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.cx-wordmark span {
+  margin-left: 8px;
+  color: var(--faint);
+  font-weight: 400;
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.cx-who {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.cx-signout {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--faint);
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.cx-signout:hover {
+  color: var(--ink);
+  background: var(--panel);
+}
+
+/* ── Tabs — text with an underline, not pills ── */
+
+.cx-tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.cx-tab {
+  position: relative;
+  padding: 0 0 13px;
+  font-size: 13.5px;
+  color: var(--faint);
+  transition: color 180ms ease;
+}
+
+.cx-tab:hover {
+  color: var(--dim);
+}
+
+.cx-tab[aria-selected="true"] {
+  color: var(--ink);
+}
+
+.cx-tab::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 1px;
+  background: var(--ink);
+  transform: scaleX(0);
+  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.cx-tab[aria-selected="true"]::after {
+  transform: scaleX(1);
+}
+
+.cx-tab b {
+  margin-left: 7px;
+  font-weight: 400;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-pane {
+  padding-top: 40px;
+  animation: cxIn 460ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes cxIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ── The one focal object ── */
+
+.cx-hero {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.cx-hero-art {
+  height: 132px;
+}
+
+.cx-hero-body {
+  padding: 26px 28px 28px;
+}
+
+.cx-hero-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+
+.cx-hero-title {
+  margin-top: 12px;
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.cx-hero-sub {
+  margin-top: 9px;
+  max-width: 46ch;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+.cx-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 34px;
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--hair);
+}
+
+.cx-figure b {
+  display: block;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-figure span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* Status dot. Pulses only while healthy, so a still ring reads as stalled. */
+.cx-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  animation: cxPulse 2.6s ease-out infinite;
+}
+
+@keyframes cxPulse {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 1;
+  }
+  70% {
+    box-shadow: 0 0 0 5px transparent;
+    opacity: 0.85;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    opacity: 1;
+  }
+}
+
+.cx-ok {
+  color: var(--ok);
+}
+.cx-warn {
+  color: var(--warn);
+}
+.cx-bad {
+  color: var(--bad);
+}
+.cx-idle {
+  color: var(--faint);
+}
+
+/* ── Quiet lists (services, datastores) ── */
+
+.cx-label {
+  margin: 44px 0 4px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+.cx-list {
+  border-top: 1px solid var(--hair);
+}
+
+.cx-row {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 4px;
+  border-bottom: 1px solid var(--hair);
+  animation: cxIn 400ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: background-color 160ms ease;
+}
+
+.cx-row:hover {
+  background: rgb(255 255 255 / 0.016);
+}
+
+.cx-row-name {
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cx-row-note {
+  font-size: 12.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.cx-row-num {
+  min-width: 68px;
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--dim);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .cx-row {
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+  }
+
+  .cx-row-note {
+    display: none;
+  }
+}
+
+.cx-skeleton {
+  height: 51px;
+  border-bottom: 1px solid var(--hair);
+  animation: cxBreathe 1.6s ease-in-out infinite;
+}
+
+@keyframes cxBreathe {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.cx-note {
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+.cx-error {
+  margin-top: 18px;
+  padding: 12px 15px;
+  border-radius: 10px;
+  border: 1px solid rgb(248 113 113 / 0.3);
+  background: rgb(248 113 113 / 0.08);
+  color: #fca5a5;
+  font-size: 12.5px;
+}
+
+/* ── Guest list ── */
+
+.cx-guests {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.cx-guests-art {
+  height: 104px;
+}
+
+.cx-guests-head {
+  padding: 26px 28px 22px;
+  text-align: center;
+  border-bottom: 1px solid var(--hair);
+}
+
+.cx-guests-head h2 {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.cx-guests-head p {
+  margin-top: 8px;
+  font-size: 13.5px;
+  color: var(--dim);
+}
+
+.cx-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  max-width: 300px;
+  margin-top: 18px;
+  padding: 9px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--faint);
+  transition: border-color 160ms ease;
+}
+
+.cx-search:focus-within {
+  border-color: #3a3a40;
+}
+
+.cx-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.cx-search input::placeholder {
+  color: var(--faint);
+}
+
+.cx-thead,
+.cx-trow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.6fr) 100px 88px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+}
+
+.cx-thead {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--hair);
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.cx-trow {
+  height: 58px;
+  border-bottom: 1px solid var(--hair);
+  animation: cxIn 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: background-color 160ms ease;
+}
+
+.cx-trow:last-child {
+  border-bottom: 0;
+}
+
+.cx-trow:hover {
+  background: rgb(255 255 255 / 0.016);
+}
+
+.cx-guest {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.cx-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.cx-guest b {
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cx-guest-mail,
+.cx-guest-date {
+  font-size: 12.5px;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cx-guest-mail {
+  font-family: var(--mono);
+}
+
+.cx-guest-date {
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  justify-self: start;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+
+.cx-status i {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.cx-status[data-status="pending"] i {
+  background: var(--warn);
+}
+.cx-status[data-status="invited"] i {
+  background: var(--violet);
+}
+.cx-status[data-status="joined"] i {
+  background: var(--ok);
+}
+
+.cx-empty {
+  padding: 46px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+@media (max-width: 640px) {
+  .cx-thead {
+    display: none;
+  }
+
+  .cx-trow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    height: auto;
+    padding-block: 15px;
+    row-gap: 5px;
+  }
+
+  .cx-guest-mail,
+  .cx-guest-date {
+    grid-column: 1;
+  }
+
+  .cx-status {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx *,
+  .cx *::before,
+  .cx *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

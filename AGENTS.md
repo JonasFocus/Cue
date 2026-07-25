@@ -94,11 +94,41 @@ npm install
 npm run dev
 npm run lint
 npx tsc --noEmit
+npm run test      # node:test, no framework — see src/lib/waitlist.test.ts
 npm run build
 ```
 
-There is no test suite yet. Add one with the first piece of real logic; the
+Tests use Node's built-in runner, so there is no test dependency. Put pure
+logic in `src/lib/` where it can be imported by a test; a `"use server"` module
+may only export async functions and cannot be unit tested directly. The
 signing, PDF, and audit paths must not ship untested.
+
+## Deployment
+
+Staging is `https://staging.cue.krevo.io` on a Linode VPS at `172.236.109.208`,
+running Docker Compose behind Caddy. Deploys pull from `origin/main`, so commit
+and push first, then:
+
+```bash
+ssh root@172.236.109.208 '/opt/cue/scripts/deploy.sh'
+```
+
+`deploy.sh` fetches, rebuilds, restarts, runs pending migrations, waits for the
+health check, and prunes build cache. It fails loudly and prints logs if the app
+does not become healthy.
+
+- Secrets live only in `/opt/cue/.env` on the box (see `.env.example`). They are
+  never in the repo and never in a chat window.
+- Schema changes go in `db/migrations/NNN_name.sql` and are applied by
+  `scripts/migrate.sh`, which tracks them in `schema_migrations`. Write them to
+  be safe to re-run. `db/init.sql` only executes on a **fresh** Postgres volume,
+  so it is not a migration path for an existing database.
+- SSH is key-only; password authentication is disabled.
+- Postgres and Redis are on an `internal: true` network with no published ports
+  and no egress. The app reads container health through a read-only
+  docker-socket-proxy, never `/var/run/docker.sock` directly.
+- **There are no database backups.** This is a deliberate, owner-accepted risk
+  on staging. Do not assume the waitlist is recoverable.
 
 ## When the product is built
 

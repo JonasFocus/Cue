@@ -1,0 +1,115 @@
+name: cue
+
+# Default json-file logging is uncapped — a chatty container will fill the disk
+# given enough time. Every service inherits this 3x10MB ceiling.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    logging: *logging
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks: [edge]
+
+  app:
+    logging: *logging
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://cue:${POSTGRES_PASSWORD}@postgres:5432/cue
+      REDIS_URL: redis://redis:6379
+      DOCKER_API: http://dockerproxy:2375
+      BETTER_AUTH_URL: ${PUBLIC_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      IP_SALT: ${IP_SALT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [edge, internal]
+
+  postgres:
+    logging: *logging
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cue
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: cue
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cue -d cue"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # No `ports:` on purpose. Postgres is reachable only from the internal
+    # compose network; nothing binds it to a public interface.
+    networks: [internal]
+
+  redis:
+    logging: *logging
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [internal]
+
+  # Read-only, endpoint-filtered view of the Docker API. The app reads container
+  # health through this instead of mounting docker.sock, which would hand an
+  # internet-facing container root on the host.
+  dockerproxy:
+    logging: *logging
+    image: tecnativa/docker-socket-proxy:0.3.0
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      POST: 0
+      IMAGES: 0
+      NETWORKS: 0
+      VOLUMES: 0
+      EXEC: 0
+      INFO: 0
+      SERVICES: 0
+      TASKS: 0
+      SECRETS: 0
+      NODES: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [internal]
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+  internal:
+    internal: true

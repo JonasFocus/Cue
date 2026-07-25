@@ -50,9 +50,11 @@ export function Nav() {
           </nav>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <a href="#waitlist" className="cue-btn cue-btn-dark">
-              Create your first Cue
-            </a>
+            {/* Secondary on purpose: the hero's waitlist CTA is the one action
+                this page is asking for, so the nav must not compete with it. */}
+            <Link href="/console/login" className="cue-btn cue-btn-light cue-nav-cta">
+              Sign in
+            </Link>
             <button
               type="button"
               className="cue-nav-toggle"
@@ -72,6 +74,9 @@ export function Nav() {
                 {l.label}
               </a>
             ))}
+            <a href="#waitlist" onClick={() => setOpen(false)}>
+              Join the waitlist
+            </a>
           </nav>
         )}
       </div>

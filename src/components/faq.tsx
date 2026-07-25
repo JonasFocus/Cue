@@ -1,5 +1,6 @@
 import { PenLine, Plus } from "lucide-react";
 import { Reveal } from "./reveal";
+import { Waitlist } from "./waitlist";
 
 /* ponytail: native <details> — no accordion state, no library, keyboard and
    find-in-page work for free. */
@@ -98,9 +99,7 @@ export function Cta() {
                 before the deposit conversation even starts.
               </p>
               <div style={{ marginTop: 28 }}>
-                <a href="#pricing" className="cue-btn cue-btn-dark">
-                  Create your first Cue
-                </a>
+                <Waitlist id="waitlist" />
               </div>
             </div>
           </div>
