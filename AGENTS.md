@@ -176,6 +176,23 @@ does not become healthy.
 - **There are no database backups.** This is a deliberate, owner-accepted risk
   on staging. Do not assume the waitlist is recoverable.
 
+### Rebuilding from nothing
+
+Migrations create the schema but not the operator, so a fresh Postgres volume
+gives a console that renders a login nobody can pass. After the first deploy
+against an empty database:
+
+```bash
+ssh root@172.236.109.208 'cd /opt/cue && set -a && . ./.env && set +a && \
+  docker compose run --rm --no-deps \
+    -e DATABASE_URL="postgresql://cue:$POSTGRES_PASSWORD@postgres:5432/cue" \
+    -e BETTER_AUTH_SECRET="$BETTER_AUTH_SECRET" \
+    -e OPERATOR_EMAIL=you@example.com -e OPERATOR_PASSWORD="$(openssl rand -base64 24)" \
+    app node scripts/seed-operator.mjs'
+```
+
+It is idempotent — it exits without changes if the account already exists.
+
 ## When the product is built
 
 - Store the final rendered agreement, signer information, consent, timestamps,

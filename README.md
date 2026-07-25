@@ -43,3 +43,9 @@ npm test          # node:test, no framework
 Docker Compose behind Caddy on a single VPS — not Vercel. `npm run ship` runs
 the checks, commits, pushes, and deploys to staging. See the Deployment section
 of [`AGENTS.md`](./AGENTS.md) for what it touches and how migrations are applied.
+
+## Rebuilding from an empty database
+
+Migrations create the schema but not the operator account. See the
+"Rebuilding from nothing" runbook in [`AGENTS.md`](./AGENTS.md) — without that
+step `/console` renders a login that nobody can pass.

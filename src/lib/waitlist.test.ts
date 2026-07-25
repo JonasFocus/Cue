@@ -6,9 +6,9 @@ import {
   isGuestStatus,
   isValidEmail,
   MAX_EMAIL_LENGTH,
-  maskEmail,
   nameFromEmail,
   normaliseEmail,
+  parseStatusPatch,
 } from "./waitlist.ts";
 
 test("accepts ordinary addresses", () => {
@@ -52,15 +52,6 @@ test("derives a readable name from an address", () => {
   assert.equal(nameFromEmail("12345@x.com"), "—");
 });
 
-test("masks the local part but keeps the domain", () => {
-  assert.equal(maskEmail("jonas@krevo.io"), "jo•••@krevo.io");
-  // Never leaks length-1 local parts as bare plaintext.
-  assert.equal(maskEmail("a@x.com"), "a•@x.com");
-  // Nothing guarantees a well-formed address reaches here — a legacy row or a
-  // hand-run INSERT predates the CHECK constraint. It must still mask, not throw.
-  assert.equal(maskEmail("nobody"), "no••••@");
-  assert.equal(maskEmail(""), "•@");
-});
 
 test("the length cap is exact at 254", () => {
   // 254 is the RFC 5321 maximum path length, and the SQL CHECK in
@@ -140,4 +131,68 @@ test("the SQL CHECK constraint matches GUEST_STATUSES", () => {
     .map((s) => s.trim().replace(/^'([^']*)'$/, "$1"));
 
   assert.deepEqual(fromSql, [...GUEST_STATUSES]);
+});
+
+/* The PATCH validator guards the only authenticated write in the product, and
+   it is the layer that turns a bad request into a 400 instead of letting the
+   database CHECK constraint surface as a 500. Two prior audits found defects
+   in exactly this area and the suite covered none of it. */
+
+test("parseStatusPatch accepts a well-formed body", () => {
+  for (const status of GUEST_STATUSES) {
+    assert.deepEqual(parseStatusPatch({ id: 13, status }), {
+      ok: true,
+      id: 13,
+      status,
+    });
+  }
+});
+
+test("parseStatusPatch rejects every bad id", () => {
+  for (const id of [
+    0,
+    -1,
+    1.5,
+    NaN,
+    Infinity,
+    "13", // a JSON string id would reach the query as text
+    null,
+    undefined,
+    true,
+    [13],
+  ]) {
+    assert.deepEqual(
+      parseStatusPatch({ id, status: "pending" }),
+      { ok: false, error: "invalid id" },
+      JSON.stringify(id),
+    );
+  }
+});
+
+test("parseStatusPatch rejects statuses the database would refuse", () => {
+  for (const status of [
+    // Retired in migration 003 — these are the ones that would 500 on the
+    // CHECK constraint rather than being caught here.
+    "invited",
+    "joined",
+    "PENDING",
+    "",
+    null,
+    undefined,
+    ["pending"],
+  ]) {
+    assert.deepEqual(
+      parseStatusPatch({ id: 13, status }),
+      { ok: false, error: "invalid status" },
+      JSON.stringify(status),
+    );
+  }
+});
+
+test("parseStatusPatch survives a body that is not an object", () => {
+  // request.json() yields whatever the client sent; null and scalars are legal
+  // JSON and must not throw on property access.
+  for (const body of [null, undefined, 42, "pending", []]) {
+    assert.equal(parseStatusPatch(body).ok, false, JSON.stringify(body));
+  }
 });

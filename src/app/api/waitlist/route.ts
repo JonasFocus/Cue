@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { guestList, setGuestStatus } from "@/lib/db";
-import { isGuestStatus } from "@/lib/waitlist";
+import { parseStatusPatch } from "@/lib/waitlist";
 
 export const dynamic = "force-dynamic";
 
@@ -43,19 +43,13 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  const { id, status } = (body ?? {}) as { id?: unknown; status?: unknown };
-
-  // Validate server-side rather than trusting the client: the column has a
-  // CHECK constraint, but a rejected write should read as 400, not a 500.
-  if (typeof id !== "number" || !Number.isInteger(id) || id <= 0) {
-    return NextResponse.json({ error: "invalid id" }, { status: 400 });
-  }
-  if (!isGuestStatus(status)) {
-    return NextResponse.json({ error: "invalid status" }, { status: 400 });
+  const patch = parseStatusPatch(body);
+  if (!patch.ok) {
+    return NextResponse.json({ error: patch.error }, { status: 400 });
   }
 
   try {
-    const guest = await setGuestStatus(id, status);
+    const guest = await setGuestStatus(patch.id, patch.status);
     if (!guest) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }

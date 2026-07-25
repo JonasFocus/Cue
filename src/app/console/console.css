@@ -167,6 +167,17 @@
 
 /* flex: none keeps the 26px box above the 24px SC 2.5.8 floor — it was being
    squeezed to 13px wide by the row it shares with the operator email. */
+/* The console's own focus ring. design.css scopes --cue-* to .cue on <body>,
+   so the console must not borrow it — see the :not(.cx *) guard there. */
+.cx a:focus-visible,
+.cx button:focus-visible,
+.cx select:focus-visible,
+.cx input:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .cx-signout {
   display: grid;
   place-items: center;

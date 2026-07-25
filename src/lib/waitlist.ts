@@ -54,10 +54,26 @@ export function nameFromEmail(email: string): string {
   );
 }
 
-/* Used by the overview feed, which is glanceable rather than a contact list.
-   The guest list tab shows the real address — that is its whole job. */
-export function maskEmail(email: string): string {
-  const [user = "", domain = ""] = email.split("@");
-  const head = user.slice(0, 2);
-  return `${head}${"•".repeat(Math.max(user.length - 2, 1))}@${domain}`;
+export type StatusPatch =
+  | { ok: true; id: number; status: GuestStatus }
+  | { ok: false; error: "invalid id" | "invalid status" };
+
+/**
+ * Validates a guest-status PATCH body.
+ *
+ * Lives here rather than inline in the route so it can be tested without a
+ * Request, a session, or a database — the route is I/O and status-code mapping
+ * only. The column also has a CHECK constraint, but a rejected write must read
+ * as 400, not as a 500 from Postgres.
+ */
+export function parseStatusPatch(body: unknown): StatusPatch {
+  const { id, status } = (body ?? {}) as { id?: unknown; status?: unknown };
+
+  if (typeof id !== "number" || !Number.isInteger(id) || id <= 0) {
+    return { ok: false, error: "invalid id" };
+  }
+  if (!isGuestStatus(status)) {
+    return { ok: false, error: "invalid status" };
+  }
+  return { ok: true, id, status };
 }

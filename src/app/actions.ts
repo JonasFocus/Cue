@@ -99,13 +99,15 @@ export async function joinWaitlist(
    conventional X-Forwarded-For-first.
 
    Caddy sets `X-Real-IP` from {remote_host} — the TCP peer — which a client
-   cannot influence. It *appends* to X-Forwarded-For instead, and has no
-   trusted_proxies configured, so a request carrying `X-Forwarded-For: 1.2.3.4`
-   arrives as "1.2.3.4, <real ip>" and the left-most entry is whatever the
-   attacker typed. Trusting it lets anyone rotate the header to get unlimited
-   waitlist writes, and poisons the ip_hash the privacy page calls an audit
-   value. XFF is only consulted when X-Real-IP is absent (no proxy in front,
-   e.g. local dev), where it is no worse than what we had. */
+   cannot influence. X-Forwarded-For carries no such guarantee: whether a proxy
+   replaces it or appends to it is that proxy's choice, so its left-most entry
+   is only trustworthy when every hop in front is known and configured. Trusting
+   it blindly lets anyone rotate the header for unlimited waitlist writes and
+   poisons the ip_hash the privacy page calls an audit value. Today Caddy 2.11
+   happens to replace it, so this was defence in depth rather than a live hole —
+   but that is a property of the deployment, not of the code, and it changes the
+   day a CDN or a second proxy goes in front. XFF is consulted only when
+   X-Real-IP is absent (no proxy at all, e.g. local dev). */
 async function clientIp() {
   const h = await headers();
   const real = h.get("x-real-ip")?.trim();

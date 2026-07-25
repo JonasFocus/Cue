@@ -3,25 +3,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, LogOut, PenLine, Search } from "lucide-react";
 import type { ServiceHealth } from "@/lib/docker";
-import type { Guest } from "@/lib/db";
+import type { Guest, WaitlistStats } from "@/lib/db";
 import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
 
 type Probe = { ok: boolean; latencyMs: number; detail: string };
 
-// Every field below `generatedAt` is optional: the degraded 503 branch of
-// /api/health answers with probes only, and the shape is still moving.
+/* Built from the server's own types rather than hand-copied. A local copy
+   drifted once already — it kept declaring `today` and `latest` after the API
+   stopped sending them, and TypeScript could not see the lie because the fetch
+   response is `any`. Fields stay optional because a non-200 (a 502 through the
+   deploy window, say) still parses into this shape. */
 type Snapshot = {
   generatedAt: string;
-  degraded?: boolean;
-  detail?: string;
   containers?: ServiceHealth[];
   probes?: { postgres?: Probe; redis?: Probe };
-  waitlist?: {
-    total: number;
-    today: number;
-    week: number;
-    latest: { email: string; createdAt: string }[];
-  };
+  waitlist?: WaitlistStats;
 };
 
 const POLL_MS = 5000;
@@ -64,14 +60,14 @@ export function Dashboard({ operator }: { operator: string }) {
       }
 
       const body: Snapshot | null = await health.json().catch(() => null);
-      // A degraded health response is a state to render, not an error. The
-      // `degraded` flag is additive, so treat any non-ok status as degraded too.
-      if (health.ok && body && !body.degraded) {
+      // A failed health check is a state to render, not an error to throw:
+      // throwing here used to discard the guest list fetched alongside it.
+      if (health.ok && body) {
         setSnap(body);
         setDegraded(null);
       } else {
         setSnap(body?.containers || body?.probes ? body : null);
-        setDegraded(body?.detail || `health check returned ${health.status}`);
+        setDegraded(`health check returned ${health.status}`);
       }
 
       setNow(Date.now());

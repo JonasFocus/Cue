@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  alternates: { canonical: `/legal/terms` },
+  openGraph: { title: 'Terms — Cue', description: 'The terms that cover this site and the Cue waitlist.', url: `/legal/terms` },
   title: "Terms — Cue",
   description:
     "The terms for using the Cue website and waitlist while the product is still being built.",

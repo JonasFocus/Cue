@@ -182,9 +182,12 @@
   color: var(--cue-ink);
 }
 
-.cue a:focus-visible,
-.cue button:focus-visible,
-.cue summary:focus-visible,
+/* :not(.cx *) keeps the marketing accent out of the console. The .cue scope
+   sits on <body>, so without this the dark surface inherits a --cue-* token
+   the design system deliberately scopes away from authenticated surfaces. */
+.cue a:focus-visible:not(.cx *),
+.cue button:focus-visible:not(.cx *),
+.cue summary:focus-visible:not(.cx *),
 .cue-table-wrap:focus-visible {
   outline: 2px solid var(--cue-accent);
   outline-offset: 3px;
