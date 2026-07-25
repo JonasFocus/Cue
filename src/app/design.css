@@ -1604,10 +1604,14 @@
   .cue-waitlist-btn {
     grid-column: 1 / -1;
   }
+}
 
-  .cue-waitlist-msg {
-    grid-column: 1 / -1;
-  }
+/* Always in the DOM so it can announce; empty and zero-height until there is
+   an outcome. Matches the form's column so the message lines up with it. */
+.cue-waitlist-live {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 520px;
 }
 
 .cue-waitlist-name,
@@ -2419,25 +2423,16 @@
   overflow: hidden;
 }
 
+/* Static: the quota bar is a still figure in a still mock, and every call site
+   overrode the looping fill this used to run. */
 .cue-mock-progress i {
   display: block;
   width: 100%;
   height: 100%;
   border-radius: 4px;
   background: var(--cue-accent);
-  transform: scaleX(0.08);
+  transform: scaleX(0.6);
   transform-origin: left center;
-  animation: cueFill 4.5s var(--cue-ease) infinite;
-}
-
-@keyframes cueFill {
-  0% {
-    transform: scaleX(0.08);
-  }
-  70%,
-  100% {
-    transform: scaleX(0.92);
-  }
 }
 
 .cue-mock-card {

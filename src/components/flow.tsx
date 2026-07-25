@@ -44,8 +44,8 @@ export function Flow() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const current = TABS[active];
 
-  // Manual activation is not needed here — each panel is already rendered
-  // client-side, so following focus costs nothing.
+  // Automatic activation: only the selected panel renders, but it is a static
+  // client-side swap with nothing to fetch, so following focus costs nothing.
   const onTabKey = (e: React.KeyboardEvent<HTMLButtonElement>, i: number) => {
     const next =
       e.key === "ArrowRight" || e.key === "ArrowDown"

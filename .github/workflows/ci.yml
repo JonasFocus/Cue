@@ -15,6 +15,15 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npx tsc --noEmit
+      # The deploy scripts are not covered by tsc or eslint, and a syntax error
+      # in one is only discovered while it is running on the box. `bash -n`
+      # parses without executing and needs nothing installed.
+      #
+      # scripts/smoke.sh itself cannot run here: it asserts against a live
+      # deployment and needs the operator credentials, which exist only in
+      # /opt/cue/.env. deploy.sh runs it, on the box, right after the health
+      # check — that is the only place it is meaningful.
+      - run: bash -n scripts/*.sh
       - run: npm run lint
       - run: npm test
       # The deploy builds this same way. A green PR that cannot build is a

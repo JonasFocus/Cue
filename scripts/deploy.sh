@@ -223,6 +223,59 @@ main() {
     exit 1
   fi
 
+  # A healthy container only proves the process answers /api/ping. It does not
+  # prove the auth gate is shut or that sign-out revokes — both of which have
+  # shipped broken while the health check stayed green. Smoke asserts that
+  # against the running deployment, over the public URL, through Caddy.
+  #
+  # A failed assertion rolls back. The failures this catches are "the new
+  # commit is serving something it must not" (an open guest list, a session
+  # that outlives sign-out); for those, the previous commit is strictly the
+  # safer thing to be serving, and rollback is already proven by the health
+  # path. It costs a rebuild when the cause is really a Caddy or .env change
+  # that rollback cannot fix — accepted, because the alternative is leaving
+  # unmasked email addresses exposed while someone reads the log.
+  #
+  # SMOKE_EMAIL/SMOKE_PASSWORD live in /opt/cue/.env, never in the repo.
+  # Without them the signed-in half cannot run (exit 2): that is reported
+  # loudly but is not a deploy failure.
+  printf '  %-22s' "smoke"
+  smoke_log="$(mktemp)"
+  smoke_status=0
+  ( set -a; . ./.env; set +a
+    SMOKE_BASE="${SMOKE_BASE:-https://staging.cue.krevo.io}" \
+      ./scripts/smoke.sh ) >"$smoke_log" 2>&1 || smoke_status=$?
+
+  if [ "$smoke_status" -eq 0 ]; then
+    printf '\033[32mok\033[0m\n'
+    rm -f "$smoke_log"
+  elif [ "$smoke_status" -eq 2 ]; then
+    printf '\033[33mincomplete\033[0m\n'
+    echo "⚠ smoke ran unauthenticated — set SMOKE_EMAIL and SMOKE_PASSWORD in" >&2
+    echo "  /opt/cue/.env to cover sign-in, the guest list and sign-out revocation." >&2
+    rm -f "$smoke_log"
+  else
+    printf '\033[31mfailed\033[0m\n\n'
+    echo "✗ SMOKE TEST FAILED at $after — the container is healthy but the" >&2
+    echo "  deployment is not behaving. Failed assertions:" >&2
+    cat "$smoke_log" >&2
+    rm -f "$smoke_log"
+    echo >&2
+
+    # The health block already recorded $after as known-good. It is not:
+    # un-record it before rolling back, or the next deploy would treat this
+    # commit as a safe target.
+    echo "$before" >"$LAST_GOOD"
+
+    if rollback; then
+      printf '\033[33m⚠ deploy of %s failed smoke — rolled back to %s\033[0m\n' "$after" "$before" >&2
+    else
+      printf '\033[31m✗ deploy of %s failed smoke AND rollback failed — recover by hand:\033[0m\n' "$after" >&2
+      echo "    cd /opt/cue && git log --oneline -5 && ./scripts/smoke.sh" >&2
+    fi
+    exit 1
+  fi
+
   # Build cache grows ~400MB per deploy and is never reclaimed on its own. Cap it
   # by size, not age: an age filter never catches cache that is always fresh, so
   # frequent deploys would grow it without bound.

@@ -30,6 +30,19 @@ MAX_ATTEMPTS=5
 mkdir -p "$DIR"
 cd /opt/cue || exit 1
 
+# One watchdog at a time. Two overlapping runs read the same .restart-<svc>
+# stamp before either writes it, so both see the same attempt count and the
+# same `last`, and the backoff — which is the only thing stopping a restart
+# loop — is computed from stale state. A burst on 2026-07-25 drove redis from
+# attempt 1 to GAVE UP in ten seconds that way.
+#
+# Its OWN lock file, deliberately not /var/lock/cue-deploy.lock: touching that
+# one makes a deploy starting in the same window exit 75. The deploy is still
+# detected by the advisory PID marker below, exactly as before. Missing the
+# occasional check is free — the timer fires again in two minutes.
+exec 9>"$DIR/health.lock"
+flock -n 9 || exit 0
+
 log() { printf '%s  %s\n' "$(date -Is)" "$*" >>"$LOG"; }
 
 # A deploy recreates containers on purpose. Don't fight it — but do NOT test
@@ -83,6 +96,9 @@ else
     attempts=0
     last=0
     [ -f "$stamp" ] && read -r attempts last <"$stamp"
+    # A stamp truncated by a crash mid-write reads back as empty, and an empty
+    # string in the arithmetic below aborts the whole check with a bash error.
+    [[ "$attempts" =~ ^[0-9]+$ && "$last" =~ ^[0-9]+$ ]] || { attempts=0; last=0; }
     now="$(date +%s)"
 
     if [ "$attempts" -ge "$MAX_ATTEMPTS" ]; then

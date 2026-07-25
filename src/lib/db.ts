@@ -42,6 +42,27 @@ function createPool() {
    than once in production too, and a second pool is ten more connections. */
 export const pool = (globalThis.cuePool ??= createPool());
 
+/* Better Auth inserts session rows and deletes them on sign-out, but nothing
+   ever removes the ones that simply expired — a browser closed without signing
+   out leaves a row that outlives its own `expiresAt` forever.
+
+   Called from the session-create hook in auth.ts, which is the *only* moment a
+   row appears (signup is disabled, so a login is the sole writer). That bounds
+   the table at "sessions created since the last login" without a cron entry, a
+   timer in a process Next may recycle, or a second datastore.
+
+   Never throws: a failed prune must not fail the login that triggered it. */
+export async function pruneExpiredSessions(): Promise<void> {
+  try {
+    const { rowCount } = await pool.query(
+      `DELETE FROM session WHERE "expiresAt" < now()`,
+    );
+    if (rowCount) console.log(`[db] pruned ${rowCount} expired session(s)`);
+  } catch (err) {
+    console.error("[db] session prune", (err as Error).message);
+  }
+}
+
 export type WaitlistStats = {
   total: number;
   week: number;
@@ -82,9 +103,15 @@ export type GuestPage = {
   limit: number;
 };
 
-/* ponytail: fetch limit+1 to detect the overflow instead of paginating. The
-   console is a single-operator screen and the list is in the hundreds; add
-   keyset pagination (WHERE created_at < $cursor) when it stops fitting. */
+/* ponytail: fetch limit+1 to detect the overflow instead of paginating, so
+   guest #201 is currently unreachable. Deliberate — the table holds 1 row and
+   the console is one operator's screen; pagination would be code written for
+   a page nobody can reach.
+   TRIGGER: the first time `truncated` comes back true (the 201st signup), or
+   sooner if the operator needs to act on the oldest rows rather than the
+   newest. Then add keyset pagination — take a `before` ISO cursor here, use
+   `WHERE created_at < $2` with the existing waitlist_created_at_idx, and pass
+   the last row's createdAt as ?before= from the console. */
 export async function guestList(limit = 200): Promise<GuestPage> {
   const { rows } = await pool.query<{
     id: string;

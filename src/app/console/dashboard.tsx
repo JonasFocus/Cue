@@ -6,6 +6,12 @@ import type { ServiceHealth } from "@/lib/docker";
 import type { Guest, WaitlistStats } from "@/lib/db";
 import type { Probe } from "@/app/api/health/route";
 import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
+import {
+  STATUS_SELECT_INITIAL,
+  statusSelectStep,
+  statusSelectValue,
+  type StatusSelectEvent,
+} from "@/lib/console";
 
 /* Built from the server's own types rather than hand-copied. A local copy
    drifted once already — it kept declaring `today` and `latest` after the API
@@ -29,6 +35,8 @@ export function Dashboard({ operator }: { operator: string }) {
   const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState<string | null>(null);
+  // Refreshed on each poll, not on a clock: it only feeds a relative-time
+  // tooltip, and a 1 Hz tick re-rendered every row and every select for it.
   const [now, setNow] = useState(0);
   const inFlight = useRef(false);
   // A poll that lands mid-edit would overwrite the optimistic value with the
@@ -128,11 +136,9 @@ export function Dashboard({ operator }: { operator: string }) {
   useEffect(() => {
     const first = setTimeout(load, 0);
     const poll = setInterval(load, POLL_MS);
-    const clock = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearTimeout(first);
       clearInterval(poll);
-      clearInterval(clock);
     };
   }, [load]);
 
@@ -181,18 +187,19 @@ export function Dashboard({ operator }: { operator: string }) {
           </button>
         </nav>
 
-        {error && (
-          <div className="cx-error" role="alert">
-            {error}
-          </div>
-        )}
+        {/* One region, always in the DOM, contents swapped. A `role="status"`
+            that mounts alongside its own text is announced unreliably: the
+            region has to exist before the change for AT to notice it. */}
+        <div className="cx-live" role="status" aria-live="polite">
+          {error && <div className="cx-error">{error}</div>}
 
-        {degraded && (
-          <div className="cx-degraded" role="status">
-            Health reporting is degraded — {degraded}. The guest list below is
-            unaffected. Retrying every {POLL_MS / 1000}s.
-          </div>
-        )}
+          {degraded && (
+            <div className="cx-degraded">
+              Health reporting is degraded — {degraded}. The guest list below is
+              unaffected. Retrying every {POLL_MS / 1000}s.
+            </div>
+          )}
+        </div>
 
         <main>
           {tab === "overview" ? (
@@ -473,10 +480,9 @@ function GuestList({
 }
 
 /**
- * A native <select> writes to the database, so it must not PATCH on every
- * change event: arrowing from Pending to Blacklisted fires three intermediate
- * changes and would persist each one. Keyboard edits are held and committed on
- * Enter or blur; mouse selection still commits the moment an option is picked.
+ * The decision of whether and what to write lives in `statusSelectStep`
+ * (src/lib/console.ts) so it can be tested without a DOM. This component is
+ * the wiring: DOM events in, machine state and PATCHes out.
  */
 function StatusSelect({
   guest,
@@ -485,28 +491,25 @@ function StatusSelect({
   guest: Guest;
   onStatus: (id: number, status: GuestStatus) => void;
 }) {
-  // Uncommitted keyboard selection. Null means "show the stored status", so a
-  // poll or a revert flows straight through without a sync effect.
+  // Only `pending` affects the render; the whole machine state is mirrored in
+  // a ref because commit runs from a timeout with a stale closure.
   const [pending, setPending] = useState<GuestStatus | null>(null);
-  // Mirrored in a ref because commit runs from a timeout with a stale closure.
-  const pendingRef = useRef<GuestStatus | null>(null);
-  const keyboard = useRef(false);
-  const value = pending ?? guest.status;
+  const machine = useRef(STATUS_SELECT_INITIAL);
 
-  const commit = useCallback(() => {
-    const next = pendingRef.current;
-    pendingRef.current = null;
-    setPending(null);
-    if (next && next !== guest.status) onStatus(guest.id, next);
-  }, [guest.id, guest.status, onStatus]);
+  // A function declaration, not a useCallback: it calls itself for the
+  // deferred half of an Enter press, and a <select>'s handlers gain nothing
+  // from a stable identity.
+  function apply(event: StatusSelectEvent) {
+    const step = statusSelectStep(machine.current, guest.status, event);
+    const before = machine.current;
+    machine.current = step.state;
+    if (step.state.pending !== before.pending) setPending(step.state.pending);
+    if (step.write) onStatus(guest.id, step.write);
+    // The change event for an Enter selection fires after the key handler.
+    if (step.deferCommit) setTimeout(() => apply({ type: "commit" }), 0);
+  }
 
-  /* Escape abandons the selection. Without this the uncommitted value survived
-     every 5s poll, so the console could display `blacklisted` for a guest the
-     database still had as `pending`, with nothing on screen to say so. */
-  const abandon = useCallback(() => {
-    pendingRef.current = null;
-    setPending(null);
-  }, []);
+  const value = statusSelectValue({ pending, keyboard: false }, guest.status);
 
   return (
     <label
@@ -518,25 +521,10 @@ function StatusSelect({
       <select
         value={value}
         aria-label={`Status for ${guest.name}`}
-        onPointerDown={() => {
-          keyboard.current = false;
-        }}
-        onKeyDown={(e) => {
-          keyboard.current = true;
-          // The change event for an Enter selection fires after this handler.
-          if (e.key === "Enter") setTimeout(commit, 0);
-          if (e.key === "Escape") abandon();
-        }}
-        onChange={(e) => {
-          const next = e.target.value as GuestStatus;
-          if (keyboard.current) {
-            pendingRef.current = next;
-            setPending(next);
-          } else {
-            onStatus(guest.id, next);
-          }
-        }}
-        onBlur={commit}
+        onPointerDown={() => apply({ type: "pointerdown" })}
+        onKeyDown={(e) => apply({ type: "keydown", key: e.key })}
+        onChange={(e) => apply({ type: "change", value: e.target.value as GuestStatus })}
+        onBlur={() => apply({ type: "commit" })}
       >
         {GUEST_STATUSES.map((s) => (
           <option key={s} value={s}>
@@ -554,8 +542,33 @@ function avatarStyle(seed: string) {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
   return {
-    background: `linear-gradient(140deg, hsl(${h} 68% 60%) 0%, hsl(${(h + 46) % 360} 66% 50%) 100%)`,
+    background: `linear-gradient(140deg, ${legible(h, 68)} 0%, ${legible((h + 46) % 360, 66)} 100%)`,
   };
+}
+
+/* The initials are white at 10.5px, so both gradient stops have to clear 4.5:1
+   against white. A fixed lightness cannot: hue 60 at 60% lightness gives
+   1.43:1. Darken per hue instead — hue is what identifies the guest, lightness
+   is free. Blues barely move, yellows and greens land near 26%. */
+const MAX_LUM = 1.05 / 5 - 0.05; // 5:1 against white, a little over the 4.5 floor
+
+function legible(h: number, s: number) {
+  let l = 60;
+  while (l > 10 && luminance(h, s, l) > MAX_LUM) l -= 1;
+  return `hsl(${h} ${s}% ${l}%)`;
+}
+
+/** WCAG relative luminance of an HSL colour. */
+function luminance(h: number, s: number, l: number) {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const channel = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const v = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(8) + 0.0722 * channel(4);
 }
 
 function initials(name: string) {

@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: "Will I be able to use my own agreement wording?",
-    a: "Yes — start from a template and edit it, or paste in the terms you already use. Saved templates and custom branding are planned for the Creator plan.",
+    a: "Yes — you will start from a template and edit it, or paste in the terms you already use. Saved templates and custom branding are planned for the Creator plan.",
   },
 ];
 
@@ -143,12 +143,8 @@ export function Footer() {
           {FOOTER_LINKS.map((col) => (
             <div className="cue-footer-col" key={col.heading}>
               {/* h3, not h4: the page has no h3 above it, so h4 skipped a
-                  level. design.css still styles `.cue-footer-col h4`, hence the
-                  inline copy of those three rules — drop it when that selector
-                  is renamed. */}
-              <h3>
-                {col.heading}
-              </h3>
+                  level. design.css styles `.cue-footer-col h3` to match. */}
+              <h3>{col.heading}</h3>
               <ul>
                 {col.links.map((l) => (
                   <li key={l.href}>

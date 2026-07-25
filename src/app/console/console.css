@@ -165,8 +165,6 @@
   color: var(--faint);
 }
 
-/* flex: none keeps the 26px box above the 24px SC 2.5.8 floor — it was being
-   squeezed to 13px wide by the row it shares with the operator email. */
 /* The console's own focus ring. design.css scopes --cue-* to .cue on <body>,
    so the console must not borrow it — see the :not(.cx *) guard there. */
 .cx a:focus-visible,
@@ -178,6 +176,8 @@
   border-radius: 4px;
 }
 
+/* flex: none keeps the 26px box above the 24px SC 2.5.8 floor — it was being
+   squeezed to 13px wide by the row it shares with the operator email. */
 .cx-signout {
   display: grid;
   place-items: center;

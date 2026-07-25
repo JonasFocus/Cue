@@ -146,7 +146,7 @@ export function MockApp({ compact = false }: { compact?: boolean }) {
                   <span>3 of 5</span>
                 </div>
                 <div className="cue-mock-progress" style={{ margin: "7px 0 9px" }}>
-                  <i style={{ transform: "scaleX(0.6)", animation: "none" }} />
+                  <i />
                 </div>
                 <span className="cue-mock-upgrade">Upgrade</span>
               </div>
@@ -246,7 +246,7 @@ export function MockAllowance() {
       </div>
       <div className="cue-mock-quota">
         <div className="cue-mock-progress">
-          <i style={{ transform: "scaleX(0.6)", animation: "none" }} />
+          <i />
         </div>
         <div className="cue-mock-quota-row">
           <span>3 sent</span>

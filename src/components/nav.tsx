@@ -76,7 +76,9 @@ export function Nav() {
               ref={toggleRef}
               className="cue-nav-toggle"
               aria-expanded={open}
-              aria-controls="cue-nav-sheet"
+              // The sheet only exists while open, and aria-controls pointing
+              // at a missing id is worse than no aria-controls at all.
+              aria-controls={open ? "cue-nav-sheet" : undefined}
               aria-label={open ? "Close menu" : "Open menu"}
               onClick={() => setOpen((v) => !v)}
             >
