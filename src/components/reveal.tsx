@@ -18,14 +18,27 @@ export function Reveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      el.classList.add("is-visible");
+      return;
+    }
+
     const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add("is-visible");
-          io.disconnect();
-        }
+        if (!entry.isIntersecting) return;
+        // Promote for the enter only — drop after the transition finishes.
+        el.style.willChange = "transform, opacity";
+        el.classList.add("is-visible");
+        io.disconnect();
+        const clear = () => {
+          el.style.willChange = "";
+          el.removeEventListener("transitionend", clear);
+        };
+        el.addEventListener("transitionend", clear);
       },
-      { rootMargin: "0px 0px -10% 0px", threshold: 0.1 },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
     );
     io.observe(el);
     return () => io.disconnect();

@@ -17,6 +17,7 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
+import { AnimHost } from "./anim-host";
 
 /* ponytail: product shots are CSS/DOM, not images — no asset pipeline, and they
    restyle with the tokens. Swap for real screenshots once the app UI exists. */
@@ -96,7 +97,7 @@ const FILTERS = ["All", "Awaiting", "Signed", "Drafts"];
 /** The agreement workspace. `compact` trims it to a small feature tile. */
 export function MockApp({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="cue-mock" aria-hidden>
+    <AnimHost className="cue-mock" aria-hidden>
       <div className="cue-mock-body">
         <div className="cue-mock-side">
           <span className="cue-mock-ws">
@@ -145,7 +146,7 @@ export function MockApp({ compact = false }: { compact?: boolean }) {
                   <span>3 of 5</span>
                 </div>
                 <div className="cue-mock-progress" style={{ margin: "7px 0 9px" }}>
-                  <i style={{ width: "60%", animation: "none" }} />
+                  <i style={{ transform: "scaleX(0.6)", animation: "none" }} />
                 </div>
                 <span className="cue-mock-upgrade">Upgrade</span>
               </div>
@@ -231,7 +232,7 @@ export function MockApp({ compact = false }: { compact?: boolean }) {
           )}
         </div>
       </div>
-    </div>
+    </AnimHost>
   );
 }
 
@@ -245,7 +246,7 @@ export function MockAllowance() {
       </div>
       <div className="cue-mock-quota">
         <div className="cue-mock-progress">
-          <i style={{ width: "60%", animation: "none" }} />
+          <i style={{ transform: "scaleX(0.6)", animation: "none" }} />
         </div>
         <div className="cue-mock-quota-row">
           <span>3 sent</span>

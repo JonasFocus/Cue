@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu, PenLine, X } from "lucide-react";
 
 const LINKS = [
@@ -13,17 +13,25 @@ const LINKS = [
 
 export function Nav() {
   const [open, setOpen] = useState(false);
-  const [stuck, setStuck] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const onScroll = () => setStuck(window.scrollY > 8);
+    const header = headerRef.current;
+    if (!header) return;
+    let stuck = false;
+    const onScroll = () => {
+      const next = window.scrollY > 8;
+      if (next === stuck) return;
+      stuck = next;
+      header.dataset.stuck = String(next);
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
-    <header className="cue-nav" data-stuck={stuck}>
+    <header className="cue-nav" data-stuck="false" ref={headerRef}>
       <div className="cue-shell">
         <div className="cue-nav-inner">
           <Link href="/" className="cue-brand">
@@ -42,7 +50,7 @@ export function Nav() {
           </nav>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <a href="#pricing" className="cue-btn cue-btn-dark">
+            <a href="#waitlist" className="cue-btn cue-btn-dark">
               Create your first Cue
             </a>
             <button

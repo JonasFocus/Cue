@@ -1,8 +1,9 @@
 import { Check, Send, ShieldCheck, Smartphone } from "lucide-react";
+import { AnimHost } from "./anim-host";
 
-const EASE = "cubic-bezier(0.2,0.7,0.2,1)";
+const EASE = "var(--cue-ease)";
 const rise = (delay: number) => ({
-  animation: `cueRise 800ms ${EASE} ${delay}ms both`,
+  animation: `cueRise 560ms ${EASE} ${delay}ms both`,
 });
 
 /* The hero visual is one CSS timeline (--cue-loop) playing the whole lifecycle:
@@ -35,7 +36,7 @@ const SIGNATURE =
 
 function SigningCue() {
   return (
-    <div className="cue-sign" aria-hidden>
+    <AnimHost className="cue-sign" aria-hidden>
       <div className="cue-sign-card">
         <div className="cue-sign-head">
           <span className="cue-sign-avatar">HW</span>
@@ -103,7 +104,7 @@ function SigningCue() {
           {label}
         </span>
       ))}
-    </div>
+    </AnimHost>
   );
 }
 
@@ -114,24 +115,24 @@ export function Hero() {
       <div className="cue-hero-grid" aria-hidden />
 
       <div className="cue-shell cue-hero-copy" style={{ position: "relative" }}>
-        <div style={rise(60)}>
+        <div style={rise(40)}>
           <span className="cue-badge">
             <span>New</span>
             <span>Built for photographers and videographers</span>
           </span>
         </div>
 
-        <h1 className="cue-h1" style={rise(160)}>
+        <h1 className="cue-h1" style={rise(120)}>
           {"Get the agreement\nout of the way."}
         </h1>
 
-        <p className="cue-hero-sub" style={rise(260)}>
+        <p className="cue-hero-sub" style={rise(200)}>
           Create a polished client agreement, send a secure signing link, and
           keep the signed copy in one place.
         </p>
 
-        <div style={{ marginTop: 30, ...rise(360) }}>
-          <a href="#pricing" className="cue-btn cue-btn-dark">
+        <div style={{ marginTop: 30, ...rise(280) }}>
+          <a href="#waitlist" className="cue-btn cue-btn-dark">
             Create your first Cue
           </a>
           <p className="cue-hero-note">
@@ -139,7 +140,7 @@ export function Hero() {
           </p>
         </div>
 
-        <div style={rise(480)}>
+        <div style={rise(380)}>
           <SigningCue />
         </div>
       </div>

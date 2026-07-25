@@ -142,24 +142,43 @@ const STEPS = [
 
 export function Steps() {
   const railRef = useRef<HTMLDivElement>(null);
-  const [progress, setProgress] = useState(0);
+  const fillRef = useRef<HTMLDivElement>(null);
+  const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
     const rail = railRef.current;
-    if (!rail) return;
+    const fill = fillRef.current;
+    if (!rail || !fill) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const count = STEPS.length;
 
+    // Drive the rail + step dots via the DOM so scroll never re-renders mocks.
     let frame = 0;
+    let lastProgress = -1;
+    const apply = (progress: number) => {
+      if (Math.abs(progress - lastProgress) < 0.001) return;
+      lastProgress = progress;
+      fill.style.transform = `scaleY(${progress})`;
+      for (let i = 0; i < count; i++) {
+        const step = stepRefs.current[i];
+        if (!step) continue;
+        const active = progress >= (i + 0.35) / count;
+        if (step.dataset.active !== String(active)) {
+          step.dataset.active = String(active);
+        }
+      }
+    };
+
     const update = () => {
       frame = 0;
       if (reduced) {
-        setProgress(1);
+        apply(1);
         return;
       }
       const rect = rail.getBoundingClientRect();
       const anchor = window.innerHeight * 0.55;
       const ratio = (anchor - rect.top) / Math.max(rect.height, 1);
-      setProgress(Math.min(1, Math.max(0, ratio)));
+      apply(Math.min(1, Math.max(0, ratio)));
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
@@ -187,17 +206,16 @@ export function Steps() {
 
         <div className="cue-steps" ref={railRef}>
           <div className="cue-steps-rail" aria-hidden>
-            <div
-              className="cue-steps-rail-fill"
-              style={{ height: `${progress * 100}%` }}
-            />
+            <div className="cue-steps-rail-fill" ref={fillRef} />
           </div>
 
           {STEPS.map((step, i) => (
             <div
               className="cue-step"
               key={step.label}
-              data-active={progress >= (i + 0.35) / STEPS.length}
+              ref={(el) => {
+                stepRefs.current[i] = el;
+              }}
             >
               <div className="cue-step-label">
                 <span className="cue-step-dot" aria-hidden />
