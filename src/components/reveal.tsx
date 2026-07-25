@@ -20,7 +20,7 @@ export function Reveal({
     if (!el) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
+    if (reduce || !("IntersectionObserver" in window)) {
       el.classList.add("is-visible");
       return;
     }

@@ -1,0 +1,2 @@
+[    2463ms] [ERROR] Failed to load resource: the server responded with a status of 415 () @ https://staging.cue.krevo.io/api/auth/sign-out:0
+[   29680ms] [ERROR] Failed to load resource: the server responded with a status of 415 () @ https://staging.cue.krevo.io/api/auth/sign-out:0

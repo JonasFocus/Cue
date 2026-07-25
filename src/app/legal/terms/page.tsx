@@ -55,9 +55,9 @@ export default function TermsPage() {
         <p style={body}>
           Submit your own email address, not someone else&apos;s. Do not attempt
           to break, overload, or probe the site or the form; the form is
-          rate-limited and abusive traffic gets blocked. You can ask to be
+          rate-limited on a best-effort basis. You can ask to be
           removed from the list at any time by emailing{" "}
-          <a href="mailto:hello@cue.krevo.io">hello@cue.krevo.io</a>.
+          <a className="cue-link" href="mailto:hello@krevo.io">hello@krevo.io</a>.
         </p>
 
         <h2 style={heading}>No warranty</h2>
@@ -86,7 +86,7 @@ export default function TermsPage() {
           These terms will be rewritten before Cue opens to customers, and again
           when there is a service to attach them to. The date at the top shows
           the current version. Questions go to{" "}
-          <a href="mailto:hello@cue.krevo.io">hello@cue.krevo.io</a>.
+          <a className="cue-link" href="mailto:hello@krevo.io">hello@krevo.io</a>.
         </p>
       </div>
     </section>

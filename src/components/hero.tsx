@@ -117,8 +117,10 @@ export function Hero() {
       <div className="cue-shell cue-hero-copy" style={{ position: "relative" }}>
         <div style={rise(40)}>
           <span className="cue-badge">
-            <span>Beta</span>
-            <span>Built for photographers and videographers</span>
+            {/* Not "Beta": there is no build anyone can join. The only thing
+                this page does today is take a waitlist address. */}
+            <span>In development</span>
+            <span>Being built for photographers and videographers</span>
           </span>
         </div>
 
@@ -127,16 +129,19 @@ export function Hero() {
         </h1>
 
         <p className="cue-hero-sub" style={rise(200)}>
-          Create a polished client agreement, send a secure signing link, and
-          keep the signed copy in one place.
+          Cue will create a polished client agreement, send a secure signing
+          link, and keep the signed copy in one place. We are building it now.
         </p>
 
         <div style={{ marginTop: 30, ...rise(280) }}>
+          {/* "Create your first Cue" stays the CTA for launch. Until there is
+              something to create, the only honest action is interest. */}
           <a href="#waitlist" className="cue-btn cue-btn-dark">
-            Create your first Cue
+            Join the waitlist
           </a>
           <p className="cue-hero-note">
-            Free for your first five Cues. No card needed.
+            Nothing to sign in to yet. Your first five Cues will be free when it
+            opens — no card.
           </p>
         </div>
 

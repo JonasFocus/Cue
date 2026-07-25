@@ -17,3 +17,6 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm test
+      # The deploy builds this same way. A green PR that cannot build is a
+      # failed deploy on the box, which is the expensive place to find out.
+      - run: npm run build

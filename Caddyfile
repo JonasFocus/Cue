@@ -5,12 +5,16 @@
 staging.cue.krevo.io {
 	encode zstd gzip
 
-	# The console is not for search engines, and neither is staging as a whole.
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
-		X-Robots-Tag "noindex, nofollow"
+
+		# The console is not for search engines, and neither is staging as a
+		# whole. Hardcoding noindex here would mean editing this file to launch
+		# production — exactly the edit that gets forgotten and de-indexes a
+		# launch. Production sets CUE_ROBOTS=all in /opt/cue/.env instead.
+		X-Robots-Tag "{$CUE_ROBOTS:noindex, nofollow}"
 
 		# Without HSTS only the 308 forces HTTPS, and an on-path attacker strips
 		# that on first contact — before any cookie for the operator login is
@@ -29,6 +33,7 @@ staging.cue.krevo.io {
 
 		-Server
 		-X-Powered-By
+		-Via # Caddy adds this on every proxied response and names itself
 	}
 
 	reverse_proxy app:3000 {

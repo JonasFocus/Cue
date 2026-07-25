@@ -14,6 +14,7 @@ const LINKS = [
 export function Nav() {
   const [open, setOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -33,7 +34,11 @@ export function Nav() {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      // Closing unmounts the sheet, which drops focus to <body>. Put it back on
+      // the control that opened it.
+      toggleRef.current?.focus();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -68,6 +73,7 @@ export function Nav() {
             </a>
             <button
               type="button"
+              ref={toggleRef}
               className="cue-nav-toggle"
               aria-expanded={open}
               aria-controls="cue-nav-sheet"

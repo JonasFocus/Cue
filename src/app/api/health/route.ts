@@ -13,40 +13,28 @@ export type Probe = {
   detail: string;
 };
 
-const NO_STATS: WaitlistStats = { total: 0, today: 0, week: 0, latest: [] };
+const NO_STATS: WaitlistStats = { total: 0, week: 0 };
 
 export async function GET() {
   // Infrastructure topology is not public. Same gate as the console page.
+  //
   // Better Auth reads the session out of Postgres, so this throws during the
-  // exact outage the dashboard exists to report. Degrade instead of 500ing.
+  // exact outage the dashboard exists to report — but without the session store
+  // an operator is indistinguishable from a stranger, and this route must then
+  // assume stranger. It answers 401 either way: a caller who cannot be
+  // authenticated learns nothing about what is running, which is the whole
+  // justification for gating the route. The 500 the try/catch prevents is the
+  // real bug; the previous 503 branch published live Postgres up/down and
+  // latency to anonymous callers, and its only consumer never rendered it.
   let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
-  let sessionUnavailable = false;
   try {
     session = await auth.api.getSession({ headers: await headers() });
   } catch (err) {
-    sessionUnavailable = true;
     console.error("[health] session lookup failed", (err as Error).message);
   }
 
   if (!session) {
-    if (!sessionUnavailable) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-    // We cannot tell an operator from a stranger without the session store, so
-    // this branch must assume stranger: probe results only, no container list,
-    // no waitlist data, and no Postgres error text (it carries the DSN).
-    const postgres = await probePostgres();
-    return NextResponse.json(
-      {
-        generatedAt: new Date().toISOString(),
-        degraded: true,
-        detail: "session store unreachable",
-        probes: {
-          postgres: { ok: postgres.ok, latencyMs: postgres.latencyMs, detail: "" },
-        },
-      },
-      { status: 503, headers: { "cache-control": "no-store" } },
-    );
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const [containers, postgres, cache, waitlist] = await Promise.all([

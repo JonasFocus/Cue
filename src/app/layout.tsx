@@ -19,8 +19,10 @@ const SHARE_DESCRIPTION =
 
 /* Must reflect where this instance is actually served. Hardcoding the
    production domain made staging advertise a hostname with no DNS record, so
-   every shared staging link previewed as an address that resolves nowhere. */
-const SITE_URL = process.env.PUBLIC_URL ?? "https://cue.krevo.io";
+   every shared staging link previewed as an address that resolves nowhere.
+   `cue.krevo.io` still has no A record, so it cannot be the fallback either —
+   staging is the only host that resolves today. */
+const SITE_URL = process.env.PUBLIC_URL ?? "https://staging.cue.krevo.io";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

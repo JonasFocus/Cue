@@ -92,7 +92,7 @@ run "origin/main" git push origin main
 # which used to be able to die between starting containers and migrating. The
 # heredoc is quoted so nothing expands locally; the flag arrives as $1.
 ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 \
-  "$HOST" bash -s -- "$([ "$VERBOSE" = true ] && echo '--verbose')" <<'REMOTE'
+  "$HOST" bash -s -- "$([ "$VERBOSE" = true ] && echo '--verbose')" "$HOST" <<'REMOTE'
 set -uo pipefail
 log=/var/log/cue-deploy.log
 status=/var/log/cue-deploy.status
@@ -106,7 +106,31 @@ setsid --fork bash -c "/opt/cue/scripts/deploy.sh ${1:-} >'$log' 2>&1; echo \$? 
 #   ssh root@… 'tail -f /var/log/cue-deploy.log'
 tail -f -n +1 "$log" 2>/dev/null &
 tail_pid=$!
-while [ ! -f "$status" ]; do sleep 1; done
+
+# A deploy that is killed (OOM, SIGKILL, box reboot) never writes its status
+# file, and waiting on it forever leaves the operator staring at a dead
+# terminal with no idea the deploy is gone. Give up on either signal: the
+# process disappearing, or 30 minutes — well past the ~3 min a real deploy
+# takes, including a rollback rebuild.
+host="${2:-the box}"
+give_up() {
+  kill "$tail_pid" 2>/dev/null || true
+  echo >&2
+  echo "✗ $1" >&2
+  echo "  Check it:  ssh $host 'tail -50 /var/log/cue-deploy.log; cd /opt/cue && docker compose ps'" >&2
+  exit 1
+}
+
+waited=0
+while [ ! -f "$status" ]; do
+  sleep 1
+  waited=$((waited + 1))
+  # 15s of grace so this cannot fire before the deploy has even started.
+  if [ "$waited" -ge 15 ] && ! pgrep -f '/opt/cue/scripts/deploy.sh' >/dev/null 2>&1; then
+    give_up "the deploy process is gone and never wrote a result."
+  fi
+  [ "$waited" -ge 1800 ] && give_up "no result after 30 minutes — the deploy is stuck or dead."
+done
 sleep 1
 kill "$tail_pid" 2>/dev/null || true
 exit "$(cat "$status")"

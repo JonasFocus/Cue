@@ -38,9 +38,24 @@ export async function joinWaitlist(
     return { status: "error", message: "That email doesn't look right." };
   }
 
+  // An unsalted — or publicly-salted — SHA-256 of an IPv4 address is reversible
+  // by brute force in seconds, so a default salt would make `ip_hash` personal
+  // data wearing a hash costume, and the privacy page promises otherwise.
+  // Refused here rather than thrown at module scope: `next build` imports this
+  // file to collect page data, and a throw would break the build instead of the
+  // one request that actually needs the secret.
+  const salt = process.env.IP_SALT;
+  if (!salt) {
+    console.error("[waitlist] IP_SALT is not set — refusing to store a signup");
+    return {
+      status: "error",
+      message: "Something broke on our end. Try again in a moment.",
+    };
+  }
+
   const ip = await clientIp();
   const ipHash = createHash("sha256")
-    .update(`${ip}:${process.env.IP_SALT ?? "cue"}`)
+    .update(`${ip}:${salt}`)
     .digest("hex")
     .slice(0, 32);
 
@@ -53,6 +68,11 @@ export async function joinWaitlist(
     await pool.query(
       `INSERT INTO waitlist (email, name, ip_hash, user_agent)
             VALUES ($1, NULLIF($2, ''), $3, $4)
+       -- Infers waitlist_email_key (001), not waitlist_email_lower_key (004).
+       -- Both are kept: the check constraint pins email = lower(email), so they
+       -- are equivalent, and the duplicate index costs nothing at this size.
+       -- Whoever drops waitlist_email_key must change this to
+       -- ON CONFLICT (lower(email)) in the SAME deploy, or every signup 42P10s.
        ON CONFLICT (email) DO UPDATE
               SET name = COALESCE(waitlist.name, EXCLUDED.name)`,
       [
@@ -75,10 +95,22 @@ export async function joinWaitlist(
   return { status: "ok", message: "You're on the list." };
 }
 
+/* The header order here is the whole rate limit. Do not "simplify" it to the
+   conventional X-Forwarded-For-first.
+
+   Caddy sets `X-Real-IP` from {remote_host} — the TCP peer — which a client
+   cannot influence. It *appends* to X-Forwarded-For instead, and has no
+   trusted_proxies configured, so a request carrying `X-Forwarded-For: 1.2.3.4`
+   arrives as "1.2.3.4, <real ip>" and the left-most entry is whatever the
+   attacker typed. Trusting it lets anyone rotate the header to get unlimited
+   waitlist writes, and poisons the ip_hash the privacy page calls an audit
+   value. XFF is only consulted when X-Real-IP is absent (no proxy in front,
+   e.g. local dev), where it is no worse than what we had. */
 async function clientIp() {
   const h = await headers();
-  // Caddy sets X-Forwarded-For; the left-most entry is the original client.
+  const real = h.get("x-real-ip")?.trim();
+  if (real) return real;
   const forwarded = h.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]!.trim();
-  return h.get("x-real-ip") ?? "unknown";
+  return "unknown";
 }

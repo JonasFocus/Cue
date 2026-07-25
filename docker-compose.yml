@@ -26,6 +26,21 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    environment:
+      # Staging keeps the default. Production sets CUE_ROBOTS=all in .env.
+      CUE_ROBOTS: "${CUE_ROBOTS:-noindex, nofollow}"
+    # Caddy answers on its own admin API long before it can usefully proxy, but
+    # without a healthcheck a wedged Caddy reports "running" and the watchdog
+    # will never restart it — the one service whose failure takes the whole site
+    # down. `depends_on` stays condition-less on purpose: lb_try_duration makes
+    # Caddy hold requests until the app answers, so gating startup on app health
+    # would only turn a brief 502 window into a fully dark site.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       - app
     networks: [edge]
@@ -42,8 +57,8 @@ services:
     # a leak to be visible in the console before the cgroup kills it.
     mem_limit: 768m
     volumes:
-      # Written by the host health watchdog (cue-health.timer), read-only here
-      # so the console can surface the last check without a socket or a cron.
+      # Written by the host health watchdog (cue-health.timer). Provisioned
+      # read-only for a future console panel — nothing in src/ reads it today.
       - /var/lib/cue:/var/lib/cue:ro
     environment:
       NODE_ENV: production

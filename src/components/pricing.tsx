@@ -16,7 +16,7 @@ const PLANS = [
       "Final PDF on every signature",
       "Full audit trail",
     ],
-    cta: "Create your first Cue",
+    cta: "Join the waitlist",
     tone: "dark",
   },
   {
@@ -90,8 +90,8 @@ export function Pricing() {
           <div className="cue-eyebrow-block">
             <h2 className="cue-h2">{"Start free,\npay when it sticks"}</h2>
             <p className="cue-lede">
-              Five Cues free, no card required. The allowance is a total, not a
-              monthly reset.
+              Planned pricing, not live yet. Five Cues free, no card required —
+              the allowance is a total, not a monthly reset.
             </p>
           </div>
         </Reveal>

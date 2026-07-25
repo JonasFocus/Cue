@@ -1,0 +1,4 @@
+[  134509ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://staging.cue.krevo.io/api/waitlist:0
+[  134551ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://staging.cue.krevo.io/api/waitlist:0
+[  134593ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://staging.cue.krevo.io/api/waitlist:0
+[  134631ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://staging.cue.krevo.io/api/waitlist:0

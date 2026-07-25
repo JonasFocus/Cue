@@ -1,0 +1,466 @@
+- generic [active] [ref=f8e1]:
+  - link "Skip to content" [ref=f8e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=f8e3]:
+    - generic [ref=f8e5]:
+      - link [ref=f8e6] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=f8e10]:
+        - link "Features" [ref=f8e11] [cursor=pointer]:
+          - /url: "#features"
+        - link "Pricing" [ref=f8e12] [cursor=pointer]:
+          - /url: "#pricing"
+        - link "How it works" [ref=f8e13] [cursor=pointer]:
+          - /url: "#steps"
+        - link "FAQ" [ref=f8e14] [cursor=pointer]:
+          - /url: "#faq"
+      - link "Join the waitlist" [ref=f8e16] [cursor=pointer]:
+        - /url: "#waitlist"
+  - main [ref=f8e17]:
+    - generic [ref=f8e19]:
+      - generic [ref=f8e21]:
+        - generic [ref=f8e22]: Beta
+        - generic [ref=f8e23]: Built for photographers and videographers
+      - heading "Get the agreement out of the way." [level=1] [ref=f8e24]
+      - paragraph [ref=f8e25]: Create a polished client agreement, send a secure signing link, and keep the signed copy in one place.
+      - generic [ref=f8e26]:
+        - link "Create your first Cue" [ref=f8e27] [cursor=pointer]:
+          - /url: "#waitlist"
+        - paragraph [ref=f8e28]: Free for your first five Cues. No card needed.
+      - generic [ref=f8e30]:
+        - generic [ref=f8e31]:
+          - generic [ref=f8e32]:
+            - generic [ref=f8e33]: HW
+            - generic [ref=f8e34]:
+              - generic [ref=f8e35]: Harper & Wells
+              - generic [ref=f8e36]: Wedding agreement · 4 pages
+            - generic [ref=f8e37]:
+              - generic [ref=f8e38]: Draft
+              - generic [ref=f8e39]: Sent
+              - generic [ref=f8e40]: Signed
+          - generic [ref=f8e46]: Client signature
+          - generic [ref=f8e48]:
+            - generic [ref=f8e49]:
+              - text: Cue sent
+              - generic [ref=f8e53]: Jun 12
+            - generic [ref=f8e54]:
+              - text: Opened by client
+              - generic [ref=f8e58]: Jun 13
+            - generic [ref=f8e59]:
+              - text: Consent recorded
+              - generic [ref=f8e63]: Jun 14
+            - generic [ref=f8e64]:
+              - text: Signed and sealed
+              - generic [ref=f8e68]: Just now
+        - generic [ref=f8e69]: Signing link sent
+        - generic [ref=f8e73]: Opened on iPhone
+        - generic [ref=f8e76]: PDF sealed · a91f…7c2
+    - generic [ref=f8e83]:
+      - paragraph [ref=f8e84]: Agreements live in email threads, scanned PDFs, and screenshots on a phone. Chasing a signature costs a day you did not have.
+      - paragraph [ref=f8e85]: Send the Cue. Get the yes. Keep the record.
+      - generic [ref=f8e86]:
+        - generic [ref=f8e87]:
+          - generic [ref=f8e88]: HW
+          - text: Harper & Wells
+        - generic [ref=f8e89]:
+          - generic [ref=f8e90]: Sent
+          - generic [ref=f8e92]: Opened
+          - generic [ref=f8e96]: Signed
+    - generic [ref=f8e101]:
+      - generic [ref=f8e103]:
+        - heading "Everything the agreement needs to be" [level=2] [ref=f8e104]
+        - paragraph [ref=f8e105]: From inquiry to signed agreement, without the paperwork feeling like paperwork.
+      - generic [ref=f8e107]:
+        - generic [ref=f8e108]:
+          - heading "Made For Creatives" [level=3] [ref=f8e114]
+          - paragraph [ref=f8e115]: Built around the moments before a shoot, not enterprise document workflows.
+        - generic [ref=f8e116]:
+          - heading "Fast To Send" [level=3] [ref=f8e121]
+          - paragraph [ref=f8e122]: Templates and saved details cut the repetitive setup down to a minute.
+        - generic [ref=f8e123]:
+          - heading "Easy To Sign" [level=3] [ref=f8e128]
+          - paragraph [ref=f8e129]: Clients review and sign on a phone. No account, no app, no friction.
+      - generic [ref=f8e131]:
+        - generic [ref=f8e132]:
+          - generic [ref=f8e135]:
+            - generic [ref=f8e136]:
+              - generic [ref=f8e139]: All Cues
+              - generic [ref=f8e143]: Awaiting
+              - generic [ref=f8e147]: Signed
+            - generic [ref=f8e150]:
+              - generic [ref=f8e151]:
+                - generic [ref=f8e152]: Workspace All Cues
+                - generic [ref=f8e159]: New Cue
+              - generic [ref=f8e161]:
+                - generic [ref=f8e162]:
+                  - generic [ref=f8e169]:
+                    - generic [ref=f8e170]: Harper & Wells
+                    - generic [ref=f8e171]: Wedding · 4 pages
+                  - generic [ref=f8e172]: Signed
+                  - generic [ref=f8e173]: AH
+                - generic [ref=f8e174]:
+                  - generic [ref=f8e180]:
+                    - generic [ref=f8e181]: Alvarez Engagement Shoot
+                    - generic [ref=f8e182]: Portrait · 3 pages
+                  - generic [ref=f8e183]: Awaiting
+                  - generic [ref=f8e184]: RA
+          - generic [ref=f8e185]:
+            - heading "Feels Like You" [level=3] [ref=f8e194]
+            - paragraph [ref=f8e195]: Your name and branding on every agreement, so the paperwork looks professional.
+        - generic [ref=f8e196]:
+          - generic [ref=f8e198]:
+            - generic [ref=f8e199]: Final PDF sealed
+            - generic [ref=f8e200]: Harper & Wells · 4 pages
+            - generic [ref=f8e201]:
+              - generic [ref=f8e202]:
+                - generic [ref=f8e203]: Document hash
+                - generic [ref=f8e204]: a91f…7c2
+              - generic [ref=f8e205]: Emailed to both parties
+          - generic [ref=f8e209]:
+            - heading "Sealed After Signing" [level=3] [ref=f8e215]
+            - paragraph [ref=f8e216]: Each finished Cue is frozen as an immutable snapshot with a document hash.
+        - generic [ref=f8e217]:
+          - generic [ref=f8e219]:
+            - generic [ref=f8e220]: Signing link sent
+            - generic [ref=f8e225]:
+              - generic [ref=f8e226]: Unguessable token
+              - generic [ref=f8e229]: Opens on any phone
+              - generic [ref=f8e232]: Expires when signed
+          - generic [ref=f8e235]:
+            - heading "Searchable Library" [level=3] [ref=f8e241]
+            - paragraph [ref=f8e242]: Find any agreement by client, date, or shoot type. Nothing lost in an inbox.
+    - generic [ref=f8e244]:
+      - generic [ref=f8e245]:
+        - heading "From inquiry to signed in minutes." [level=2] [ref=f8e246]
+        - paragraph [ref=f8e247]: Three steps, and none of them feel like admin.
+      - tablist "How Cue works" [ref=f8e248]:
+        - tab "Pick a template" [selected] [ref=f8e249] [cursor=pointer]
+        - tab "Send the link" [ref=f8e250] [cursor=pointer]
+        - tab "Keep the record" [ref=f8e251] [cursor=pointer]
+      - tabpanel "Pick a template" [ref=f8e252]:
+        - generic [ref=f8e253]:
+          - heading "Start From A Template" [level=3] [ref=f8e257]
+          - paragraph [ref=f8e258]: Choose the agreement that fits the job.
+          - paragraph [ref=f8e259]: Wedding, elopement, portrait, or retainer. Personalise the couple, the date, the deliverables, and the terms, then save it as your own.
+          - generic [ref=f8e260]:
+            - heading "Under a minute" [level=4] [ref=f8e261]
+            - paragraph [ref=f8e262]: From template to ready-to-send
+        - generic [ref=f8e264]:
+          - generic [ref=f8e265]: Free plan
+          - generic [ref=f8e266]: Five Cues, no card needed
+          - generic [ref=f8e270]:
+            - generic [ref=f8e271]: 3 sent
+            - generic [ref=f8e272]: 5 total
+    - generic [ref=f8e274]:
+      - generic [ref=f8e276]:
+        - heading "One place for every client agreement" [level=2] [ref=f8e277]
+        - paragraph [ref=f8e278]: Not a form builder and not studio management software. Cue does one job properly.
+      - generic [ref=f8e282]:
+        - generic [ref=f8e283]:
+          - generic [ref=f8e284]: Harper Studio
+          - generic [ref=f8e291]:
+            - text: Quick actions
+            - generic [ref=f8e294]: K
+          - generic [ref=f8e295]: Workspace
+          - generic [ref=f8e296]:
+            - text: All Cues
+            - generic [ref=f8e300]: "28"
+          - generic [ref=f8e301]:
+            - text: Awaiting
+            - generic [ref=f8e306]: "2"
+          - generic [ref=f8e307]:
+            - text: Signed
+            - generic [ref=f8e310]: "24"
+          - generic [ref=f8e311]: Templates
+          - generic [ref=f8e312]: Wedding
+          - generic [ref=f8e316]: Elopement
+          - generic [ref=f8e321]: Portrait
+          - generic [ref=f8e326]:
+            - generic [ref=f8e327]:
+              - generic [ref=f8e328]: Free plan
+              - generic [ref=f8e329]: 3 of 5
+            - generic [ref=f8e332]: Upgrade
+        - generic [ref=f8e333]:
+          - generic [ref=f8e334]:
+            - generic [ref=f8e335]: Workspace / All Cues
+            - generic [ref=f8e342]: New Cue
+          - generic [ref=f8e344]:
+            - generic [ref=f8e345]: All
+            - generic [ref=f8e346]: Awaiting
+            - generic [ref=f8e347]: Signed
+            - generic [ref=f8e348]: Drafts
+            - generic [ref=f8e349]: Shoot date
+          - generic [ref=f8e353]:
+            - generic [ref=f8e354]:
+              - generic [ref=f8e355]: Agreement
+              - generic [ref=f8e356]: Status
+              - generic [ref=f8e357]: Shoot date
+              - generic [ref=f8e358]: Updated
+            - generic [ref=f8e359]:
+              - generic [ref=f8e366]:
+                - generic [ref=f8e367]: Harper & Wells
+                - generic [ref=f8e368]: Wedding · 4 pages
+              - generic [ref=f8e369]: Signed
+              - generic [ref=f8e370]: Jun 14
+              - generic [ref=f8e371]: 2 hr ago
+              - generic [ref=f8e372]: AH
+            - generic [ref=f8e373]:
+              - generic [ref=f8e379]:
+                - generic [ref=f8e380]: Alvarez Engagement Shoot
+                - generic [ref=f8e381]: Portrait · 3 pages
+              - generic [ref=f8e382]: Awaiting
+              - generic [ref=f8e383]: Jun 21
+              - generic [ref=f8e384]: Yesterday
+              - generic [ref=f8e385]: RA
+            - generic [ref=f8e386]:
+              - generic [ref=f8e392]:
+                - generic [ref=f8e393]: Okafor Elopement — Film
+                - generic [ref=f8e394]: Elopement · 5 pages
+              - generic [ref=f8e395]: Awaiting
+              - generic [ref=f8e396]: Jul 02
+              - generic [ref=f8e397]: 3 days ago
+              - generic [ref=f8e398]: "NO"
+            - generic [ref=f8e399]:
+              - generic [ref=f8e404]:
+                - generic [ref=f8e405]: Brand Session — Retainer
+                - generic [ref=f8e406]: Retainer · 6 pages
+              - generic [ref=f8e407]: Draft
+              - generic [ref=f8e408]: Jul 09
+              - generic [ref=f8e409]: 10 min ago
+              - generic [ref=f8e410]: TB
+            - generic [ref=f8e411]:
+              - generic [ref=f8e418]:
+                - generic [ref=f8e419]: Marsh Family Portraits
+                - generic [ref=f8e420]: Portrait · 3 pages
+              - generic [ref=f8e421]: Signed
+              - generic [ref=f8e422]: Apr 02
+              - generic [ref=f8e423]: Apr 02
+              - generic [ref=f8e424]: KM
+          - generic [ref=f8e425]:
+            - generic [ref=f8e426]: 28 agreements
+            - generic [ref=f8e427]: 2 awaiting signature
+      - generic [ref=f8e432]:
+        - generic [ref=f8e433]:
+          - heading "Create" [level=3] [ref=f8e440]
+          - paragraph [ref=f8e441]: Start from a wedding, elopement, or portrait template and personalise the details.
+        - generic [ref=f8e442]:
+          - heading "Send" [level=3] [ref=f8e448]
+          - paragraph [ref=f8e449]: Cue generates a secure signing link with an unguessable token you can share anywhere.
+        - generic [ref=f8e450]:
+          - heading "Sign" [level=3] [ref=f8e455]
+          - paragraph [ref=f8e456]: Your client reviews, consents, and signs on whatever device is already in their hand.
+        - generic [ref=f8e457]:
+          - heading "Keep" [level=3] [ref=f8e463]
+          - paragraph [ref=f8e464]: The final PDF, signer details, and audit trail are stored and emailed to both parties.
+    - generic [ref=f8e466]:
+      - generic [ref=f8e467]:
+        - heading "Up and running in three steps" [level=2] [ref=f8e468]
+        - paragraph [ref=f8e469]: Your first agreement can go out today, on the free plan.
+      - generic [ref=f8e470]:
+        - generic [ref=f8e472]:
+          - generic [ref=f8e473]: Step 01
+          - generic [ref=f8e476]:
+            - generic [ref=f8e477]: Free plan
+            - generic [ref=f8e478]: Five Cues, no card needed
+            - generic [ref=f8e482]:
+              - generic [ref=f8e483]: 3 sent
+              - generic [ref=f8e484]: 5 total
+          - generic [ref=f8e485]:
+            - heading "Set up your details once" [level=3] [ref=f8e486]
+            - paragraph [ref=f8e487]: Add your business name, branding, and standard terms. Cue reuses them on every agreement from then on.
+        - generic [ref=f8e488]:
+          - generic [ref=f8e489]: Step 02
+          - generic [ref=f8e493]:
+            - generic [ref=f8e494]:
+              - generic [ref=f8e497]: All Cues
+              - generic [ref=f8e501]: Awaiting
+              - generic [ref=f8e505]: Signed
+            - generic [ref=f8e508]:
+              - generic [ref=f8e509]:
+                - generic [ref=f8e510]: Workspace All Cues
+                - generic [ref=f8e517]: New Cue
+              - generic [ref=f8e519]:
+                - generic [ref=f8e520]:
+                  - generic [ref=f8e527]:
+                    - generic [ref=f8e528]: Harper & Wells
+                    - generic [ref=f8e529]: Wedding · 4 pages
+                  - generic [ref=f8e530]: Signed
+                  - generic [ref=f8e531]: AH
+                - generic [ref=f8e532]:
+                  - generic [ref=f8e538]:
+                    - generic [ref=f8e539]: Alvarez Engagement Shoot
+                    - generic [ref=f8e540]: Portrait · 3 pages
+                  - generic [ref=f8e541]: Awaiting
+                  - generic [ref=f8e542]: RA
+          - generic [ref=f8e543]:
+            - heading "Send your first Cue" [level=3] [ref=f8e544]
+            - paragraph [ref=f8e545]: Pick a template, fill in the client and shoot details, and send the signing link straight from your phone or laptop.
+        - generic [ref=f8e546]:
+          - generic [ref=f8e547]: Step 03
+          - generic [ref=f8e550]:
+            - generic [ref=f8e551]: Final PDF sealed
+            - generic [ref=f8e552]: Harper & Wells · 4 pages
+            - generic [ref=f8e553]:
+              - generic [ref=f8e554]:
+                - generic [ref=f8e555]: Document hash
+                - generic [ref=f8e556]: a91f…7c2
+              - generic [ref=f8e557]: Emailed to both parties
+          - generic [ref=f8e561]:
+            - heading "Get the yes on file" [level=3] [ref=f8e562]
+            - paragraph [ref=f8e563]: Your client signs, Cue seals the PDF, and the signed record lands in your library and both inboxes.
+    - generic [ref=f8e565]:
+      - generic [ref=f8e567]:
+        - heading "Start free, pay when it sticks" [level=2] [ref=f8e568]
+        - paragraph [ref=f8e569]: Five Cues free, no card required. The allowance is a total, not a monthly reset.
+      - generic [ref=f8e571]:
+        - generic [ref=f8e572]:
+          - generic [ref=f8e574]:
+            - generic [ref=f8e575]:
+              - heading "Free" [level=3] [ref=f8e576]
+              - generic [ref=f8e577]: $0
+            - paragraph [ref=f8e578]: Try Cue on real client work before you commit to anything.
+            - paragraph [ref=f8e579]: "What you get:"
+            - list [ref=f8e580]:
+              - listitem [ref=f8e581]: Five total sent Cues
+              - listitem [ref=f8e585]: Standard agreement templates
+              - listitem [ref=f8e589]: Final PDF on every signature
+              - listitem [ref=f8e593]: Full audit trail
+          - link "Create your first Cue" [ref=f8e598] [cursor=pointer]:
+            - /url: "#waitlist"
+        - generic [ref=f8e599]:
+          - generic [ref=f8e601]:
+            - generic [ref=f8e602]:
+              - heading "Creator" [level=3] [ref=f8e603]
+              - generic [ref=f8e604]: $19/month
+            - paragraph [ref=f8e605]: For independent photographers and videographers sending regularly.
+            - paragraph [ref=f8e606]: "What you get:"
+            - list [ref=f8e607]:
+              - listitem [ref=f8e608]: Unlimited Cues
+              - listitem [ref=f8e612]: Custom branding
+              - listitem [ref=f8e616]: Saved templates
+              - listitem [ref=f8e620]: Email reminders
+              - listitem [ref=f8e624]: Searchable agreement library
+          - link "Join the waitlist" [ref=f8e629] [cursor=pointer]:
+            - /url: "#waitlist"
+        - generic [ref=f8e630]:
+          - generic [ref=f8e632]:
+            - generic [ref=f8e633]:
+              - heading "Studio" [level=3] [ref=f8e634]
+              - generic [ref=f8e635]: $49/month
+            - paragraph [ref=f8e636]: For small creative businesses with more than one person sending.
+            - paragraph [ref=f8e637]: "What you get:"
+            - list [ref=f8e638]:
+              - listitem [ref=f8e639]: Everything in Creator
+              - listitem [ref=f8e643]: Multiple users
+              - listitem [ref=f8e647]: Shared templates
+              - listitem [ref=f8e651]: Custom domain
+              - listitem [ref=f8e655]: Priority support
+          - link "Join the waitlist" [ref=f8e660] [cursor=pointer]:
+            - /url: "#waitlist"
+      - region "Plan comparison" [ref=f8e662]:
+        - table [ref=f8e663]:
+          - rowgroup [ref=f8e664]:
+            - row [ref=f8e665]:
+              - columnheader "Plan Comparison" [ref=f8e666]
+              - columnheader "Free" [ref=f8e667]
+              - columnheader "Creator" [ref=f8e668]
+              - columnheader "Studio" [ref=f8e669]
+          - rowgroup [ref=f8e670]:
+            - row [ref=f8e671]:
+              - rowheader "Sent Cues" [ref=f8e672]
+              - cell "5 total" [ref=f8e673]
+              - cell "Unlimited" [ref=f8e674]
+              - cell "Unlimited" [ref=f8e675]
+            - row [ref=f8e676]:
+              - rowheader "Final PDF and audit trail" [ref=f8e677]
+              - cell [ref=f8e678]
+              - cell [ref=f8e682]
+              - cell [ref=f8e686]
+            - row [ref=f8e690]:
+              - rowheader "Custom branding" [ref=f8e691]
+              - cell "—" [ref=f8e692]
+              - cell [ref=f8e693]
+              - cell [ref=f8e697]
+            - row [ref=f8e701]:
+              - rowheader "Saved templates" [ref=f8e702]
+              - cell "—" [ref=f8e703]
+              - cell [ref=f8e704]
+              - cell "Shared" [ref=f8e708]
+            - row [ref=f8e709]:
+              - rowheader "Users" [ref=f8e710]
+              - cell "1" [ref=f8e711]
+              - cell "1" [ref=f8e712]
+              - cell "Multiple" [ref=f8e713]
+            - row [ref=f8e714]:
+              - rowheader "Support" [ref=f8e715]
+              - cell "Email" [ref=f8e716]
+              - cell "Email" [ref=f8e717]
+              - cell "Priority" [ref=f8e718]
+    - generic [ref=f8e722]:
+      - generic [ref=f8e723]:
+        - heading "Frequently asked questions" [level=2] [ref=f8e724]
+        - paragraph [ref=f8e725]: Still have questions? Reach out at hello@cue.krevo.io
+      - generic [ref=f8e726]:
+        - group [ref=f8e727]:
+          - generic "Can I use Cue today?" [ref=f8e728] [cursor=pointer]
+        - group [ref=f8e730]:
+          - generic "Will a Cue be legally binding?" [ref=f8e731] [cursor=pointer]
+        - group [ref=f8e733]:
+          - generic "Will my client need an account?" [ref=f8e734] [cursor=pointer]
+        - group [ref=f8e736]:
+          - generic "What will the free plan include?" [ref=f8e737] [cursor=pointer]
+        - group [ref=f8e739]:
+          - generic "What will happen after a Cue is signed?" [ref=f8e740] [cursor=pointer]
+        - group [ref=f8e742]:
+          - generic "Will I be able to use my own agreement wording?" [ref=f8e743] [cursor=pointer]
+    - generic [ref=f8e749]:
+      - heading "Send the Cue. Get the yes." [level=2] [ref=f8e750]
+      - paragraph [ref=f8e751]: Cue is still being built. Leave your email and you will hear from us the day it opens — your first five agreements will be free, no card required.
+      - generic [ref=f8e753]:
+        - generic [ref=f8e754]: Your name (optional)
+        - textbox "Your name (optional)" [ref=f8e755]
+        - generic [ref=f8e756]: Email address
+        - textbox "Email address" [ref=f8e757]:
+          - /placeholder: you@studio.com
+        - textbox
+        - button "Join the waitlist" [ref=f8e758] [cursor=pointer]
+  - contentinfo [ref=f8e761]:
+    - generic [ref=f8e762]:
+      - generic [ref=f8e763]:
+        - generic [ref=f8e764]:
+          - generic [ref=f8e765]: Cue
+          - paragraph [ref=f8e769]: Client agreements for photographers and videographers. A Krevo product.
+        - generic [ref=f8e770]:
+          - heading "Product" [level=3] [ref=f8e771]
+          - list [ref=f8e772]:
+            - listitem [ref=f8e773]:
+              - link "Features" [ref=f8e774] [cursor=pointer]:
+                - /url: /#features
+            - listitem [ref=f8e775]:
+              - link "Pricing" [ref=f8e776] [cursor=pointer]:
+                - /url: /#pricing
+            - listitem [ref=f8e777]:
+              - link "How it works" [ref=f8e778] [cursor=pointer]:
+                - /url: /#steps
+            - listitem [ref=f8e779]:
+              - link "FAQ" [ref=f8e780] [cursor=pointer]:
+                - /url: /#faq
+        - generic [ref=f8e781]:
+          - heading "Company" [level=3] [ref=f8e782]
+          - list [ref=f8e783]:
+            - listitem [ref=f8e784]:
+              - link "Krevo" [ref=f8e785] [cursor=pointer]:
+                - /url: https://www.krevo.io
+            - listitem [ref=f8e786]:
+              - link "Contact" [ref=f8e787] [cursor=pointer]:
+                - /url: mailto:hello@cue.krevo.io
+            - listitem [ref=f8e788]:
+              - link "Privacy" [ref=f8e789] [cursor=pointer]:
+                - /url: /legal/privacy
+            - listitem [ref=f8e790]:
+              - link "Terms" [ref=f8e791] [cursor=pointer]:
+                - /url: /legal/terms
+      - generic [ref=f8e792]:
+        - generic [ref=f8e793]: © 2026 Krevo. All rights reserved.
+        - generic [ref=f8e794]: Cue is not a law firm and does not provide legal advice.
+  - alert [ref=f8e795]

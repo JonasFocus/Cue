@@ -107,7 +107,7 @@ export function LoginForm() {
           </button>
 
           <p className="cue-auth-foot">
-            <Link href="/">← Back to cue.krevo.io</Link>
+            <Link href="/">← Back to Cue</Link>
           </p>
         </div>
       </form>

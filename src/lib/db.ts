@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { type GuestStatus, maskEmail, nameFromEmail } from "./waitlist";
+import { type GuestStatus, nameFromEmail } from "./waitlist";
 
 /* One pool per process. Next dev re-evaluates modules on every hot reload, so
    the pool is stashed on globalThis to avoid leaking connections. */
@@ -44,15 +44,8 @@ export const pool = (globalThis.cuePool ??= createPool());
 
 export type WaitlistStats = {
   total: number;
-  today: number;
   week: number;
-  latest: { email: string; createdAt: string }[];
 };
-
-/* "Signups today" is read by one operator in US Central. `current_date` is the
-   Postgres session timezone (UTC in the container), so the counter rolled over
-   at 7pm local and disagreed with the rolling 7-day figure next to it. */
-const OPERATOR_TZ = "America/Chicago";
 
 export type Guest = {
   id: number;
@@ -62,32 +55,21 @@ export type Guest = {
   createdAt: string;
 };
 
+/* Only what the overview actually renders. A "signups today" count (in
+   America/Chicago, since the one operator is US Central) and a masked
+   latest-eight feed used to be computed here and thrown away unread on every
+   5-second poll — two extra round trips per poll for nothing. Both are a few
+   lines to restore alongside the markup that would show them. */
 export async function waitlistStats(): Promise<WaitlistStats> {
-  const [totals, latest] = await Promise.all([
-    pool.query<{ total: string; today: string; week: string }>(
-      `SELECT count(*)::text AS total,
-              count(*) FILTER (
-                WHERE (created_at AT TIME ZONE $1)::date = (now() AT TIME ZONE $1)::date
-              )::text AS today,
-              count(*) FILTER (WHERE created_at >= now() - interval '7 days')::text AS week
-         FROM waitlist`,
-      [OPERATOR_TZ],
-    ),
-    pool.query<{ email: string; created_at: Date }>(
-      `SELECT email, created_at FROM waitlist ORDER BY created_at DESC LIMIT 8`,
-    ),
-  ]);
+  const { rows } = await pool.query<{ total: string; week: string }>(
+    `SELECT count(*)::text AS total,
+            count(*) FILTER (WHERE created_at >= now() - interval '7 days')::text AS week
+       FROM waitlist`,
+  );
 
   return {
-    total: Number(totals.rows[0]?.total ?? 0),
-    today: Number(totals.rows[0]?.today ?? 0),
-    week: Number(totals.rows[0]?.week ?? 0),
-    latest: latest.rows.map((r) => ({
-      // The overview feed is glanceable, not a contact list — mask it there.
-      // The guest list tab shows the real address, which is its whole job.
-      email: maskEmail(r.email),
-      createdAt: r.created_at.toISOString(),
-    })),
+    total: Number(rows[0]?.total ?? 0),
+    week: Number(rows[0]?.week ?? 0),
   };
 }
 

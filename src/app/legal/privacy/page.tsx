@@ -44,9 +44,10 @@ export default function PrivacyPage() {
           <li>Your email address.</li>
           <li>Your name, if you typed one — that field is optional.</li>
           <li>
-            A salted SHA-256 hash of your IP address. We do not store the address
-            itself, and the hash cannot be turned back into it. It exists only to
-            rate-limit the form against abuse.
+            A SHA-256 hash of your IP address, salted with a secret that is held
+            only on the server and is not in the source code. We do not store the
+            address itself, and the hash cannot be turned back into it. It exists
+            only to rate-limit the form against abuse.
           </li>
           <li>The user-agent string your browser sends, truncated.</li>
           <li>The date and time you submitted the form.</li>
@@ -79,7 +80,7 @@ export default function PrivacyPage() {
 
         <h2 style={heading}>Getting your data removed</h2>
         <p style={body}>
-          Email <a href="mailto:hello@cue.krevo.io">hello@cue.krevo.io</a> from
+          Email <a className="cue-link" href="mailto:hello@krevo.io">hello@krevo.io</a> from
           the address you signed up with and we will delete the row. There is no
           account to close — a waitlist entry is all we hold.
         </p>
@@ -96,7 +97,7 @@ export default function PrivacyPage() {
         <p style={body}>
           If what we collect changes, this page changes with it and the date at
           the top moves. Questions go to{" "}
-          <a href="mailto:hello@cue.krevo.io">hello@cue.krevo.io</a>.
+          <a className="cue-link" href="mailto:hello@krevo.io">hello@krevo.io</a>.
         </p>
       </div>
     </section>

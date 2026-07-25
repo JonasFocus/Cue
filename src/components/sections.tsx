@@ -72,17 +72,17 @@ const TOP = [
   {
     icon: Camera,
     title: "Made For Creatives",
-    body: "Built around the moments before a shoot, not enterprise document workflows.",
+    body: "Being built around the moments before a shoot, not enterprise document workflows.",
   },
   {
     icon: Zap,
     title: "Fast To Send",
-    body: "Templates and saved details cut the repetitive setup down to a minute.",
+    body: "Templates and saved details will cut the repetitive setup down to a minute.",
   },
   {
     icon: Smartphone,
     title: "Easy To Sign",
-    body: "Clients review and sign on a phone. No account, no app, no friction.",
+    body: "Clients will review and sign on a phone. No account, no app, no friction.",
   },
 ];
 
@@ -90,19 +90,19 @@ const BOTTOM = [
   {
     icon: Palette,
     title: "Feels Like You",
-    body: "Your name and branding on every agreement, so the paperwork looks professional.",
+    body: "Every agreement will carry your name and branding, so the paperwork looks professional.",
     visual: <MockApp compact />,
   },
   {
     icon: ShieldCheck,
     title: "Sealed After Signing",
-    body: "Each finished Cue is frozen as an immutable snapshot with a document hash.",
+    body: "Each finished Cue will be frozen as an immutable snapshot with a document hash.",
     visual: <MockRecord />,
   },
   {
     icon: Search,
     title: "Searchable Library",
-    body: "Find any agreement by client, date, or shoot type. Nothing lost in an inbox.",
+    body: "Every agreement findable by client, date, or shoot type. Nothing lost in an inbox.",
     visual: <MockLink />,
   },
 ];
@@ -115,8 +115,8 @@ export function Features() {
           <div className="cue-eyebrow-block">
             <h2 className="cue-h2">{"Everything the agreement\nneeds to be"}</h2>
             <p className="cue-lede">
-              From inquiry to signed agreement, without the paperwork feeling
-              like paperwork.
+              What we are building: from inquiry to signed agreement, without
+              the paperwork feeling like paperwork.
             </p>
           </div>
         </Reveal>
@@ -171,17 +171,17 @@ const CELLS = [
   {
     icon: Send,
     title: "Send",
-    body: "Cue generates a secure signing link with an unguessable token you can share anywhere.",
+    body: "Cue will generate a secure signing link with an unguessable token you can share anywhere.",
   },
   {
     icon: Check,
     title: "Sign",
-    body: "Your client reviews, consents, and signs on whatever device is already in their hand.",
+    body: "Your client will review, consent, and sign on whatever device is already in their hand.",
   },
   {
     icon: Archive,
     title: "Keep",
-    body: "The final PDF, signer details, and audit trail are stored and emailed to both parties.",
+    body: "The final PDF, signer details, and audit trail will be stored and emailed to both parties.",
   },
 ];
 
@@ -193,7 +193,7 @@ export function Capability() {
           <div className="cue-eyebrow-block">
             <h2 className="cue-h2">{"One place for every\nclient agreement"}</h2>
             <p className="cue-lede">
-              Not a form builder and not studio management software. Cue does
+              Not a form builder and not studio management software. Cue will do
               one job properly.
             </p>
           </div>
@@ -202,6 +202,12 @@ export function Capability() {
         <Reveal>
           <div style={{ marginTop: 56 }}>
             <MockApp />
+            {/* The mock is convincing enough to read as a screenshot of a
+                shipping app. Say what it is. */}
+            <p className="cue-hero-note" style={{ textAlign: "center" }}>
+              A design preview of the interface we are building. Nothing in it
+              is live yet.
+            </p>
           </div>
         </Reveal>
 

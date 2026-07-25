@@ -1,7 +1,9 @@
 # Cue
 
 Client agreements and electronic signing for photographers and videographers.
-A Krevo product, served at `cue.krevo.io` (staging: `staging.cue.krevo.io`).
+A Krevo product. The only host that resolves today is
+`staging.cue.krevo.io`; `cue.krevo.io` is the intended production domain and
+has no DNS record yet.
 
 **Current state:** the marketing site and its waitlist are live. The signing
 product itself is not built — no customer accounts, no templates, no PDFs, no

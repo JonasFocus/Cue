@@ -22,7 +22,7 @@ const TABS = [
     icon: Send,
     title: "Send A Secure Link",
     lede: "No account for your client.",
-    body: "Cue creates a signing link protected by an unguessable token. Your client opens it on a phone, reads a clean mobile layout, and signs.",
+    body: "Cue will create a signing link protected by an unguessable token. Your client will open it on a phone, read a clean mobile layout, and sign.",
     statValue: "Any device",
     statLabel: "Nothing to download or install",
     visual: <MockLink />,
@@ -32,7 +32,7 @@ const TABS = [
     icon: Archive,
     title: "Keep The Record",
     lede: "Signed means settled.",
-    body: "The moment it is signed, Cue freezes the agreement, renders a final PDF, stores the audit trail, and emails a copy to both parties.",
+    body: "The moment it is signed, Cue will freeze the agreement, render a final PDF, store the audit trail, and email a copy to both parties.",
     statValue: "Immutable",
     statLabel: "Snapshot, hash, and audit trail",
     visual: <MockRecord />,
@@ -67,9 +67,10 @@ export function Flow() {
     <section className="cue-section">
       <div className="cue-shell">
         <div className="cue-eyebrow-block">
-          <h2 className="cue-h2">From inquiry to signed in minutes.</h2>
+          <h2 className="cue-h2">{"From inquiry to signed,\nin three steps"}</h2>
           <p className="cue-lede">
-            Three steps, and none of them feel like admin.
+            Here is what we are building. None of it is live yet — the waitlist
+            is the one thing on this page that works today.
           </p>
         </div>
 
@@ -101,6 +102,9 @@ export function Flow() {
           role="tabpanel"
           id="cue-flow-panel"
           aria-labelledby={`cue-tab-${active}`}
+          // The panel holds no focusable children, so without this a keyboard
+          // user tabs straight past its content.
+          tabIndex={0}
         >
           <div className="cue-tabpanel-copy">
             <Sparkles
@@ -148,7 +152,7 @@ const STEPS = [
   {
     label: "Step 01",
     title: "Set up your details once",
-    body: "Add your business name, branding, and standard terms. Cue reuses them on every agreement from then on.",
+    body: "Add your business name, branding, and standard terms. Cue will reuse them on every agreement from then on.",
     visual: <MockAllowance />,
   },
   {
@@ -160,7 +164,7 @@ const STEPS = [
   {
     label: "Step 03",
     title: "Get the yes on file",
-    body: "Your client signs, Cue seals the PDF, and the signed record lands in your library and both inboxes.",
+    body: "Once it is built: your client signs, Cue seals the PDF, and the signed record lands in your library and both inboxes.",
     visual: <MockRecord />,
   },
 ];
@@ -225,7 +229,8 @@ export function Steps() {
         <div className="cue-eyebrow-block">
           <h2 className="cue-h2">{"Up and running\nin three steps"}</h2>
           <p className="cue-lede">
-            Your first agreement can go out today, on the free plan.
+            The day Cue opens, your first five agreements will be free — no
+            card.
           </p>
         </div>
 

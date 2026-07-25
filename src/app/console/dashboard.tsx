@@ -8,11 +8,15 @@ import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
 
 type Probe = { ok: boolean; latencyMs: number; detail: string };
 
+// Every field below `generatedAt` is optional: the degraded 503 branch of
+// /api/health answers with probes only, and the shape is still moving.
 type Snapshot = {
   generatedAt: string;
-  containers: ServiceHealth[];
-  probes: { postgres: Probe; redis: Probe };
-  waitlist: {
+  degraded?: boolean;
+  detail?: string;
+  containers?: ServiceHealth[];
+  probes?: { postgres?: Probe; redis?: Probe };
+  waitlist?: {
     total: number;
     today: number;
     week: number;
@@ -29,6 +33,7 @@ export function Dashboard({ operator }: { operator: string }) {
   // The API caps the list; when it does, the count on screen is not the total.
   const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [degraded, setDegraded] = useState<string | null>(null);
   const [now, setNow] = useState(0);
   const inFlight = useRef(false);
   // A poll that lands mid-edit would overwrite the optimistic value with the
@@ -47,20 +52,35 @@ export function Dashboard({ operator }: { operator: string }) {
         window.location.href = "/console/login";
         return;
       }
-      if (!health.ok) throw new Error(`health returned ${health.status}`);
-      setSnap(await health.json());
+      // Read the two responses independently. A failed health check used to
+      // throw before the guest list was parsed, silently discarding it.
       // `truncated` is additive and may be absent on older responses.
       const payload: { guests?: Guest[]; truncated?: boolean } | null = list.ok
-        ? await list.json()
+        ? await list.json().catch(() => null)
         : null;
       if (payload?.guests && mutating.current === 0) {
         setGuests(payload.guests);
         setTruncated(payload.truncated === true);
       }
+
+      const body: Snapshot | null = await health.json().catch(() => null);
+      // A degraded health response is a state to render, not an error. The
+      // `degraded` flag is additive, so treat any non-ok status as degraded too.
+      if (health.ok && body && !body.degraded) {
+        setSnap(body);
+        setDegraded(null);
+      } else {
+        setSnap(body?.containers || body?.probes ? body : null);
+        setDegraded(body?.detail || `health check returned ${health.status}`);
+      }
+
       setNow(Date.now());
+      if (!list.ok) throw new Error(`guest list returned ${list.status}`);
       setError(null);
     } catch (err) {
-      setError((err as Error).message);
+      setError(
+        `Lost contact with the API — ${(err as Error).message}. Retrying every ${POLL_MS / 1000}s.`,
+      );
     } finally {
       inFlight.current = false;
     }
@@ -88,6 +108,27 @@ export function Dashboard({ operator }: { operator: string }) {
       mutating.current -= 1;
     }
   }, [load]);
+
+  // Better Auth rejects a body-less POST with 415 and never revokes the
+  // session. Without the header the operator was redirected to the login page
+  // while the session cookie stayed valid for its full life — on a shared
+  // machine, that is a live session handed to the next person.
+  const signOut = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/sign-out", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      if (!res.ok) throw new Error(`sign-out returned ${res.status}`);
+    } catch (err) {
+      setError(
+        `Sign-out failed (${(err as Error).message}) — you are STILL signed in. Try again.`,
+      );
+      return;
+    }
+    window.location.href = "/console/login";
+  }, []);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
@@ -141,20 +182,29 @@ export function Dashboard({ operator }: { operator: string }) {
 
         {error && (
           <div className="cx-error" role="alert">
-            Lost contact with the API — {error}. Retrying every {POLL_MS / 1000}s.
+            {error}
           </div>
         )}
 
-        {tab === "overview" ? (
-          <Overview snap={snap} />
-        ) : (
-          <GuestList
-            guests={guests}
-            truncated={truncated}
-            now={now}
-            onStatus={setStatus}
-          />
+        {degraded && (
+          <div className="cx-degraded" role="status">
+            Health reporting is degraded — {degraded}. The guest list below is
+            unaffected. Retrying every {POLL_MS / 1000}s.
+          </div>
         )}
+
+        <main>
+          {tab === "overview" ? (
+            <Overview snap={snap} degraded={degraded} />
+          ) : (
+            <GuestList
+              guests={guests}
+              truncated={truncated}
+              now={now}
+              onStatus={setStatus}
+            />
+          )}
+        </main>
       </div>
     </div>
   );
@@ -162,12 +212,13 @@ export function Dashboard({ operator }: { operator: string }) {
 
 /* ── Overview ── */
 
-function Overview({ snap }: { snap: Snapshot | null }) {
-  const running = snap?.containers.filter((c) => c.state === "running").length ?? 0;
-  const total = snap?.containers.length ?? 0;
-  const storesOk = (snap?.probes.postgres.ok ?? false) && (snap?.probes.redis.ok ?? false);
-  const allUp = total > 0 && running === total && storesOk;
-  const memory = snap?.containers.reduce((a, c) => a + c.memoryUsedMb, 0) ?? 0;
+function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string | null }) {
+  const containers = snap?.containers ?? [];
+  const running = containers.filter((c) => c.state === "running").length;
+  const total = containers.length;
+  const storesOk = (snap?.probes?.postgres?.ok ?? false) && (snap?.probes?.redis?.ok ?? false);
+  const allUp = !degraded && total > 0 && running === total && storesOk;
+  const memory = containers.reduce((a, c) => a + c.memoryUsedMb, 0);
 
   return (
     <div className="cx-pane">
@@ -176,22 +227,34 @@ function Overview({ snap }: { snap: Snapshot | null }) {
           <div className="cx-dither" />
         </div>
         <div className="cx-hero-body">
-          <span className={`cx-hero-status ${!snap ? "cx-idle" : allUp ? "cx-ok" : "cx-warn"}`}>
+          <span
+            className={`cx-hero-status ${degraded ? "cx-warn" : !snap ? "cx-idle" : allUp ? "cx-ok" : "cx-warn"}`}
+          >
             <span className="cx-dot" />
-            {!snap ? "Connecting" : allUp ? "All systems operational" : "Degraded"}
+            {degraded
+              ? "Degraded"
+              : !snap
+                ? "Connecting"
+                : allUp
+                  ? "All systems operational"
+                  : "Degraded"}
           </span>
 
           <h1 className="cx-hero-title">
-            {!snap
-              ? "Reading the box…"
-              : allUp
-                ? "Everything is running."
-                : "Something needs a look."}
+            {degraded
+              ? "Health reporting is degraded."
+              : !snap
+                ? "Reading the box…"
+                : allUp
+                  ? "Everything is running."
+                  : "Something needs a look."}
           </h1>
           <p className="cx-hero-sub">
-            {snap
-              ? `${running} of ${total} services up, Postgres and Redis answering, and the waitlist is open.`
-              : "Fetching container health and datastore probes."}
+            {degraded
+              ? `${degraded}. Only partial health data is available — the guest list is still live.`
+              : snap
+                ? `${running} of ${total} services up, Postgres and Redis answering, and the waitlist is open.`
+                : "Fetching container health and datastore probes."}
           </p>
 
           <div className="cx-figures">
@@ -200,11 +263,11 @@ function Overview({ snap }: { snap: Snapshot | null }) {
               <span>services</span>
             </span>
             <span className="cx-figure">
-              <b>{snap ? snap.waitlist.total.toLocaleString() : "—"}</b>
+              <b>{snap?.waitlist ? snap.waitlist.total.toLocaleString() : "—"}</b>
               <span>on the waitlist</span>
             </span>
             <span className="cx-figure">
-              <b>{snap ? `+${snap.waitlist.week}` : "—"}</b>
+              <b>{snap?.waitlist ? `+${snap.waitlist.week}` : "—"}</b>
               <span>this week</span>
             </span>
             <span className="cx-figure">
@@ -217,10 +280,10 @@ function Overview({ snap }: { snap: Snapshot | null }) {
 
       <p className="cx-label">Services</p>
       <div className="cx-list">
-        {!snap &&
+        {!containers.length &&
           Array.from({ length: 5 }, (_, i) => <div className="cx-skeleton" key={i} />)}
 
-        {snap?.containers.map((c, i) => (
+        {containers.map((c, i) => (
           <div className="cx-row" key={c.key} style={{ animationDelay: `${i * 45}ms` }}>
             <span className={c.state === "running" ? "cx-ok" : "cx-bad"}>
               <span className="cx-dot" />
@@ -234,8 +297,8 @@ function Overview({ snap }: { snap: Snapshot | null }) {
 
       <p className="cx-label">Datastores</p>
       <div className="cx-list">
-        <ProbeRow name="postgres" hint="SELECT version()" probe={snap?.probes.postgres} />
-        <ProbeRow name="redis" hint="PING" probe={snap?.probes.redis} />
+        <ProbeRow name="postgres" hint="SELECT version()" probe={snap?.probes?.postgres} />
+        <ProbeRow name="redis" hint="PING" probe={snap?.probes?.redis} />
       </div>
 
       <p className="cx-note">
@@ -310,7 +373,7 @@ function GuestList({
         </div>
 
         <header className="cx-guests-head">
-          <h2>Guest list</h2>
+          <h1>Guest list</h1>
           <p>
             {!guests?.length
               ? "Everyone who asked to be told when Cue opens up."
@@ -330,50 +393,79 @@ function GuestList({
           </label>
         </header>
 
-        {/* Plain divs on a CSS grid. The previous role="table"/role="row" had
-            no cell roles, so screen readers announced an empty table and threw
-            away every name, email and status. */}
-        <div>
+        {/* A real table. The fixed 4-column layout comes from `display:
+            contents` on thead/tbody/tr — but Blink drops the implicit row and
+            cell roles the moment their display is not table-row/table-cell, so
+            every role here is spelled out. Verified in the a11y tree: without
+            them the whole table collapses to `table > generic`. */}
+        <table className="cx-table">
           {/* Column headers over an empty table label nothing — hide them. */}
           {!!filtered?.length && (
-            <div className="cx-thead">
-              <span>Name</span>
-              <span>Email</span>
-              <span>Joined</span>
-              <span>Status</span>
-            </div>
+            <thead className="cx-thead" role="rowgroup">
+              <tr role="row">
+                <th scope="col" role="columnheader">
+                  Name
+                </th>
+                <th scope="col" role="columnheader">
+                  Email
+                </th>
+                <th scope="col" role="columnheader">
+                  Joined
+                </th>
+                <th scope="col" role="columnheader">
+                  Status
+                </th>
+              </tr>
+            </thead>
           )}
 
-          {!filtered && <div className="cx-empty">Loading…</div>}
+          <tbody role="rowgroup">
+            {!filtered && (
+              <tr role="row">
+                <td className="cx-empty" role="cell" colSpan={4}>
+                  Loading…
+                </td>
+              </tr>
+            )}
 
-          {filtered?.length === 0 && (
-            <div className="cx-empty">
-              {q ? `Nobody matches “${q}”.` : "No one on the list yet."}
-            </div>
-          )}
+            {filtered?.length === 0 && (
+              <tr role="row">
+                <td className="cx-empty" role="cell" colSpan={4}>
+                  {q ? `Nobody matches “${q}”.` : "No one on the list yet."}
+                </td>
+              </tr>
+            )}
 
-          {filtered?.map((g, i) => (
-            <div
-              className="cx-trow"
-              key={g.id}
-              style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
-            >
-              <span className="cx-guest">
-                <i className="cx-avatar" style={avatarStyle(g.email)}>
-                  {initials(g.name)}
-                </i>
-                <b>{g.name}</b>
-              </span>
-              <span className="cx-guest-mail" title={g.email}>
-                {g.email}
-              </span>
-              <span className="cx-guest-date" title={relative(g.createdAt, now)}>
-                {formatDate(g.createdAt)}
-              </span>
-              <StatusSelect guest={g} onStatus={onStatus} />
-            </div>
-          ))}
-        </div>
+            {filtered?.map((g, i) => (
+              <tr
+                className="cx-trow"
+                role="row"
+                key={g.id}
+                style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
+              >
+                <td className="cx-guest" role="cell">
+                  <i className="cx-avatar" style={avatarStyle(g.email)}>
+                    {initials(g.name)}
+                  </i>
+                  <b>{g.name}</b>
+                </td>
+                <td className="cx-guest-mail" role="cell" title={g.email}>
+                  {g.email}
+                </td>
+                <td
+                  className="cx-guest-date"
+                  role="cell"
+                  title={relative(g.createdAt, now)}
+                >
+                  {formatDate(g.createdAt)}
+                </td>
+                <td className="cx-status-cell" role="cell">
+                  <StatusSelect guest={g} onStatus={onStatus} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -441,11 +533,6 @@ function StatusSelect({
       <ChevronDown size={11} strokeWidth={2.25} />
     </label>
   );
-}
-
-async function signOut() {
-  await fetch("/api/auth/sign-out", { method: "POST" });
-  window.location.href = "/console/login";
 }
 
 /* Stable per-person colour so the same guest always reads the same. */

@@ -1,0 +1,24 @@
+- generic [ref=f2e3]:
+  - banner [ref=f2e4]:
+    - generic [ref=f2e8]: Consolestaging.cue.krevo.io
+    - text: jonasbubela@gmail.com
+    - button "Sign out" [ref=f2e9] [cursor=pointer]
+  - navigation "Console views" [ref=f2e13]:
+    - button "Overview" [pressed] [ref=f2e14] [cursor=pointer]
+    - button "Guest list" [ref=f2e15] [cursor=pointer]
+  - generic [ref=f2e16]:
+    - generic [ref=f2e18]:
+      - generic [ref=f2e19]: Connecting
+      - heading "Reading the box…" [level=1] [ref=f2e20]
+      - paragraph [ref=f2e21]: Fetching container health and datastore probes.
+      - generic [ref=f2e22]:
+        - generic [ref=f2e23]: —services
+        - generic [ref=f2e24]: —on the waitlist
+        - generic [ref=f2e25]: —this week
+        - generic [ref=f2e26]: —MB in use
+    - paragraph [ref=f2e27]: Services
+    - paragraph [ref=f2e28]: Datastores
+    - generic [ref=f2e29]:
+      - generic [ref=f2e30]: postgresSELECT version()—
+      - generic [ref=f2e31]: redisPING—
+    - paragraph [ref=f2e32]: Polling every 5 seconds. Container stats come through a read-only Docker socket proxy, never the socket itself.

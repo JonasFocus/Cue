@@ -13,7 +13,15 @@ export const metadata: Metadata = {
 };
 
 export default async function ConsolePage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  // Better Auth reads the session out of Postgres, so this throws during the
+  // exact outage the console exists to report. A thrown lookup is treated as
+  // "no session": the operator lands on the login page instead of a raw 500.
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
+  try {
+    session = await auth.api.getSession({ headers: await headers() });
+  } catch (err) {
+    console.error("[console] session lookup failed", (err as Error).message);
+  }
   if (!session) redirect("/console/login");
 
   return <Dashboard operator={session.user.email} />;

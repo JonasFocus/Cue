@@ -12,9 +12,17 @@
   --panel: #121214;
   --line: #212124;
   --hair: #1a1a1d;
+  /* --line and --hair are decorative separators (1.23:1 / 1.14:1). Any actual
+     control boundary must use --line-strong: 3.33:1 on --bg, 3.15:1 on
+     --panel, which is the SC 1.4.11 minimum. */
+  --line-strong: #63636d;
   --ink: #f2f2f4;
   --dim: #9a9aa4;
-  --faint: #62626c;
+  /* 5.79:1 on --bg, 5.47:1 on --panel — WCAG AA at the 11.5–13.5px this is
+     used at. The old #62626c was 3.28:1 / 3.10:1 and failed on every guest
+     email, join date and column header. Still clearly quieter than --dim
+     (7.10:1 / 6.71:1), so the hierarchy holds. */
+  --faint: #8a8a94;
 
   --ok: #4ade80;
   --warn: #fbbf24;
@@ -26,6 +34,9 @@
   position: relative;
   z-index: 0;
   min-height: 100vh;
+  /* Matches .cue. Without it the masthead's long hostname and operator email
+     pushed the document 57px wider than the 375px viewport. */
+  overflow-x: hidden;
   padding: 0 24px 120px;
   background: var(--bg);
   color: var(--ink);
@@ -108,8 +119,11 @@
 
 /* ── Masthead ── */
 
+/* Wraps rather than overflowing: at 375px the wordmark takes the first line
+   and the operator plus sign-out drop to a second. */
 .cx-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 26px 0 22px;
@@ -128,6 +142,8 @@
 
 .cx-wordmark {
   margin-right: auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 14px;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -142,15 +158,23 @@
 }
 
 .cx-who {
+  min-width: 0;
+  margin-left: auto;
+  overflow-wrap: anywhere;
   font-size: 12px;
   color: var(--faint);
 }
 
+/* flex: none keeps the 26px box above the 24px SC 2.5.8 floor — it was being
+   squeezed to 13px wide by the row it shares with the operator email. */
 .cx-signout {
   display: grid;
   place-items: center;
   width: 26px;
   height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  flex: none;
   border-radius: 7px;
   color: var(--faint);
   transition:
@@ -416,6 +440,18 @@
   font-size: 12.5px;
 }
 
+/* Partial health data is a state, not a failure — it must not read like the
+   red "lost contact" banner, and it must not hide the guest list. */
+.cx-degraded {
+  margin-top: 18px;
+  padding: 12px 15px;
+  border-radius: 10px;
+  border: 1px solid rgb(251 191 36 / 0.3);
+  background: rgb(251 191 36 / 0.08);
+  color: #fcd34d;
+  font-size: 12.5px;
+}
+
 /* ── Guest list ── */
 
 .cx-guests {
@@ -435,7 +471,7 @@
   border-bottom: 1px solid var(--hair);
 }
 
-.cx-guests-head h2 {
+.cx-guests-head h1 {
   font-size: 22px;
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -456,14 +492,14 @@
   margin-top: 18px;
   padding: 9px 14px;
   border-radius: 100px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: var(--bg);
   color: var(--faint);
   transition: border-color 160ms ease;
 }
 
 .cx-search:focus-within {
-  border-color: #3a3a40;
+  border-color: var(--dim);
 }
 
 .cx-search input {
@@ -478,7 +514,8 @@
 }
 
 /* The wrapper carries the ring, since the input's own outline is suppressed so
-   the pill stays the focus object. --line is invisible on --bg (1.23:1). */
+   the pill stays the focus object. Its resting border is --line-strong, which
+   the ring has to beat loudly. */
 .cx-search:has(input:focus-visible) {
   border-color: var(--violet);
   box-shadow: 0 0 0 2px rgb(139 124 246 / 0.4);
@@ -488,34 +525,66 @@
   color: var(--faint);
 }
 
-.cx-thead,
-.cx-trow {
+/* A real <table>. `display: contents` on thead/tbody/tr hands the cells
+   straight to the table's own 4-column grid, so the semantics cost nothing
+   in layout. Cells carry the padding and rules the rows used to. */
+.cx-table {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.6fr) 100px 88px;
-  align-items: center;
-  gap: 12px;
-  padding: 0 24px;
+  width: 100%;
 }
 
-.cx-thead {
-  padding-block: 12px;
+.cx-table thead,
+.cx-table tbody,
+.cx-table tr {
+  display: contents;
+}
+
+.cx-table th,
+.cx-table td {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding-inline: 6px;
   border-bottom: 1px solid var(--hair);
+}
+
+.cx-table th:first-child,
+.cx-table td:first-child {
+  padding-left: 24px;
+}
+
+.cx-table th:last-child,
+.cx-table td:last-child {
+  padding-right: 24px;
+}
+
+.cx-thead th {
+  padding-block: 12px;
   font-size: 12px;
+  font-weight: 400;
+  text-align: left;
   color: var(--faint);
 }
 
-.cx-trow {
+.cx-table td {
   height: 58px;
-  border-bottom: 1px solid var(--hair);
-  animation: cxIn 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  transition: background-color 160ms ease;
 }
 
-.cx-trow:last-child {
+.cx-table tr:last-child td {
   border-bottom: 0;
 }
 
-.cx-trow:hover {
+/* The row is `display: contents`, so the hover and the entrance both have to
+   live on the cells. animation-delay: inherit picks up the per-row stagger
+   set inline on the <tr>. */
+.cx-trow td {
+  animation: cxIn 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: inherit;
+  transition: background-color 160ms ease;
+}
+
+.cx-trow:hover td {
   background: rgb(255 255 255 / 0.016);
 }
 
@@ -586,7 +655,7 @@
 
 .cx-status:hover,
 .cx-status:focus-within {
-  border-color: var(--line);
+  border-color: var(--line-strong);
   background: rgb(255 255 255 / 0.03);
 }
 
@@ -650,23 +719,52 @@
   color: #fca5a5;
 }
 
-.cx-empty {
+.cx-table td.cx-empty {
+  grid-column: 1 / -1;
+  justify-content: center;
+  height: auto;
   padding: 46px 20px;
+  border-bottom: 0;
   text-align: center;
   font-size: 13px;
   color: var(--faint);
 }
 
+/* Below 640px the grid moves off the table and onto each row, so a guest
+   reflows to two lines without rows bleeding into one another. */
 @media (max-width: 640px) {
-  .cx-thead {
+  .cx-table,
+  .cx-table tbody {
+    display: block;
+  }
+
+  .cx-table thead {
     display: none;
   }
 
-  .cx-trow {
+  .cx-table tr {
+    display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    height: auto;
-    padding-block: 15px;
+    align-items: center;
+    padding: 15px 24px;
     row-gap: 5px;
+    column-gap: 12px;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  .cx-table tr:last-child {
+    border-bottom: 0;
+  }
+
+  .cx-table td {
+    height: auto;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .cx-table td:first-child,
+  .cx-table td:last-child {
+    padding-inline: 0;
   }
 
   .cx-guest-mail,
@@ -674,9 +772,13 @@
     grid-column: 1;
   }
 
-  .cx-status {
+  .cx-status-cell {
     grid-column: 2;
     grid-row: 1;
+  }
+
+  .cx-table td.cx-empty {
+    padding: 46px 20px;
   }
 }
 

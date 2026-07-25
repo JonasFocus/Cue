@@ -47,7 +47,7 @@ export function Faq() {
                 {"Frequently asked\nquestions"}
               </h2>
               <p className="cue-lede" style={{ textAlign: "left" }}>
-                Still have questions? Reach out at hello@cue.krevo.io
+                Still have questions? Reach out at hello@krevo.io
               </p>
             </div>
 
@@ -85,7 +85,7 @@ const FOOTER_LINKS = [
     heading: "Company",
     links: [
       { href: "https://www.krevo.io", label: "Krevo" },
-      { href: "mailto:hello@cue.krevo.io", label: "Contact" },
+      { href: "mailto:hello@krevo.io", label: "Contact" },
       { href: "/legal/privacy", label: "Privacy" },
       { href: "/legal/terms", label: "Terms" },
     ],
