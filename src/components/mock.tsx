@@ -1,14 +1,21 @@
 import {
+  ArrowUpDown,
   Check,
+  ChevronDown,
   Clock,
+  Command,
   FileSignature,
   FileText,
-  Files,
+  Heart,
   Inbox,
+  PanelLeft,
   PenLine,
+  Plus,
   Search,
   Send,
-  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  User,
 } from "lucide-react";
 
 /* ponytail: product shots are CSS/DOM, not images — no asset pipeline, and they
@@ -23,203 +30,206 @@ const ICONS = {
 type CueRow = {
   icon: keyof typeof ICONS;
   name: string;
-  meta: string;
-  pill?: { label: string; tone?: "ok" | "wait" };
+  template: string;
+  date: string;
+  updated: string;
+  initials: string;
+  pill: { label: string; tone?: "ok" | "wait" };
 };
 
 const CUES: CueRow[] = [
   {
     icon: "signed",
-    name: "Harper & Wells — Wedding",
-    meta: "Signed 2 hr ago · Jun 14",
+    name: "Harper & Wells",
+    template: "Wedding · 4 pages",
+    date: "Jun 14",
+    updated: "2 hr ago",
+    initials: "AH",
     pill: { label: "Signed", tone: "ok" },
   },
   {
     icon: "doc",
     name: "Alvarez Engagement Shoot",
-    meta: "Sent yesterday · viewed twice",
+    template: "Portrait · 3 pages",
+    date: "Jun 21",
+    updated: "Yesterday",
+    initials: "RA",
     pill: { label: "Awaiting", tone: "wait" },
   },
   {
     icon: "doc",
     name: "Okafor Elopement — Film",
-    meta: "Sent 3 days ago · viewed once",
+    template: "Elopement · 5 pages",
+    date: "Jul 02",
+    updated: "3 days ago",
+    initials: "NO",
     pill: { label: "Awaiting", tone: "wait" },
   },
   {
     icon: "draft",
     name: "Brand Session — Retainer",
-    meta: "Edited 10 min ago",
+    template: "Retainer · 6 pages",
+    date: "Jul 09",
+    updated: "10 min ago",
+    initials: "TB",
     pill: { label: "Draft" },
   },
   {
     icon: "signed",
     name: "Marsh Family Portraits",
-    meta: "Signed Apr 2 · PDF stored",
+    template: "Portrait · 3 pages",
+    date: "Apr 02",
+    updated: "Apr 02",
+    initials: "KM",
     pill: { label: "Signed", tone: "ok" },
   },
 ];
 
-const AUDIT = [
-  { label: "Cue sent", meta: "Jun 12" },
-  { label: "Opened by client", meta: "Jun 13" },
-  { label: "Consent recorded", meta: "Jun 14" },
-  { label: "Signed and sealed", meta: "2 hr ago", done: true },
+const TEMPLATES = [
+  { label: "Wedding", icon: Heart, tone: "rose" },
+  { label: "Elopement", icon: Sparkles, tone: "violet" },
+  { label: "Portrait", icon: User, tone: "teal" },
 ];
 
-/**
- * Full agreement-workspace window.
- * `detail` adds the third inspector pane used by the hero shot.
- */
-export function MockApp({
-  compact = false,
-  detail = false,
-}: {
-  compact?: boolean;
-  detail?: boolean;
-}) {
+const FILTERS = ["All", "Awaiting", "Signed", "Drafts"];
+
+/** The agreement workspace. `compact` trims it to a small feature tile. */
+export function MockApp({ compact = false }: { compact?: boolean }) {
   return (
     <div className="cue-mock" aria-hidden>
-      <div className="cue-mock-bar">
-        <span className="cue-mock-dot" style={{ background: "#ff5f57" }} />
-        <span className="cue-mock-dot" style={{ background: "#febc2e" }} />
-        <span className="cue-mock-dot" style={{ background: "#28c840" }} />
-        <span style={{ marginLeft: 10, color: "var(--cue-muted)" }}>
-          Cue — All agreements
-        </span>
-        {detail && (
-          <span className="cue-mock-bar-cta">
-            <Send size={11} strokeWidth={2} /> New Cue
-          </span>
-        )}
-      </div>
-
-      <div className="cue-mock-body" data-detail={detail}>
+      <div className="cue-mock-body">
         <div className="cue-mock-side">
+          <span className="cue-mock-ws">
+            <i className="cue-mock-ws-mark" />
+            <b>Harper Studio</b>
+            <ChevronDown size={11} strokeWidth={2} />
+            <PanelLeft size={12} strokeWidth={1.75} className="cue-mock-ws-panel" />
+          </span>
+
+          {!compact && (
+            <span className="cue-mock-quick">
+              <Command size={11} strokeWidth={1.75} />
+              Quick actions
+              <kbd>K</kbd>
+            </span>
+          )}
+
           <span className="cue-mock-side-label">Workspace</span>
           <span className="cue-mock-side-item" data-active="true">
             <Inbox size={13} strokeWidth={1.75} /> All Cues <b>28</b>
           </span>
           <span className="cue-mock-side-item">
-            <Clock size={13} strokeWidth={1.75} /> Awaiting <b>2</b>
+            <Clock size={13} strokeWidth={1.75} /> Awaiting
+            <i className="cue-mock-live" />
+            <b>2</b>
           </span>
           <span className="cue-mock-side-item">
             <Check size={13} strokeWidth={1.75} /> Signed <b>24</b>
           </span>
-          <span className="cue-mock-side-label">Templates</span>
-          <span className="cue-mock-side-item">
-            <Files size={13} strokeWidth={1.75} /> Wedding
-          </span>
-          <span className="cue-mock-side-item">
-            <Files size={13} strokeWidth={1.75} /> Elopement
-          </span>
-          {!compact && (
-            <span className="cue-mock-side-item">
-              <Files size={13} strokeWidth={1.75} /> Portrait
-            </span>
-          )}
 
-          {detail && (
-            <div className="cue-mock-side-foot">
-              <div className="cue-mock-quota-row">
-                <span style={{ color: "var(--cue-ink)" }}>Free plan</span>
-                <span>3 / 5</span>
+          {!compact && (
+            <>
+              <span className="cue-mock-side-label">Templates</span>
+              {TEMPLATES.map(({ label, icon: Icon, tone }) => (
+                <span className="cue-mock-side-item" key={label}>
+                  <i className="cue-mock-tile" data-tone={tone}>
+                    <Icon size={9} strokeWidth={2.25} />
+                  </i>
+                  {label}
+                </span>
+              ))}
+
+              <div className="cue-mock-side-foot">
+                <div className="cue-mock-quota-row">
+                  <span style={{ color: "var(--cue-ink)" }}>Free plan</span>
+                  <span>3 of 5</span>
+                </div>
+                <div className="cue-mock-progress" style={{ margin: "7px 0 9px" }}>
+                  <i style={{ width: "60%", animation: "none" }} />
+                </div>
+                <span className="cue-mock-upgrade">Upgrade</span>
               </div>
-              <div className="cue-mock-progress" style={{ margin: "7px 0" }}>
-                <i style={{ width: "60%", animation: "none" }} />
-              </div>
-              <div className="cue-mock-quota-row">
-                <span>Cues sent</span>
-                <span>2 left</span>
-              </div>
-            </div>
+            </>
           )}
         </div>
 
         <div className="cue-mock-main">
-          <div className="cue-mock-search">
-            <Search size={12} strokeWidth={1.75} />
-            Search agreements, clients, or dates
+          <div className="cue-mock-top">
+            <span className="cue-mock-crumb">
+              Workspace <i>/</i> <b>All Cues</b>
+            </span>
+            <span className="cue-mock-icon-btn">
+              <Search size={12} strokeWidth={1.75} />
+            </span>
+            <span className="cue-mock-icon-btn">
+              <SlidersHorizontal size={12} strokeWidth={1.75} />
+            </span>
+            <span className="cue-mock-new">
+              <Plus size={11} strokeWidth={2.5} /> New Cue
+            </span>
           </div>
 
-          {(compact ? CUES.slice(0, 2) : CUES).map((c, i) => {
-            const Icon = ICONS[c.icon];
-            return (
-              <div
-                className="cue-mock-file"
-                data-selected={detail && i === 0}
-                key={c.name}
-              >
-                <Icon
-                  size={15}
-                  strokeWidth={1.75}
-                  style={{ color: "var(--cue-muted)", flex: "none" }}
-                />
-                <span className="cue-mock-file-meta">
-                  <span>{c.name}</span>
-                  <span>{c.meta}</span>
+          {!compact && (
+            <div className="cue-mock-toolbar">
+              {FILTERS.map((f) => (
+                <span
+                  className="cue-mock-chip"
+                  data-active={f === "All"}
+                  key={f}
+                >
+                  {f}
                 </span>
-                {c.pill && (
+              ))}
+              <span className="cue-mock-sort">
+                <ArrowUpDown size={10} strokeWidth={2} /> Shoot date
+              </span>
+            </div>
+          )}
+
+          <div className="cue-mock-table">
+            {!compact && (
+              <div className="cue-mock-thead">
+                <span>Agreement</span>
+                <span>Status</span>
+                <span>Shoot date</span>
+                <span>Updated</span>
+                <span />
+              </div>
+            )}
+
+            {(compact ? CUES.slice(0, 2) : CUES).map((c) => {
+              const Icon = ICONS[c.icon];
+              return (
+                <div className="cue-mock-row" key={c.name}>
+                  <span className="cue-mock-cell">
+                    <i className="cue-mock-doc">
+                      <Icon size={11} strokeWidth={1.9} />
+                    </i>
+                    <span className="cue-mock-file-meta">
+                      <span>{c.name}</span>
+                      <span>{c.template}</span>
+                    </span>
+                  </span>
                   <span className="cue-mock-pill" data-tone={c.pill.tone}>
                     {c.pill.label}
                   </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {detail && (
-          <div className="cue-mock-detail">
-            <div className="cue-mock-preview">
-              <ShieldCheck size={22} strokeWidth={1.5} />
-            </div>
-            <div style={{ fontWeight: 500, marginTop: 12 }}>
-              Harper &amp; Wells
-            </div>
-            <div style={{ color: "var(--cue-muted)", fontSize: 10 }}>
-              Wedding agreement · 4 pages
-            </div>
-
-            <div className="cue-mock-detail-block">
-              <div className="cue-mock-detail-head">
-                <PenLine size={11} strokeWidth={2} /> Signature
-              </div>
-              <div className="cue-mock-sign">Amelia Harper</div>
-              <div className="cue-mock-detail-line">
-                <Check
-                  size={10}
-                  strokeWidth={3}
-                  style={{ color: "var(--cue-accent)" }}
-                />
-                Consent recorded
-              </div>
-            </div>
-
-            <div className="cue-mock-detail-block">
-              <div className="cue-mock-detail-head">Audit trail</div>
-              <div className="cue-mock-timeline">
-                {AUDIT.map((a) => (
-                  <div
-                    className="cue-mock-timeline-row"
-                    data-done={a.done}
-                    key={a.label}
-                  >
-                    {a.done ? (
-                      <span className="cue-mock-tick-done">
-                        <Check size={8} strokeWidth={4} />
-                      </span>
-                    ) : (
-                      <i className="cue-mock-tick" />
-                    )}
-                    {a.label}
-                    <b>{a.meta}</b>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  <span className="cue-mock-col">{c.date}</span>
+                  <span className="cue-mock-col">{c.updated}</span>
+                  <span className="cue-mock-face">{c.initials}</span>
+                </div>
+              );
+            })}
           </div>
-        )}
+
+          {!compact && (
+            <div className="cue-mock-foot">
+              <span>28 agreements</span>
+              <span className="cue-mock-foot-note">
+                <Send size={10} strokeWidth={1.9} /> 2 awaiting signature
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
