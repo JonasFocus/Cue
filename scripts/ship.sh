@@ -85,6 +85,6 @@ fi
 step "▸ pushing"
 run "origin/main" git push origin main
 
-step "▸ deploying"
+# deploy.sh prints its own "▸ deploying" header.
 ssh -o StrictHostKeyChecking=accept-new "$HOST" \
   "/opt/cue/scripts/deploy.sh$([ "$VERBOSE" = true ] && echo ' --verbose')"
