@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { maskEmail, nameFromEmail } from "./waitlist";
+import { type GuestStatus, maskEmail, nameFromEmail } from "./waitlist";
 
 /* One pool per process. Next dev re-evaluates modules on every hot reload, so
    the pool is stashed on globalThis to avoid leaking connections. */
@@ -41,7 +41,7 @@ export type Guest = {
   id: number;
   name: string;
   email: string;
-  status: "pending" | "invited" | "joined";
+  status: GuestStatus;
   createdAt: string;
 };
 
@@ -76,7 +76,7 @@ export async function guestList(limit = 200): Promise<Guest[]> {
     id: string;
     email: string;
     name: string | null;
-    status: Guest["status"];
+    status: GuestStatus;
     created_at: Date;
   }>(
     `SELECT id, email, name, status, created_at
@@ -93,4 +93,33 @@ export async function guestList(limit = 200): Promise<Guest[]> {
     status: r.status,
     createdAt: r.created_at.toISOString(),
   }));
+}
+
+/** Returns the updated row, or null when no guest has that id. */
+export async function setGuestStatus(
+  id: number,
+  status: GuestStatus,
+): Promise<Guest | null> {
+  const { rows } = await pool.query<{
+    id: string;
+    email: string;
+    name: string | null;
+    status: GuestStatus;
+    created_at: Date;
+  }>(
+    `UPDATE waitlist SET status = $2 WHERE id = $1
+       RETURNING id, email, name, status, created_at`,
+    [id, status],
+  );
+
+  const r = rows[0];
+  if (!r) return null;
+
+  return {
+    id: Number(r.id),
+    name: r.name?.trim() || nameFromEmail(r.email),
+    email: r.email,
+    status: r.status,
+    createdAt: r.created_at.toISOString(),
+  };
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LogOut, PenLine, Search } from "lucide-react";
+import { ChevronDown, LogOut, PenLine, Search } from "lucide-react";
 import type { ServiceHealth } from "@/lib/docker";
 import type { Guest } from "@/lib/db";
+import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
 
 type Probe = { ok: boolean; latencyMs: number; detail: string };
 
@@ -28,6 +29,9 @@ export function Dashboard({ operator }: { operator: string }) {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(0);
   const inFlight = useRef(false);
+  // A poll that lands mid-edit would overwrite the optimistic value with the
+  // pre-edit one. Hold guest updates while a mutation is outstanding.
+  const mutating = useRef(0);
 
   const load = useCallback(async () => {
     if (inFlight.current) return;
@@ -43,7 +47,8 @@ export function Dashboard({ operator }: { operator: string }) {
       }
       if (!health.ok) throw new Error(`health returned ${health.status}`);
       setSnap(await health.json());
-      if (list.ok) setGuests((await list.json()).guests);
+      const listed = list.ok ? (await list.json()).guests : null;
+      if (listed && mutating.current === 0) setGuests(listed);
       setNow(Date.now());
       setError(null);
     } catch (err) {
@@ -52,6 +57,29 @@ export function Dashboard({ operator }: { operator: string }) {
       inFlight.current = false;
     }
   }, []);
+
+  const setStatus = useCallback(async (id: number, status: GuestStatus) => {
+    mutating.current += 1;
+    setGuests((prev) =>
+      prev ? prev.map((g) => (g.id === id ? { ...g, status } : g)) : prev,
+    );
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) throw new Error(`status update returned ${res.status}`);
+      const { guest } = await res.json();
+      setGuests((prev) => (prev ? prev.map((g) => (g.id === id ? guest : g)) : prev));
+      setError(null);
+    } catch (err) {
+      setError(`${(err as Error).message} — reverting`);
+      void load();
+    } finally {
+      mutating.current -= 1;
+    }
+  }, [load]);
 
   useEffect(() => {
     const first = setTimeout(load, 0);
@@ -111,7 +139,7 @@ export function Dashboard({ operator }: { operator: string }) {
         {tab === "overview" ? (
           <Overview snap={snap} />
         ) : (
-          <GuestList guests={guests} now={now} />
+          <GuestList guests={guests} now={now} onStatus={setStatus} />
         )}
       </div>
     </div>
@@ -229,13 +257,23 @@ function ProbeRow({
 
 /* ── Guest list ── */
 
-const STATUS_LABEL: Record<Guest["status"], string> = {
+const STATUS_LABEL: Record<GuestStatus, string> = {
   pending: "Pending",
-  invited: "Invited",
-  joined: "Joined",
+  screening: "Screening",
+  approved: "Approved",
+  suspended: "Suspended",
+  blacklisted: "Blacklisted",
 };
 
-function GuestList({ guests, now }: { guests: Guest[] | null; now: number }) {
+function GuestList({
+  guests,
+  now,
+  onStatus,
+}: {
+  guests: Guest[] | null;
+  now: number;
+  onStatus: (id: number, status: GuestStatus) => void;
+}) {
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -312,10 +350,21 @@ function GuestList({ guests, now }: { guests: Guest[] | null; now: number }) {
               <span className="cx-guest-date" title={relative(g.createdAt, now)}>
                 {formatDate(g.createdAt)}
               </span>
-              <span className="cx-status" data-status={g.status}>
+              <label className="cx-status" data-status={g.status}>
                 <i />
-                {STATUS_LABEL[g.status]}
-              </span>
+                <select
+                  value={g.status}
+                  aria-label={`Status for ${g.name}`}
+                  onChange={(e) => onStatus(g.id, e.target.value as GuestStatus)}
+                >
+                  {GUEST_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABEL[s]}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={11} strokeWidth={2.25} />
+              </label>
             </div>
           ))}
         </div>

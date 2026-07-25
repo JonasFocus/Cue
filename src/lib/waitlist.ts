@@ -2,6 +2,25 @@
    A "use server" module may only export async functions, so nothing in it can
    be unit tested directly. These live here so they can be. */
 
+/* The single source of truth for guest status. The database CHECK constraint,
+   the PATCH endpoint's allowlist, and the console dropdown all derive from
+   this, so adding a stage means editing one list plus one migration. */
+export const GUEST_STATUSES = [
+  "pending",
+  "screening",
+  "approved",
+  "suspended",
+  "blacklisted",
+] as const;
+
+export type GuestStatus = (typeof GUEST_STATUSES)[number];
+
+export function isGuestStatus(value: unknown): value is GuestStatus {
+  return (
+    typeof value === "string" && (GUEST_STATUSES as readonly string[]).includes(value)
+  );
+}
+
 /* Deliberately permissive. The job is to catch typos and obvious junk, not to
    adjudicate RFC 5322 — an address is only truly validated by delivering to
    it, and we are not sending mail. */

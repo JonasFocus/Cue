@@ -557,13 +557,30 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Editable status. A real <select> under a pill: native keyboard handling and
+   the platform picker on mobile, with none of the click-outside, focus-trap
+   and roving-tabindex code a custom popover would need. */
 .cx-status {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   justify-self: start;
+  padding: 5px 9px 5px 10px;
+  margin-left: -10px;
+  border-radius: 100px;
+  border: 1px solid transparent;
   font-size: 12.5px;
   color: var(--dim);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.cx-status:hover,
+.cx-status:focus-within {
+  border-color: var(--line);
+  background: rgb(255 255 255 / 0.03);
 }
 
 .cx-status i {
@@ -571,16 +588,51 @@
   height: 5px;
   flex: none;
   border-radius: 50%;
+  background: var(--faint);
+}
+
+.cx-status select {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+/* The chevron only appears on hover/focus, so a resting row stays a clean
+   read-only list rather than looking like a form. */
+.cx-status > svg {
+  opacity: 0;
+  color: var(--faint);
+  transition: opacity 160ms ease;
+}
+
+.cx-status:hover > svg,
+.cx-status:focus-within > svg {
+  opacity: 1;
 }
 
 .cx-status[data-status="pending"] i {
   background: var(--warn);
 }
-.cx-status[data-status="invited"] i {
-  background: var(--violet);
+.cx-status[data-status="screening"] i {
+  background: #38bdf8;
 }
-.cx-status[data-status="joined"] i {
+.cx-status[data-status="approved"] i {
   background: var(--ok);
+}
+.cx-status[data-status="suspended"] i {
+  background: #fb923c;
+}
+.cx-status[data-status="blacklisted"] i {
+  background: var(--bad);
+}
+
+.cx-status[data-status="blacklisted"] select {
+  color: #fca5a5;
 }
 
 .cx-empty {
