@@ -62,9 +62,11 @@ if [ "$healthy" != true ]; then
   exit 1
 fi
 
-# Build cache grows by ~400MB per deploy and is never reclaimed on its own.
+# Build cache grows ~400MB per deploy and is never reclaimed on its own. Cap it
+# by size, not age: an age filter never catches cache that is always fresh, so
+# frequent deploys would grow it without bound.
 echo "▸ pruning build cache"
-docker builder prune --force --filter 'until=168h' >/dev/null 2>&1 || true
+docker builder prune --force --max-used-space 2GB >/dev/null 2>&1 || true
 docker image prune --force >/dev/null 2>&1 || true
 
 echo
