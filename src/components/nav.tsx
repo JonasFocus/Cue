@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Menu, PenLine, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { CueMark } from "@/components/cue-mark";
 
 const LINKS = [
   { href: "#features", label: "Features" },
@@ -50,7 +51,7 @@ export function Nav() {
         <div className="cue-nav-inner">
           <Link href="/" className="cue-brand">
             <span className="cue-brand-mark">
-              <PenLine size={15} strokeWidth={2} />
+              <CueMark size={15} />
             </span>
             Cue
           </Link>

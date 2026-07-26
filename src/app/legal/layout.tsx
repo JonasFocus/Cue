@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { PenLine } from "lucide-react";
 import { Footer } from "@/components/faq";
+import { CueMark } from "@/components/cue-mark";
 
 /* The marketing Nav is not reused here: its links are same-page anchors into
    sections that do not exist on a legal page. A brand link home is enough. */
@@ -15,7 +15,7 @@ export default function LegalLayout({
           <div className="cue-nav-inner">
             <Link href="/" className="cue-brand">
               <span className="cue-brand-mark">
-                <PenLine size={15} strokeWidth={2} />
+                <CueMark size={15} />
               </span>
               Cue
             </Link>

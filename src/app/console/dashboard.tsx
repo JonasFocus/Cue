@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, LogOut, PenLine, Search } from "lucide-react";
+import { ChevronDown, LogOut, Search } from "lucide-react";
 import type { ServiceHealth } from "@/lib/docker";
 import type { Guest, WaitlistStats } from "@/lib/db";
 import type { Probe } from "@/app/api/health/route";
@@ -12,6 +12,7 @@ import {
   statusSelectValue,
   type StatusSelectEvent,
 } from "@/lib/console";
+import { CueMark } from "@/components/cue-mark";
 
 /* Built from the server's own types rather than hand-copied. A local copy
    drifted once already — it kept declaring `today` and `latest` after the API
@@ -147,7 +148,7 @@ export function Dashboard({ operator }: { operator: string }) {
       <div className="cx-col">
         <header className="cx-top">
           <span className="cx-mark">
-            <PenLine size={13} strokeWidth={2.25} />
+            <CueMark size={13} />
           </span>
           <span className="cx-wordmark">
             Console<span>staging.cue.krevo.io</span>

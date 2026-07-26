@@ -1,6 +1,7 @@
-import { PenLine, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Reveal } from "./reveal";
 import { Waitlist } from "./waitlist";
+import { CueMark } from "@/components/cue-mark";
 
 /* ponytail: native <details> — no accordion state, no library, keyboard and
    find-in-page work for free. */
@@ -130,7 +131,7 @@ export function Footer() {
           <div>
             <span className="cue-brand">
               <span className="cue-brand-mark">
-                <PenLine size={15} strokeWidth={2} />
+                <CueMark size={15} />
               </span>
               Cue
             </span>

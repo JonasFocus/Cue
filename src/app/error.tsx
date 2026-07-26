@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { PenLine, RotateCw } from "lucide-react";
+import { RotateCw } from "lucide-react";
 import { useEffect } from "react";
+import { CueMark } from "@/components/cue-mark";
 
 /* Catches any unhandled render or data error below the root layout so nobody
    ever meets Next's raw 500 page. Reuses the 404 classes verbatim — the styling
@@ -33,7 +34,7 @@ export default function Error({
           <div className="cue-404-brandrow">
             <Link href="/" className="cue-404-brand">
               <span className="cue-404-mark">
-                <PenLine size={15} strokeWidth={2} />
+                <CueMark size={15} />
               </span>
               Cue
             </Link>

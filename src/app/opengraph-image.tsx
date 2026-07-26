@@ -36,12 +36,13 @@ export default function OpengraphImage() {
               background: "#0086ff",
             }}
           >
-            {/* The pen mark from the nav, inlined — Satori cannot load icons. */}
+            {/* The Cue mark, inlined — Satori renders SVG but cannot import a component.
+               Keep in sync with src/components/cue-mark.tsx. */}
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
               <path
-                d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+                d="M5 15.4c3.2.2 4.2-6.8 7.3-6.8 2.6 0 2 6.2 4.4 6.2 1.4 0 2.1-1.3 2.6-2.4"
                 stroke="#fff"
-                strokeWidth="2"
+                strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />

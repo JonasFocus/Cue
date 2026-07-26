@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, PenLine } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { CueMark } from "@/components/cue-mark";
 
 export default function NotFound() {
   return (
@@ -21,7 +22,7 @@ export default function NotFound() {
           <div className="cue-404-brandrow">
             <Link href="/" className="cue-404-brand">
               <span className="cue-404-mark">
-                <PenLine size={15} strokeWidth={2} />
+                <CueMark size={15} />
               </span>
               Cue
             </Link>

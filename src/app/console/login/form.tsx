@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, ArrowRight, Loader2, PenLine } from "lucide-react";
+import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { createAuthClient } from "better-auth/react";
+import { CueMark } from "@/components/cue-mark";
 
 const client = createAuthClient();
 
@@ -40,7 +41,7 @@ export function LoginForm() {
         <div className="cue-auth-head">
           <span className="cue-brand">
             <span className="cue-brand-mark">
-              <PenLine size={15} strokeWidth={2} />
+              <CueMark size={15} />
             </span>
             Cue
           </span>
