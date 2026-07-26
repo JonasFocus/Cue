@@ -66,6 +66,15 @@
   width: 100%;
   max-width: 720px;
   margin-inline: auto;
+  transition: max-width 380ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* The changelog reads left to right — `[code] — description (see also: #n)`
+   plus its controls — and does not fit on one line in the ops column. Same
+   reasoning as .cue-shell-wide on the marketing page: the content decides the
+   measure, not the shell. */
+.cx-col[data-tab="changelog"] {
+  max-width: 880px;
 }
 
 /* ── Dithered gradient ──
@@ -97,6 +106,15 @@
     radial-gradient(50% 86% at 88% 70%, #5fd39b 0%, transparent 58%),
     radial-gradient(52% 88% at 28% 98%, #7fb8f7 0%, transparent 60%),
     linear-gradient(146deg, #7c86e8 0%, #4fc3d9 100%);
+}
+
+.cx-dither[data-tone="warm"] {
+  background:
+    radial-gradient(46% 78% at 24% 24%, #ffb03d 0%, transparent 58%),
+    radial-gradient(44% 74% at 62% 10%, #ff6f61 0%, transparent 56%),
+    radial-gradient(50% 86% at 86% 66%, #b07ef0 0%, transparent 58%),
+    radial-gradient(52% 88% at 26% 98%, #ffe08a 0%, transparent 60%),
+    linear-gradient(146deg, #f7a97f 0%, #9b7ef0 100%);
 }
 
 /* Halftone dot grid, sitting above the blur so it stays crisp. */
@@ -804,6 +822,570 @@
 
   .cx-table td.cx-empty {
     padding: 46px 20px;
+  }
+}
+
+/* ── Changelog ──
+   Ported from the reference layout: a release heading, then one badged
+   timeline group per type, then `[code] — description (see also: #n)` rows.
+   The reference is a light page; the palette here is the console's, because a
+   white panel dropped into this surface reads as a broken embed rather than a
+   considered one. Everything else — structure, rhythm, the mono code, the rail
+   through the badges — is the reference. */
+
+/* No `overflow: hidden`, unlike the other two cards: an entry's ⋯ menu has to
+   be able to hang past the card's bottom edge. The art clips its own corners
+   instead — .cx-art already carries the overflow rule the dot grid needs. */
+.cx-log {
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.cx-log-art {
+  height: 104px;
+  border-radius: 17px 17px 0 0;
+}
+
+.cx-log-head {
+  padding: 26px 28px 22px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.cx-log-head h1 {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+.cx-log-head p {
+  margin-top: 8px;
+  font-size: 13.5px;
+  color: var(--dim);
+}
+
+.cx-log-error {
+  margin: 18px 28px 0;
+}
+
+.cx-log-body {
+  padding: 30px 28px 34px;
+}
+
+.cx-log-empty {
+  padding: 26px 0 8px;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+/* ── One release ── */
+
+.cx-release {
+  animation: cxIn 460ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.cx-release + .cx-release {
+  margin-top: 46px;
+  padding-top: 40px;
+  border-top: 1px solid var(--hair);
+}
+
+.cx-release-head {
+  margin-bottom: 26px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-release-head b {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.cx-release-head span {
+  margin-left: 7px;
+  color: var(--faint);
+  font-weight: 400;
+}
+
+/* ── A type group, with the rail running through its badge ── */
+
+.cx-kind {
+  position: relative;
+  padding: 0 0 24px 50px;
+}
+
+/* The rail. Starts under the badge and runs to the next one; on the last group
+   it stops short of the container so it reads as an end, not a cut. */
+.cx-kind::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 34px;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.cx-kind:last-child {
+  padding-bottom: 4px;
+}
+
+.cx-kind:last-child::before {
+  bottom: 14px;
+}
+
+.cx-kind-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--violet);
+  animation: cxPop 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+.cx-kind[data-kind="fix"] .cx-kind-badge {
+  background: #3b82f6;
+}
+
+.cx-kind[data-kind="breaking"] .cx-kind-badge {
+  background: #ef4444;
+}
+
+@keyframes cxPop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+.cx-kind-head {
+  padding-top: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.cx-entries {
+  margin-top: 12px;
+  list-style: none;
+}
+
+/* ── One entry ── */
+
+.cx-entry {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  padding: 5px 0;
+  animation: cxIn 400ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: inherit;
+}
+
+.cx-entry-code {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--dim);
+}
+
+.cx-entry-dash {
+  flex: none;
+  color: var(--faint);
+}
+
+/* Auto-sizing text field. The ::after mirrors the value into the same grid
+   cell and sets the width; the input rides on top of it. Both must carry the
+   identical font and padding or the field sizes to the wrong string. */
+.cx-entry-field {
+  display: inline-grid;
+  min-width: 6ch;
+  max-width: 100%;
+}
+
+.cx-entry-field::after {
+  content: attr(data-value) " ";
+  visibility: hidden;
+  white-space: pre;
+}
+
+.cx-entry-field > input,
+.cx-entry-field::after {
+  grid-area: 1 / 1;
+  width: auto;
+  min-width: 0;
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13.5px;
+  letter-spacing: normal;
+}
+
+/* No resting border and none on hover either. A row of boxes lighting up under
+   the pointer is what made this read as a form; the ⋯ menu carries the
+   affordance now, and the box appears only once the field actually has focus. */
+.cx-entry-field > input {
+  background: none;
+  color: var(--dim);
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.cx-entry-field > input:focus {
+  color: var(--ink);
+  border-color: var(--line-strong);
+  background: rgb(255 255 255 / 0.03);
+}
+
+.cx-entry-field > input:focus-visible {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgb(139 124 246 / 0.4);
+  outline: none;
+}
+
+.cx-entry-ref {
+  flex: none;
+  font-size: 13px;
+  color: var(--violet);
+}
+
+/* ── The ⋯ button and its menu ── */
+
+/* Present at rest rather than hover-only: there is no hover on a touch screen,
+   and a control that only exists while the pointer is over it is a control
+   most people never find. Quiet enough at 0.4 to stay out of the reading. */
+.cx-more {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  margin-left: auto;
+  border-radius: 7px;
+  color: var(--faint);
+  opacity: 0.4;
+  transition:
+    opacity 160ms ease,
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.cx-entry:hover .cx-more,
+.cx-more:focus-visible,
+.cx-more[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.cx-more:hover,
+.cx-more[aria-expanded="true"] {
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.06);
+}
+
+/* The entry, not the menu, carries the z-index. `cxIn` fills `both`, so every
+   row keeps a computed transform forever and is therefore its own stacking
+   context — a z-index on the menu only ever competed with its own row, and the
+   rows below painted straight over the top of it. */
+.cx-entry[data-open] {
+  z-index: 5;
+}
+
+.cx-menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: 13px;
+  border: 1px solid var(--line-strong);
+  /* Opaque, not translucent: it sits over text it has to be readable against. */
+  background: #17171a;
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.55);
+  animation: cxMenu 150ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes cxMenu {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.97);
+  }
+}
+
+.cx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--dim);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.cx-menu-item:hover {
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.06);
+}
+
+.cx-menu-item[aria-pressed="true"] {
+  color: var(--ink);
+}
+
+.cx-menu-item[data-kind="feature"] > svg:first-child {
+  color: var(--violet);
+}
+
+.cx-menu-item[data-kind="fix"] > svg:first-child {
+  color: #3b82f6;
+}
+
+.cx-menu-item[data-kind="breaking"] > svg:first-child {
+  color: #ef4444;
+}
+
+.cx-menu-check {
+  margin-left: auto;
+  color: var(--violet);
+}
+
+.cx-menu-label {
+  margin-top: 4px;
+  padding: 7px 9px 3px;
+  border-top: 1px solid var(--hair);
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.cx-menu-danger {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hair);
+  border-radius: 0 0 8px 8px;
+  color: #fca5a5;
+}
+
+.cx-menu-danger:hover {
+  color: #fca5a5;
+  background: rgb(248 113 113 / 0.12);
+}
+
+/* ── Composer ── */
+
+.cx-compose {
+  padding: 20px 28px 22px;
+  border-bottom: 1px solid var(--hair);
+  background: rgb(255 255 255 / 0.012);
+}
+
+.cx-compose-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cx-compose-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--line-strong);
+  font-size: 12.5px;
+  color: var(--faint);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.cx-compose-kind:hover {
+  color: var(--dim);
+}
+
+.cx-compose-kind[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: transparent;
+}
+
+.cx-compose-kind[aria-pressed="true"][data-kind="feature"] {
+  background: rgb(139 124 246 / 0.22);
+  color: #c4bbfb;
+}
+
+.cx-compose-kind[aria-pressed="true"][data-kind="fix"] {
+  background: rgb(59 130 246 / 0.22);
+  color: #a5c8fb;
+}
+
+.cx-compose-kind[aria-pressed="true"][data-kind="breaking"] {
+  background: rgb(239 68 68 / 0.22);
+  color: #fca5a5;
+}
+
+.cx-compose-title {
+  width: 100%;
+  margin-top: 14px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14.5px;
+  outline: none;
+  transition: border-color 160ms ease;
+}
+
+.cx-compose-title::placeholder {
+  color: var(--faint);
+}
+
+.cx-compose-title:focus-visible {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgb(139 124 246 / 0.4);
+  outline: none;
+}
+
+.cx-compose-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 11px;
+}
+
+.cx-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--line-strong);
+  transition: border-color 160ms ease;
+}
+
+.cx-field span {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.cx-field input {
+  width: 8ch;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.cx-field input::placeholder {
+  color: var(--faint);
+}
+
+.cx-field:has(input:focus-visible) {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgb(139 124 246 / 0.4);
+}
+
+/* A text button, not another pill: it reveals fields, it is not one. */
+.cx-compose-more {
+  padding: 6px 4px;
+  font-size: 12.5px;
+  color: var(--faint);
+  transition: color 160ms ease;
+}
+
+.cx-compose-more:hover {
+  color: var(--dim);
+}
+
+.cx-compose-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  padding: 8px 15px;
+  border-radius: 100px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition:
+    opacity 160ms ease,
+    transform 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.cx-compose-add:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.cx-compose-add:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .cx-log-head,
+  .cx-compose {
+    padding-inline: 20px;
+  }
+
+  .cx-log-body {
+    padding-inline: 20px;
+  }
+
+  .cx-log-error {
+    margin-inline: 20px;
+  }
+
+  .cx-kind {
+    padding-left: 40px;
+  }
+
+  .cx-kind::before {
+    left: 12px;
+  }
+
+  .cx-kind-badge {
+    width: 25px;
+    height: 25px;
+  }
+
+  /* The ⋯ pins to the row's first line rather than wrapping to the bottom of
+     a two-line entry, where it reads as belonging to the next one. */
+  .cx-more {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    opacity: 0.55;
+  }
+
+  .cx-entry {
+    padding-right: 32px;
+  }
+
+  .cx-compose-add {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
   }
 }
 

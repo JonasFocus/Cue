@@ -1,5 +1,11 @@
 import { Pool } from "pg";
 import { type GuestStatus, nameFromEmail } from "./waitlist";
+import {
+  CHANGE_FIELDS,
+  type ChangeEntry,
+  type ChangeFields,
+  type ChangeKind,
+} from "./changelog";
 
 /* One pool per process. Next dev re-evaluates modules on every hot reload, so
    the pool is stashed on globalThis to avoid leaking connections. */
@@ -175,6 +181,93 @@ export async function setGuestStatus(
     status: r.status,
     createdAt: r.created_at.toISOString(),
   };
+}
+
+/* ── Changelog ── */
+
+type ChangeRow = {
+  id: string;
+  code: string;
+  version: string;
+  kind: ChangeKind;
+  title: string;
+  ref: string | null;
+  created_at: Date;
+};
+
+const CHANGE_COLUMNS = "id, code, version, kind, title, ref, created_at";
+
+function toEntry(row: ChangeRow): ChangeEntry {
+  return {
+    id: Number(row.id),
+    code: row.code,
+    version: row.version,
+    kind: row.kind,
+    title: row.title,
+    ref: row.ref,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
+/* ponytail: no pagination and no truncation flag, unlike guestList. The
+   changelog is written by one operator by hand — it grows at the speed of
+   releases, not signups, and 500 lines is years of them. Add a cursor the day
+   that stops being true. */
+export async function changelogList(limit = 500): Promise<ChangeEntry[]> {
+  const { rows } = await pool.query<ChangeRow>(
+    `SELECT ${CHANGE_COLUMNS} FROM changelog ORDER BY created_at DESC, id DESC LIMIT $1`,
+    [limit],
+  );
+  return rows.map(toEntry);
+}
+
+/* created_at is left to the column default so the stamp is Postgres's clock,
+   not the operator's laptop. It is rendered in Central time on the way out. */
+export async function addChangelogEntry(fields: ChangeFields): Promise<ChangeEntry> {
+  const { rows } = await pool.query<ChangeRow>(
+    `INSERT INTO changelog (code, version, kind, title, ref)
+          VALUES ($1, $2, $3, $4, $5)
+       RETURNING ${CHANGE_COLUMNS}`,
+    [fields.code, fields.version, fields.kind, fields.title, fields.ref],
+  );
+  return toEntry(rows[0]!);
+}
+
+/** Returns the updated row, or null when no entry has that id. */
+export async function updateChangelogEntry(
+  id: number,
+  fields: Partial<ChangeFields>,
+): Promise<ChangeEntry | null> {
+  /* The SET clause is built from CHANGE_FIELDS, a literal tuple in
+     changelog.ts — never from the keys of the parsed body. Values stay
+     parameterised; only names the source already spells out reach the SQL. */
+  const assignments: string[] = [];
+  const values: unknown[] = [id];
+
+  for (const field of CHANGE_FIELDS) {
+    const value = fields[field];
+    if (value === undefined) continue;
+    values.push(value);
+    assignments.push(`${field} = $${values.length}`);
+  }
+
+  // parseChangelogPatch rejects an empty patch as a 400, so this is a caller
+  // bug rather than a request the operator can make.
+  if (!assignments.length) return null;
+
+  const { rows } = await pool.query<ChangeRow>(
+    `UPDATE changelog SET ${assignments.join(", ")} WHERE id = $1
+       RETURNING ${CHANGE_COLUMNS}`,
+    values,
+  );
+
+  return rows[0] ? toEntry(rows[0]) : null;
+}
+
+/** True when a row was actually removed. */
+export async function deleteChangelogEntry(id: number): Promise<boolean> {
+  const { rowCount } = await pool.query(`DELETE FROM changelog WHERE id = $1`, [id]);
+  return rowCount === 1;
 }
 
 /* ponytail: a single COUNT over the existing created_at index, not a token

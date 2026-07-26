@@ -1,7 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, LogOut, Search } from "lucide-react";
+import {
+  Bug,
+  Check,
+  ChevronDown,
+  CircleAlert,
+  CornerDownLeft,
+  Ellipsis,
+  LogOut,
+  Pencil,
+  Search,
+  Sparkles,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import type { ServiceHealth } from "@/lib/docker";
 import type { Guest, WaitlistStats } from "@/lib/db";
 import type { Probe } from "@/app/api/health/route";
@@ -12,6 +25,18 @@ import {
   statusSelectValue,
   type StatusSelectEvent,
 } from "@/lib/console";
+import {
+  CHANGE_KINDS,
+  entryStamp,
+  groupReleases,
+  MAX_CODE,
+  MAX_REF,
+  MAX_TITLE,
+  MAX_VERSION,
+  type ChangeEntry,
+  type ChangeFields,
+  type ChangeKind,
+} from "@/lib/changelog";
 import { CueMark } from "@/components/cue-mark";
 
 /* Built from the server's own types rather than hand-copied. A local copy
@@ -29,7 +54,7 @@ type Snapshot = {
 const POLL_MS = 5000;
 
 export function Dashboard({ operator }: { operator: string }) {
-  const [tab, setTab] = useState<"overview" | "guests">("overview");
+  const [tab, setTab] = useState<"overview" | "guests" | "changelog">("overview");
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [guests, setGuests] = useState<Guest[] | null>(null);
   // The API caps the list; when it does, the count on screen is not the total.
@@ -145,7 +170,7 @@ export function Dashboard({ operator }: { operator: string }) {
 
   return (
     <div className="cx">
-      <div className="cx-col">
+      <div className="cx-col" data-tab={tab}>
         <header className="cx-top">
           <span className="cx-mark">
             <CueMark size={13} />
@@ -186,6 +211,14 @@ export function Dashboard({ operator }: { operator: string }) {
             Guest list
             {guests ? <b>{truncated ? `${guests.length}+` : guests.length}</b> : null}
           </button>
+          <button
+            type="button"
+            aria-pressed={tab === "changelog"}
+            className="cx-tab"
+            onClick={() => setTab("changelog")}
+          >
+            Changelog
+          </button>
         </nav>
 
         {/* One region, always in the DOM, contents swapped. A `role="status"`
@@ -203,9 +236,8 @@ export function Dashboard({ operator }: { operator: string }) {
         </div>
 
         <main>
-          {tab === "overview" ? (
-            <Overview snap={snap} degraded={degraded} />
-          ) : (
+          {tab === "overview" && <Overview snap={snap} degraded={degraded} />}
+          {tab === "guests" && (
             <GuestList
               guests={guests}
               truncated={truncated}
@@ -213,6 +245,7 @@ export function Dashboard({ operator }: { operator: string }) {
               onStatus={setStatus}
             />
           )}
+          {tab === "changelog" && <Changelog />}
         </main>
       </div>
     </div>
@@ -535,6 +568,512 @@ function StatusSelect({
       </select>
       <ChevronDown size={11} strokeWidth={2.25} />
     </label>
+  );
+}
+
+/* ── Changelog ── */
+
+const KIND_META: Record<
+  ChangeKind,
+  { label: string; heading: string; Icon: LucideIcon }
+> = {
+  feature: { label: "Feature", heading: "New Features", Icon: Sparkles },
+  fix: { label: "Fix", heading: "Bug Fixes / Improvements", Icon: Bug },
+  breaking: { label: "Breaking", heading: "Breaking Changes", Icon: CircleAlert },
+};
+
+/* The first release anyone logs against has to be called something. */
+const FIRST_VERSION = "0.1.0";
+
+/**
+ * Release notes, written from this screen.
+ *
+ * Deliberately not wired into the 5-second poll that feeds the other two tabs.
+ * Nothing but this operator writes the changelog, so polling would only buy the
+ * bug the guest list already had to fix — a refresh landing mid-edit and
+ * overwriting the half-typed title. It loads once per visit to the tab.
+ */
+function Changelog() {
+  const [entries, setEntries] = useState<ChangeEntry[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Guards against a state write after the tab is switched away mid-flight.
+    let live = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/changelog", { cache: "no-store" });
+        if (res.status === 401) {
+          window.location.href = "/console/login";
+          return;
+        }
+        if (!res.ok) throw new Error(`changelog returned ${res.status}`);
+        const payload: { entries?: ChangeEntry[] } = await res.json();
+        if (live) setEntries(payload.entries ?? []);
+      } catch (err) {
+        // An empty list rather than a permanent skeleton: the composer stays
+        // usable, and the banner says why nothing is showing.
+        if (!live) return;
+        setEntries([]);
+        setError(`Could not load the changelog — ${(err as Error).message}`);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const send = useCallback(async (method: string, body: unknown) => {
+    const res = await fetch("/api/changelog", {
+      method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) {
+      window.location.href = "/console/login";
+      throw new Error("session expired");
+    }
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(payload?.error ?? `${method} returned ${res.status}`);
+    }
+    return payload as { entry?: ChangeEntry };
+  }, []);
+
+  const add = useCallback(
+    async (draft: Partial<ChangeFields>) => {
+      const { entry } = await send("POST", draft);
+      // The list is newest-first and this is the newest row, so it goes on top.
+      if (entry) setEntries((prev) => [entry, ...(prev ?? [])]);
+      setError(null);
+    },
+    [send],
+  );
+
+  /* ponytail: no optimistic write and no revert path, unlike the guest status
+     select. That machinery exists there because a 5s poll fights the edit;
+     here nothing races the request, so awaiting the row Postgres actually
+     wrote is both shorter and more honest. Revisit if the round trip ever
+     stops feeling instant. */
+  const patch = useCallback(
+    async (id: number, fields: Partial<ChangeFields>) => {
+      try {
+        const { entry } = await send("PATCH", { id, ...fields });
+        if (entry) {
+          setEntries((prev) => prev?.map((e) => (e.id === id ? entry : e)) ?? prev);
+        }
+        setError(null);
+      } catch (err) {
+        setError((err as Error).message);
+      }
+    },
+    [send],
+  );
+
+  const remove = useCallback(
+    async (id: number) => {
+      // A changelog line has no undo and no audit trail behind it, so the
+      // browser's own confirm is the whole safety net — and enough of one.
+      if (!window.confirm("Remove this entry? This cannot be undone.")) return;
+      try {
+        await send("DELETE", { id });
+        setEntries((prev) => prev?.filter((e) => e.id !== id) ?? prev);
+        setError(null);
+      } catch (err) {
+        setError((err as Error).message);
+      }
+    },
+    [send],
+  );
+
+  const releases = useMemo(() => groupReleases(entries ?? []), [entries]);
+
+  return (
+    <div className="cx-pane">
+      <div className="cx-log">
+        <div className="cx-log-art cx-art" aria-hidden>
+          <div className="cx-dither" data-tone="warm" />
+        </div>
+
+        <header className="cx-log-head">
+          <h1>Changelog</h1>
+          <p>
+            {entries === null
+              ? "Reading the release notes…"
+              : entries.length
+                ? `${entries.length} ${entries.length === 1 ? "entry" : "entries"} across ${releases.length} ${releases.length === 1 ? "release" : "releases"}. Dates are Central.`
+                : "Nothing logged yet. The first line goes below."}
+          </p>
+        </header>
+
+        <Composer
+          onAdd={add}
+          onError={setError}
+          latestVersion={entries?.[0]?.version ?? FIRST_VERSION}
+        />
+
+        {error && <div className="cx-error cx-log-error">{error}</div>}
+
+        <div className="cx-log-body">
+          {entries === null &&
+            Array.from({ length: 3 }, (_, i) => <div className="cx-skeleton" key={i} />)}
+
+          {entries?.length === 0 && (
+            <p className="cx-log-empty">
+              Every release you ship shows up here, newest first.
+            </p>
+          )}
+
+          {releases.map((release, ri) => (
+            <section
+              className="cx-release"
+              key={release.version}
+              style={{ animationDelay: `${Math.min(ri, 6) * 60}ms` }}
+            >
+              <p className="cx-release-head">
+                <b>{release.version}</b>
+                <span>— {release.date}</span>
+              </p>
+
+              {release.groups.map((group) => {
+                const { heading, Icon } = KIND_META[group.kind];
+                return (
+                  <div className="cx-kind" key={group.kind} data-kind={group.kind}>
+                    <span className="cx-kind-badge" aria-hidden>
+                      <Icon size={14} strokeWidth={2.25} />
+                    </span>
+                    <h2 className="cx-kind-head">{heading}</h2>
+                    <ul className="cx-entries">
+                      {group.entries.map((entry, i) => (
+                        <Entry
+                          key={entry.id}
+                          entry={entry}
+                          index={i}
+                          onPatch={patch}
+                          onRemove={remove}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </section>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One entry: `[code] — title (see also: #n)`, and nothing else at rest.
+ *
+ * Every control lives behind the ⋯ button. The first pass put a type dropdown
+ * and a delete button on every row and revealed them on hover, which meant the
+ * list rearranged itself under the pointer and read as a form rather than as
+ * release notes.
+ *
+ * Deliberately not `role="menu"`. An honest menu owes arrow-key navigation and
+ * roving tabindex; a panel of plain buttons is already reachable with Tab and
+ * closes on Escape, and claiming the role without the keys is worse than not
+ * claiming it — same call as the tab bar above.
+ */
+function Entry({
+  entry,
+  index,
+  onPatch,
+  onRemove,
+}: {
+  entry: ChangeEntry;
+  index: number;
+  onPatch: (id: number, fields: Partial<ChangeFields>) => void;
+  onRemove: (id: number) => void;
+}) {
+  const [title, setTitle] = useState(entry.title);
+  const [stored, setStored] = useState(entry.title);
+  const [open, setOpen] = useState(false);
+  const row = useRef<HTMLLIElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+
+  /* The server's row is the truth: re-sync when a write comes back, otherwise
+     a rejected edit would keep showing the text the database refused. Adjusted
+     during render rather than in an effect — an effect would paint the stale
+     text for a frame first, and React re-runs this before anything commits. */
+  if (stored !== entry.title) {
+    setStored(entry.title);
+    setTitle(entry.title);
+  }
+
+  // Only the open menu listens, so this is one pair of handlers on the page
+  // rather than one per entry.
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!row.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      // Escape must not strand focus on a button that no longer exists.
+      trigger.current?.focus();
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+
+  function commit() {
+    const next = title.trim();
+    // A blank title is not a delete — Remove is. Put the old one back.
+    if (!next) return setTitle(entry.title);
+    if (next !== entry.title) onPatch(entry.id, { title: next });
+  }
+
+  function edit() {
+    setOpen(false);
+    field.current?.focus();
+    field.current?.select();
+  }
+
+  return (
+    <li
+      className="cx-entry"
+      ref={row}
+      data-open={open || undefined}
+      style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+    >
+      <code className="cx-entry-code" title={entryStamp(entry.createdAt)}>
+        [{entry.code}]
+      </code>
+      <span className="cx-entry-dash" aria-hidden>
+        —
+      </span>
+
+      {/* Auto-sizing input: the wrapper's ::after mirrors the value in the same
+          grid cell, so the field is exactly as wide as its text and the ref
+          sits right after it, as in the reference. No measurement in JS. */}
+      <span className="cx-entry-field" data-value={title}>
+        <input
+          ref={field}
+          value={title}
+          maxLength={MAX_TITLE}
+          aria-label={`Description for ${entry.code}`}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.currentTarget.blur();
+            }
+            if (e.key === "Escape") {
+              setTitle(entry.title);
+              e.currentTarget.blur();
+            }
+          }}
+        />
+      </span>
+
+      {entry.ref && (
+        /* Text, not a link: no repository URL is configured, and a link that
+           goes nowhere is worse than a reference that reads as one.
+           TRIGGER: wrap in an <a> the day a repo base URL exists. */
+        <span className="cx-entry-ref">(see also: #{entry.ref})</span>
+      )}
+
+      <button
+        ref={trigger}
+        type="button"
+        className="cx-more"
+        aria-expanded={open}
+        aria-label={`Actions for ${entry.code}`}
+        title="Actions"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Ellipsis size={15} strokeWidth={2.25} />
+      </button>
+
+      {open && (
+        <div className="cx-menu" aria-label={`Actions for ${entry.code}`}>
+          <button type="button" className="cx-menu-item" onClick={edit}>
+            <Pencil size={12} strokeWidth={2.25} />
+            Edit description
+          </button>
+
+          <p className="cx-menu-label">Type</p>
+          {CHANGE_KINDS.map((k) => {
+            const { label, Icon } = KIND_META[k];
+            return (
+              <button
+                key={k}
+                type="button"
+                className="cx-menu-item"
+                data-kind={k}
+                aria-pressed={k === entry.kind}
+                onClick={() => {
+                  setOpen(false);
+                  if (k !== entry.kind) onPatch(entry.id, { kind: k });
+                }}
+              >
+                <Icon size={12} strokeWidth={2.25} />
+                {label}
+                {k === entry.kind && (
+                  <Check className="cx-menu-check" size={12} strokeWidth={2.5} />
+                )}
+              </button>
+            );
+          })}
+
+          <button
+            type="button"
+            className="cx-menu-item cx-menu-danger"
+            onClick={() => {
+              setOpen(false);
+              onRemove(entry.id);
+            }}
+          >
+            <Trash2 size={12} strokeWidth={2.25} />
+            Remove
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+/**
+ * The add form.
+ *
+ * Type and version stay put after a submit, so logging three fixes against one
+ * release is three titles and three Enters. Code and ref clear, because they
+ * are per-entry. A blank code is filled in server-side.
+ */
+function Composer({
+  onAdd,
+  onError,
+  latestVersion,
+}: {
+  onAdd: (draft: Partial<ChangeFields>) => Promise<void>;
+  onError: (message: string) => void;
+  latestVersion: string;
+}) {
+  const [kind, setKind] = useState<ChangeKind>("feature");
+  const [title, setTitle] = useState("");
+  const [code, setCode] = useState("");
+  const [ref, setRef] = useState("");
+  const [extras, setExtras] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  /* Null means "the operator has not touched this", so the field tracks the
+     newest release until they do — derived rather than copied into state,
+     which is what keeps a late-arriving list from clobbering a half-typed
+     version. */
+  const [typedVersion, setVersion] = useState<string | null>(null);
+  const version = typedVersion ?? latestVersion;
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (busy || !title.trim()) return;
+    setBusy(true);
+    try {
+      await onAdd({ kind, title, version, code, ref });
+      setTitle("");
+      setCode("");
+      setRef("");
+    } catch (err) {
+      onError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="cx-compose" onSubmit={submit}>
+      <div className="cx-compose-kinds" role="group" aria-label="Type of change">
+        {CHANGE_KINDS.map((k) => {
+          const { label, Icon } = KIND_META[k];
+          return (
+            <button
+              key={k}
+              type="button"
+              className="cx-compose-kind"
+              data-kind={k}
+              aria-pressed={kind === k}
+              onClick={() => setKind(k)}
+            >
+              <Icon size={13} strokeWidth={2.25} />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <input
+        className="cx-compose-title"
+        value={title}
+        maxLength={MAX_TITLE}
+        placeholder="What changed?"
+        aria-label="What changed"
+        onChange={(e) => setTitle(e.target.value)}
+      />
+
+      <div className="cx-compose-meta">
+        <label className="cx-field">
+          <span>Release</span>
+          <input
+            value={version}
+            maxLength={MAX_VERSION}
+            placeholder="2.4.0"
+            onChange={(e) => setVersion(e.target.value)}
+          />
+        </label>
+
+        {/* Both of these are usually left alone — the code generates itself and
+            most entries have no issue to point at — so they stay folded away
+            rather than sitting on screen as two more empty boxes. One-way on
+            purpose: a control that hides a value the form would still submit
+            is a trap. */}
+        {extras ? (
+          <>
+            <label className="cx-field">
+              <span>Code</span>
+              <input
+                autoFocus
+                value={code}
+                maxLength={MAX_CODE}
+                placeholder="auto"
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </label>
+            <label className="cx-field">
+              <span>Ref</span>
+              <input
+                value={ref}
+                maxLength={MAX_REF}
+                placeholder="420"
+                onChange={(e) => setRef(e.target.value)}
+              />
+            </label>
+          </>
+        ) : (
+          <button type="button" className="cx-compose-more" onClick={() => setExtras(true)}>
+            Add a code or ref
+          </button>
+        )}
+
+        <button
+          type="submit"
+          className="cx-compose-add"
+          disabled={busy || !title.trim() || !version.trim()}
+        >
+          {busy ? "Adding…" : "Add entry"}
+          <CornerDownLeft size={12} strokeWidth={2.25} />
+        </button>
+      </div>
+    </form>
   );
 }
 
