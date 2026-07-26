@@ -23,6 +23,9 @@
   --cue-accent: #0086ff;
   --cue-accent-deep: #0069c9;
   --cue-star: #ffa200;
+  /* Same green as the "Signed" pill — 5.02:1 on white. */
+  --cue-ok: #147a3d;
+  --cue-ok-soft: #e6f6ec;
 
   --cue-r-card: 20px;
   --cue-r-sm: 12px;
@@ -32,6 +35,9 @@
   --cue-shadow-btn: 0 1px 2px rgb(0 0 0 / 0.18), 0 8px 20px -10px rgb(0 0 0 / 0.35);
   /* Strong ease-out — starts fast, settles soft (emil / improve-animations). */
   --cue-ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Lets block-size transition to/from `auto` — the FAQ accordion needs it. */
+  interpolate-size: allow-keywords;
 
   position: relative;
   min-height: 100vh;
@@ -946,7 +952,7 @@
   color: #fff;
 }
 
-/* ── Features ── */
+/* ── Features (soft wells — lab /v4) ── */
 
 .cue-features-section {
   padding-block: 64px 56px;
@@ -958,26 +964,81 @@
   }
 }
 
-.cue-features-top {
-  margin-top: 32px;
+.cue-features-lede {
+  max-width: 36em;
+  margin-inline: auto;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--cue-ink-soft);
 }
 
-/* ── Feature cards ── */
+.cue-features-whisper {
+  margin: 36px auto 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--cue-muted);
+  letter-spacing: 0.02em;
+}
 
-.cue-grid-3 {
+.cue-features-wells {
+  margin-top: 48px;
   display: grid;
-  gap: 25px 8px;
+  gap: 12px;
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Both grids carry exactly three cards, so a two-column step always orphans
-   the third. One column until all three fit. */
-@media (min-width: 1000px) {
-  .cue-grid-3 {
+@media (min-width: 900px) {
+  .cue-features-wells {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
   }
 }
 
+.cue-feature-well {
+  border-radius: 24px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(0 134 255 / 0.08) 0%, transparent 55%),
+    var(--cue-panel);
+  border: 1px solid var(--cue-line);
+  padding: 24px 16px 28px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
+}
+
+.cue-feature-stage {
+  display: grid;
+  place-items: center;
+  min-height: 172px;
+  margin-bottom: 14px;
+}
+
+.cue-feature-stage .cue-mock-card {
+  max-width: 236px;
+  text-align: left;
+  outline: 1px solid oklch(0 0 0 / 0.06);
+  outline-offset: -1px;
+  border-color: var(--cue-line);
+  box-shadow: 0 8px 24px -16px rgb(0 0 0 / 0.2);
+}
+
+.cue-feature-title {
+  font-size: 18px;
+  letter-spacing: -0.025em;
+  font-weight: 550;
+}
+
+.cue-feature-body {
+  margin-top: 10px;
+  margin-inline: auto;
+  max-width: 22em;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--cue-muted);
+  text-wrap: balance;
+}
+
+/* Shared card primitives (Capability split, pricing, etc.). */
 .cue-card {
   border-radius: var(--cue-r-card);
   border: 1px solid var(--cue-line);
@@ -1015,41 +1076,58 @@
   color: #fff;
 }
 
-.cue-feature-visual {
-  height: 232px;
-  border-radius: var(--cue-r-card);
-  background: var(--cue-tint);
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  padding: 22px;
-}
-
-.cue-feature-tail {
-  margin-top: 22px;
-}
-
-/* App mockups render at their natural width, then scale down to the tinted
-   panel and crop at the bottom — the way the reference template presents its
-   product shots. Small cards stay centred. */
-.cue-feature-visual:has(.cue-mock),
+/* App mockups in Steps — natural width, then scale down. */
 .cue-step-visual:has(.cue-mock) {
   align-content: start;
-  padding: 22px 0 0;
+  padding: 16px 0 0;
 }
 
-.cue-feature-visual .cue-mock,
 .cue-step-visual .cue-mock {
   width: 440px;
   flex: none;
-}
-
-.cue-feature-visual .cue-mock {
-  zoom: 0.58;
-}
-
-.cue-step-visual .cue-mock {
   zoom: 0.72;
+}
+
+/* Stagger feature wells inside one Reveal. */
+@media (scripting: enabled) {
+  .cue-reveal-stagger {
+    opacity: 1;
+    transform: none;
+  }
+
+  .cue-reveal-stagger:not(.is-visible) .cue-feature-well {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  .cue-reveal-stagger.is-visible .cue-feature-well {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 420ms var(--cue-ease),
+      transform 420ms var(--cue-ease);
+  }
+
+  .cue-reveal-stagger.is-visible .cue-feature-well:nth-child(1) {
+    transition-delay: 0ms;
+  }
+
+  .cue-reveal-stagger.is-visible .cue-feature-well:nth-child(2) {
+    transition-delay: 80ms;
+  }
+
+  .cue-reveal-stagger.is-visible .cue-feature-well:nth-child(3) {
+    transition-delay: 160ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue-reveal-stagger:not(.is-visible) .cue-feature-well,
+  .cue-reveal-stagger.is-visible .cue-feature-well {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* ── Execution / tabs ── */
@@ -1135,13 +1213,24 @@
 
 @media (min-width: 800px) {
   .cue-split {
+    /* Equal tracks so the vertical rule sits on the page midline. */
     grid-template-columns: 1fr 1fr;
   }
 }
 
 .cue-split-cell {
-  padding: 26px 26px 26px 0;
+  padding: 28px 20px;
   border-top: 1px solid var(--cue-line);
+  text-align: center;
+}
+
+.cue-split-cell .cue-card-head {
+  justify-content: center;
+}
+
+.cue-split-cell .cue-card-body {
+  max-width: 34ch;
+  margin-inline: auto;
 }
 
 .cue-split-cell:nth-child(-n + 1) {
@@ -1152,8 +1241,13 @@
   .cue-split-cell:nth-child(-n + 2) {
     border-top: 0;
   }
+
+  .cue-split-cell:nth-child(odd) {
+    padding: 32px 36px 32px 12px;
+  }
+
   .cue-split-cell:nth-child(even) {
-    padding-left: 26px;
+    padding: 32px 12px 32px 36px;
     border-left: 1px solid var(--cue-line);
   }
 }
@@ -1161,10 +1255,10 @@
 /* ── Steps timeline ── */
 
 .cue-steps {
-  margin-top: 44px;
+  margin-top: 36px;
   position: relative;
   display: grid;
-  gap: 56px;
+  gap: 44px;
 }
 
 .cue-steps-rail {
@@ -1205,7 +1299,7 @@
 @media (min-width: 900px) {
   .cue-step {
     grid-template-columns: 130px minmax(0, 1fr) minmax(0, 1fr);
-    gap: 32px;
+    gap: 28px;
     padding-left: 42px;
     align-items: start;
   }
@@ -1243,8 +1337,8 @@
 .cue-step-visual {
   border-radius: var(--cue-r-card);
   background: var(--cue-tint);
-  height: 245px;
-  padding: 22px;
+  height: 216px;
+  padding: 18px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -1497,11 +1591,30 @@
 .cue-faq-plus {
   flex: none;
   color: var(--cue-muted);
-  transition: transform 260ms var(--cue-ease);
+  transition: transform 340ms var(--cue-ease);
 }
 
 .cue-faq-item[open] .cue-faq-plus {
   transform: rotate(45deg);
+}
+
+/* Native <details> snaps open. `interpolate-size` lets block-size animate to
+   `auto`, and `content-visibility` has to ride along (allow-discrete) or the
+   content pops in before the height has moved. Browsers without
+   ::details-content just keep today's instant open. */
+.cue-faq-item::details-content {
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+  transition:
+    block-size 340ms var(--cue-ease),
+    opacity 260ms var(--cue-ease),
+    content-visibility 340ms var(--cue-ease) allow-discrete;
+}
+
+.cue-faq-item[open]::details-content {
+  block-size: auto;
+  opacity: 1;
 }
 
 .cue-faq-answer {
@@ -1509,7 +1622,16 @@
   font-size: 15px;
   line-height: 1.6;
   color: var(--cue-ink-soft);
-  animation: cueRise 300ms var(--cue-ease) both;
+}
+
+.cue-faq-contact {
+  margin-top: 24px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue-faq-item::details-content {
+    transition: none;
+  }
 }
 
 /* ── CTA ── */
@@ -2442,7 +2564,12 @@
   border: 1px solid var(--cue-line);
   background: var(--cue-panel);
   padding: 16px;
-  box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.35);
+  /* Layered shadow + hairline outline — reads on tint wells without mud. */
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 10px 28px -18px rgb(0 0 0 / 0.28);
+  outline: 1px solid oklch(0 0 0 / 0.06);
+  outline-offset: -1px;
   font-size: 12px;
 }
 
@@ -2456,6 +2583,537 @@
   justify-content: space-between;
   color: var(--cue-muted);
   font-size: 11px;
+}
+
+/* Branding preview — studio identity on the client-facing Cue (light). */
+.cue-mock-brand {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  outline: 1px solid oklch(0 0 0 / 0.08);
+  outline-offset: -1px;
+}
+
+.cue-mock-brand-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #fff 0%, var(--cue-tint-soft) 100%);
+  color: var(--cue-ink);
+  border-bottom: 1px solid var(--cue-line);
+}
+
+.cue-mock-brand-bar span {
+  display: grid;
+  gap: 2px;
+  line-height: 1.25;
+}
+
+.cue-mock-brand-bar b {
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.cue-mock-brand-bar span span {
+  font-size: 10px;
+  color: var(--cue-muted);
+}
+
+.cue-mock-brand-mark {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, #5eb1ff 0%, var(--cue-accent) 55%, #0069c9 100%);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.35),
+    0 1px 2px rgb(0 134 255 / 0.25);
+}
+
+/* Fills the rest of the card so the white area reads as the document page
+   rather than as space the card ran out of content to hold. */
+.cue-mock-brand-doc {
+  display: grid;
+  align-content: start;
+  flex: 1;
+  gap: 4px;
+  padding: 14px 16px 16px;
+  background: var(--cue-panel);
+}
+
+.cue-mock-brand-kicker {
+  font-size: 10px;
+  color: var(--cue-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cue-mock-brand-title {
+  font-size: 14px;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+}
+
+.cue-mock-brand-meta {
+  font-size: 11px;
+  color: var(--cue-ink-soft);
+}
+
+/* Library search preview — query in, matching Cues out. */
+.cue-mock-library-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--cue-line);
+  background: var(--cue-tint-soft);
+  color: var(--cue-ink);
+  font-size: 12px;
+}
+
+.cue-mock-library-search svg {
+  flex: none;
+  color: var(--cue-muted);
+}
+
+.cue-mock-library-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cue-mock-library-meta {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.cue-mock-library-meta span:first-child {
+  font-size: 12px;
+  color: var(--cue-ink);
+}
+
+.cue-mock-library-meta span:last-child {
+  font-size: 10px;
+  color: var(--cue-muted);
+}
+
+/* ── Card visuals: template shelf, setup checklist, send click, seal ── */
+
+.cue-mock-tpl {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  margin-inline: -8px;
+  border-radius: 9px;
+  font-size: 12px;
+  color: var(--cue-ink-soft);
+}
+
+.cue-mock-tpl[data-active="true"] {
+  background: var(--cue-tint-soft);
+  color: var(--cue-ink);
+}
+
+.cue-mock-tpl[data-active="true"] svg:last-child {
+  margin-left: auto;
+  color: var(--cue-accent);
+}
+
+.cue-mock-tpl-meta {
+  display: grid;
+  gap: 1px;
+  line-height: 1.3;
+}
+
+.cue-mock-tpl-meta span:last-child {
+  font-size: 10px;
+  color: var(--cue-muted);
+}
+
+.cue-mock-task {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--cue-muted);
+}
+
+.cue-mock-task[data-done="true"] {
+  color: var(--cue-ink-soft);
+}
+
+.cue-mock-ring {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--cue-line-strong);
+  color: transparent;
+}
+
+.cue-mock-task[data-done="true"] .cue-mock-ring {
+  border-color: var(--cue-ok);
+  background: var(--cue-ok);
+  color: #fff;
+}
+
+/* Send click — cursor drifts in, presses, the button flips to sent. */
+.cue-send {
+  --cue-loop: 3.8s;
+  position: relative;
+  overflow: hidden;
+}
+
+.cue-send-btn {
+  position: relative;
+  display: block;
+  height: 34px;
+  border-radius: 10px;
+  background: #0a0a0a;
+  animation: cueSendPress var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-send-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  animation: cueSendSwapOut var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-send-face[data-state="done"] {
+  opacity: 0;
+  animation-name: cueSendSwapIn;
+}
+
+.cue-send-cursor {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  color: var(--cue-ink);
+  opacity: 0;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.3));
+  animation: cueSendCursor var(--cue-loop) var(--cue-ease) infinite;
+}
+
+@keyframes cueSendPress {
+  0%,
+  38% {
+    transform: scale(1);
+    background: #0a0a0a;
+  }
+  44% {
+    transform: scale(0.96);
+    background: #0a0a0a;
+  }
+  52%,
+  90% {
+    transform: scale(1);
+    background: var(--cue-ok);
+  }
+  100% {
+    transform: scale(1);
+    background: #0a0a0a;
+  }
+}
+
+@keyframes cueSendSwapOut {
+  0%,
+  44% {
+    opacity: 1;
+  }
+  50%,
+  92% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes cueSendSwapIn {
+  0%,
+  44% {
+    opacity: 0;
+  }
+  50%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Absolute px against the card's padding box, measured from its horizontal
+   centre. The pointer tip is the icon's own top-left corner, and it rests on
+   the left of the button so the arrow never sits on top of the label. */
+@keyframes cueSendCursor {
+  0% {
+    opacity: 0;
+    transform: translate(40px, 150px);
+  }
+  12%,
+  38% {
+    opacity: 1;
+  }
+  38%,
+  48% {
+    transform: translate(-54px, 86px);
+  }
+  44% {
+    transform: translate(-54px, 90px);
+  }
+  62%,
+  100% {
+    opacity: 0;
+    transform: translate(-54px, 86px);
+  }
+}
+
+/* Seal — the signers tick over top to bottom, the pill lands, then the whole
+   stage fades out and respawns. The ticks only ever reset behind that fade, so
+   the loop never plays backwards on screen. */
+.cue-seal {
+  --cue-loop: 4.4s;
+}
+
+.cue-seal-stage {
+  display: grid;
+  justify-items: center;
+  animation: cueSealStage var(--cue-loop) linear infinite;
+}
+
+.cue-seal-stage .cue-mock-quota {
+  width: 100%;
+}
+
+.cue-seal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--cue-ink-soft);
+}
+
+/* One keyframe per row rather than a shared one offset by animation-delay: a
+   delay staggers the reset too, so the top tick would blank out while the ones
+   below it were still green. Separate keyframes put every row on one clock —
+   they fill top to bottom, hold together, and clear together. */
+.cue-seal-tick {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--cue-line-strong);
+  color: transparent;
+  animation: cueSealTick1 var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-seal-tick[data-i="1"] {
+  animation-name: cueSealTick2;
+}
+
+.cue-seal-tick[data-i="2"] {
+  animation-name: cueSealTick3;
+}
+
+.cue-seal-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  margin-top: 16px;
+  padding: 5px 11px;
+  border-radius: var(--cue-r-pill);
+  background: var(--cue-ok-soft);
+  color: var(--cue-ok);
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0;
+  animation: cueSealPill var(--cue-loop) var(--cue-ease) infinite;
+}
+
+/* The Apple Pay confirmation sweep — one pass of light straight after the pop. */
+.cue-seal-pill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgb(255 255 255 / 0.85) 50%,
+    transparent 70%
+  );
+  animation: cueSealSheen var(--cue-loop) var(--cue-ease) infinite;
+}
+
+@keyframes cueSealStage {
+  0% {
+    opacity: 0;
+  }
+  6%,
+  90% {
+    opacity: 1;
+  }
+  97%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes cueSealTick1 {
+  0%,
+  10% {
+    border-color: var(--cue-line-strong);
+    background: transparent;
+    color: transparent;
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.22);
+  }
+  18%,
+  97% {
+    border-color: var(--cue-ok);
+    background: var(--cue-ok);
+    color: #fff;
+    transform: scale(1);
+  }
+  /* Reset happens inside the stage fade, so it is never seen. */
+  100% {
+    border-color: var(--cue-line-strong);
+    background: transparent;
+    color: transparent;
+  }
+}
+
+@keyframes cueSealTick2 {
+  0%,
+  20% {
+    border-color: var(--cue-line-strong);
+    background: transparent;
+    color: transparent;
+    transform: scale(1);
+  }
+  24% {
+    transform: scale(1.22);
+  }
+  28%,
+  97% {
+    border-color: var(--cue-ok);
+    background: var(--cue-ok);
+    color: #fff;
+    transform: scale(1);
+  }
+  100% {
+    border-color: var(--cue-line-strong);
+    background: transparent;
+    color: transparent;
+  }
+}
+
+@keyframes cueSealTick3 {
+  0%,
+  30% {
+    border-color: var(--cue-line-strong);
+    background: transparent;
+    color: transparent;
+    transform: scale(1);
+  }
+  34% {
+    transform: scale(1.22);
+  }
+  38%,
+  97% {
+    border-color: var(--cue-ok);
+    background: var(--cue-ok);
+    color: #fff;
+    transform: scale(1);
+  }
+  100% {
+    border-color: var(--cue-line-strong);
+    background: transparent;
+    color: transparent;
+  }
+}
+
+/* Lands after the third tick, with the overshoot Apple Pay settles on. */
+@keyframes cueSealPill {
+  0%,
+  46% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.82);
+  }
+  56% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+  64%,
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cueSealSheen {
+  0%,
+  58% {
+    transform: translateX(-140%);
+  }
+  76%,
+  100% {
+    transform: translateX(140%);
+  }
+}
+
+/* Reduced motion: hold the finished state — sent, signed, sealed. */
+@media (prefers-reduced-motion: reduce) {
+  .cue-send *,
+  .cue-seal * {
+    animation: none !important;
+  }
+
+  .cue-send-btn {
+    background: var(--cue-ok);
+  }
+
+  .cue-send-face[data-state="idle"],
+  .cue-send-cursor {
+    opacity: 0;
+  }
+
+  .cue-send-face[data-state="done"] {
+    opacity: 1;
+  }
+
+  .cue-seal-tick {
+    border-color: var(--cue-ok);
+    background: var(--cue-ok);
+    color: #fff;
+  }
+
+  .cue-seal-pill {
+    opacity: 1;
+  }
 }
 
 /* ── 404 — full-bleed horizon, type in the open sky ── */

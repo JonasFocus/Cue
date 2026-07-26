@@ -8,11 +8,13 @@ import {
   FileText,
   Heart,
   Inbox,
+  MousePointer2,
   PanelLeft,
   PenLine,
   Plus,
   Search,
   Send,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   User,
@@ -87,9 +89,9 @@ const CUES: CueRow[] = [
 ];
 
 const TEMPLATES = [
-  { label: "Wedding", icon: Heart, tone: "rose" },
-  { label: "Elopement", icon: Sparkles, tone: "violet" },
-  { label: "Portrait", icon: User, tone: "teal" },
+  { label: "Wedding", icon: Heart, tone: "rose", meta: "4 pages · full day" },
+  { label: "Elopement", icon: Sparkles, tone: "violet", meta: "5 pages · travel" },
+  { label: "Portrait", icon: User, tone: "teal", meta: "3 pages · half day" },
 ];
 
 const FILTERS = ["All", "Awaiting", "Signed", "Drafts"];
@@ -236,24 +238,115 @@ export function MockApp({ compact = false }: { compact?: boolean }) {
   );
 }
 
-/** Small floating card — the free-plan allowance. */
-export function MockAllowance() {
+/** Small floating card — the template shelf you start from. */
+export function MockTemplates() {
   return (
     <div className="cue-mock-card" aria-hidden>
-      <div style={{ fontWeight: 500, marginBottom: 4 }}>Free plan</div>
+      <div style={{ fontWeight: 500, marginBottom: 4 }}>Templates</div>
       <div style={{ color: "var(--cue-muted)", fontSize: 11, marginBottom: 14 }}>
-        Five Cues, no card needed
+        Start from one, make it yours
       </div>
       <div className="cue-mock-quota">
-        <div className="cue-mock-progress">
-          <i />
-        </div>
-        <div className="cue-mock-quota-row">
-          <span>3 sent</span>
-          <span>5 total</span>
-        </div>
+        {TEMPLATES.map(({ label, icon: Icon, tone, meta }, i) => (
+          <span className="cue-mock-tpl" key={label} data-active={i === 0}>
+            <i className="cue-mock-tile" data-tone={tone}>
+              <Icon size={10} strokeWidth={2.25} />
+            </i>
+            <span className="cue-mock-tpl-meta">
+              <span>{label}</span>
+              <span>{meta}</span>
+            </span>
+            {i === 0 && <Check size={12} strokeWidth={3} />}
+          </span>
+        ))}
       </div>
     </div>
+  );
+}
+
+const SETUP = [
+  "Studio name and logo",
+  "Standard terms",
+  "Payment schedule",
+  "Signature block",
+];
+
+/** Small floating card — the one-time setup checklist. */
+export function MockSetup() {
+  return (
+    <div className="cue-mock-card" aria-hidden>
+      <div style={{ fontWeight: 500, marginBottom: 4 }}>Set up your studio</div>
+      <div style={{ color: "var(--cue-muted)", fontSize: 11, marginBottom: 12 }}>
+        1 of 4 done
+      </div>
+      <div className="cue-mock-progress" style={{ marginBottom: 14 }}>
+        <i style={{ transform: "scaleX(0.25)" }} />
+      </div>
+      <div className="cue-mock-quota">
+        {SETUP.map((label, i) => (
+          <span className="cue-mock-task" key={label} data-done={i === 0}>
+            <i className="cue-mock-ring">
+              <Check size={9} strokeWidth={4} />
+            </i>
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Small floating card — the send click, on a loop. */
+export function MockSend() {
+  return (
+    <AnimHost className="cue-mock-card cue-send" aria-hidden>
+      <div style={{ fontWeight: 500, marginBottom: 4 }}>Harper &amp; Wells</div>
+      <div style={{ color: "var(--cue-muted)", fontSize: 11, marginBottom: 16 }}>
+        Wedding · 4 pages · ready
+      </div>
+      <span className="cue-send-btn">
+        <span className="cue-send-face" data-state="idle">
+          <Send size={12} strokeWidth={2} /> Send Cue
+        </span>
+        <span className="cue-send-face" data-state="done">
+          <Check size={13} strokeWidth={3} /> Sent
+        </span>
+      </span>
+      <span className="cue-send-cursor">
+        {/* White body, dark outline — the cursor has to read against both the
+            white card it travels over and the dark button it lands on. */}
+        <MousePointer2 size={15} strokeWidth={1.75} fill="#fff" />
+      </span>
+    </AnimHost>
+  );
+}
+
+const SIGNERS = ["Ava Harper", "Daniel Wells", "Harper Studio"];
+
+/** Small floating card — every party signs, then the record seals. */
+export function MockSeal() {
+  return (
+    <AnimHost className="cue-mock-card cue-seal" aria-hidden>
+      <div style={{ fontWeight: 500, marginBottom: 4 }}>Harper &amp; Wells</div>
+      <div style={{ color: "var(--cue-muted)", fontSize: 11, marginBottom: 14 }}>
+        Wedding · 4 pages
+      </div>
+      <div className="cue-seal-stage">
+        <div className="cue-mock-quota" style={{ gap: 10 }}>
+          {SIGNERS.map((name, i) => (
+            <span className="cue-seal-row" key={name}>
+              {name}
+              <i className="cue-seal-tick" data-i={i}>
+                <Check size={10} strokeWidth={4} />
+              </i>
+            </span>
+          ))}
+        </div>
+        <span className="cue-seal-pill">
+          <ShieldCheck size={11} strokeWidth={2} /> Record sealed
+        </span>
+      </div>
+    </AnimHost>
   );
 }
 
@@ -289,6 +382,65 @@ export function MockLink() {
   );
 }
 
+/** Small floating card — studio branding on the client-facing Cue. */
+export function MockBrand() {
+  return (
+    <div className="cue-mock-card cue-mock-brand" aria-hidden>
+      <div className="cue-mock-brand-bar">
+        <i className="cue-mock-brand-mark" />
+        <span>
+          <b>Harper Studio</b>
+          <span>Your logo on every Cue</span>
+        </span>
+      </div>
+      <div className="cue-mock-brand-doc">
+        <span className="cue-mock-brand-kicker">Wedding agreement</span>
+        <span className="cue-mock-brand-title">Harper &amp; Wells</span>
+        <span className="cue-mock-brand-meta">Prepared by Harper Studio</span>
+      </div>
+    </div>
+  );
+}
+
+const LIBRARY = [
+  { name: "Harper & Wells", meta: "Wedding · Jun 14", tone: "ok" as const },
+  { name: "Okafor Elopement", meta: "Elopement · Jul 02", tone: "wait" as const },
+];
+
+/** Small floating card — find a Cue by search, not by inbox scroll. */
+export function MockLibrary() {
+  return (
+    <div className="cue-mock-card" aria-hidden>
+      <div className="cue-mock-library-search">
+        <Search size={12} strokeWidth={2} />
+        <span>wedding</span>
+      </div>
+      <div className="cue-mock-quota" style={{ marginTop: 12 }}>
+        {LIBRARY.map((row) => (
+          <div className="cue-mock-library-row" key={row.name}>
+            <span className="cue-mock-library-meta">
+              <span>{row.name}</span>
+              <span>{row.meta}</span>
+            </span>
+            <span className="cue-mock-pill" data-tone={row.tone}>
+              {row.tone === "ok" ? "Signed" : "Awaiting"}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          marginTop: 12,
+          fontSize: 11,
+          color: "var(--cue-muted)",
+        }}
+      >
+        2 of 28 Cues
+      </div>
+    </div>
+  );
+}
+
 /** Small floating card — the sealed record. */
 export function MockRecord() {
   return (
@@ -301,6 +453,10 @@ export function MockRecord() {
         <div className="cue-mock-quota-row">
           <span>Document hash</span>
           <span>a91f…7c2</span>
+        </div>
+        <div className="cue-mock-quota-row">
+          <span>Sealed</span>
+          <span>Jun 14, 4:12 PM</span>
         </div>
         <div className="cue-mock-quota-row">
           <span>Emailed to both parties</span>

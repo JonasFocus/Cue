@@ -11,11 +11,11 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
    the value proposition has to land before the category does. */
 const TITLE = "Cue — client agreements for photographers and videographers";
 const DESCRIPTION =
-  "Create a polished client agreement, send a secure signing link, and keep the signed copy in one place.";
+  "Send the Cue. Get the yes. Keep the record. Client agreements for photographers and videographers.";
 
-const SHARE_TITLE = "Get the agreement out of the way.";
+const SHARE_TITLE = "Send the Cue. Get the yes.";
 const SHARE_DESCRIPTION =
-  "Client agreements for photographers and videographers. Send it, get it signed, keep the record.";
+  "Client agreements for photographers and videographers. Send the Cue, get the yes, keep the record.";
 
 /* Must reflect where this instance is actually served. Hardcoding the
    production domain made staging advertise a hostname with no DNS record, so

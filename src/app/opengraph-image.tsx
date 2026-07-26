@@ -64,7 +64,7 @@ export default function OpengraphImage() {
             color: "#000",
           }}
         >
-          Get the agreement out of the way.
+          Send the Cue. Get the yes.
         </div>
 
         <div
@@ -77,8 +77,8 @@ export default function OpengraphImage() {
             maxWidth: 880,
           }}
         >
-          Client agreements for photographers and videographers. Send it, get it
-          signed, keep the record.
+          Client agreements for photographers and videographers. Send the Cue,
+          get the yes, keep the record.
         </div>
 
         {/* Footer rule */}

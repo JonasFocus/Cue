@@ -37,13 +37,20 @@ For photographers and videographers who want professional agreements without hea
 
 ### Homepage copy
 
-**Headline:** Get the agreement out of the way.
+**Headline:** Send the Cue. Get the yes.
 
-**Subhead:** Create a polished client agreement, send a secure signing link, and keep the signed copy in one place.
+**Subhead:** Cue will create a polished client agreement, send a secure signing link, and keep the signed Cue in one place.
 
 **Primary CTA:** Create your first Cue
 
-**Supporting message:** From inquiry to signed agreement, without the paperwork feeling like paperwork.
+**Supporting message:** From a template to a sealed PDF — built for the moments before a shoot.
+
+**Closing CTA:** Send the Cue. Get the yes. Keep the record.
+
+**Features section:** Everything essential. Nothing else.  
+**Features lede:** Client agreements, considered. For photographers and videographers who prefer quiet confidence to busy software.  
+**Features whisper:** Crafted for creatives · Effortless to send · Beautiful to sign  
+**Features wells:** Distinctly yours · Sealed and settled · Always at hand
 
 ### Messaging pillars
 

@@ -1,18 +1,12 @@
 import {
   Archive,
-  Camera,
   Check,
   ChevronRight,
   FileSignature,
-  Palette,
-  Search,
   Send,
-  ShieldCheck,
-  Smartphone,
-  Zap,
 } from "lucide-react";
 import { Reveal } from "./reveal";
-import { MockApp, MockLink, MockRecord } from "./mock";
+import { MockApp, MockBrand, MockLibrary, MockRecord } from "./mock";
 
 /* Compact lifecycle strip — product proof under the core line, not a second hero. */
 const PROOF_STEPS = [
@@ -68,90 +62,50 @@ export function Statement() {
 
 /* ── Features ── */
 
-const TOP = [
+/* Soft-wells Features layout — ported from lab /v4. */
+const WELLS = [
   {
-    icon: Camera,
-    title: "Made For Creatives",
-    body: "Being built around the moments before a shoot, not enterprise document workflows.",
+    title: "Distinctly yours",
+    body: "Your name. Your mark. Every Cue feels like your studio.",
+    visual: <MockBrand />,
   },
   {
-    icon: Zap,
-    title: "Fast To Send",
-    body: "Templates and saved details will cut the repetitive setup down to a minute.",
-  },
-  {
-    icon: Smartphone,
-    title: "Easy To Sign",
-    body: "Clients will review and sign on a phone. No account, no app, no friction.",
-  },
-];
-
-const BOTTOM = [
-  {
-    icon: Palette,
-    title: "Feels Like You",
-    body: "Every agreement will carry your name and branding, so the paperwork looks professional.",
-    visual: <MockApp compact />,
-  },
-  {
-    icon: ShieldCheck,
-    title: "Sealed After Signing",
-    body: "Each finished Cue will be frozen as an immutable snapshot with a document hash.",
+    title: "Sealed and settled",
+    body: "A final PDF. An immutable record. Certainty you keep.",
     visual: <MockRecord />,
   },
   {
-    icon: Search,
-    title: "Searchable Library",
-    body: "Every agreement findable by client, date, or shoot type. Nothing lost in an inbox.",
-    visual: <MockLink />,
+    title: "Always at hand",
+    body: "Find any Cue by client, date, or shoot. Instantly.",
+    visual: <MockLibrary />,
   },
-];
+] as const;
 
 export function Features() {
   return (
     <section id="features" className="cue-section cue-features-section">
-      <div className="cue-shell">
+      <div className="cue-shell cue-shell-wide">
         <Reveal>
           <div className="cue-eyebrow-block">
-            <h2 className="cue-h2">{"Everything the agreement\nneeds to be"}</h2>
-            <p className="cue-lede">
-              What we are building: from inquiry to signed agreement, without
-              the paperwork feeling like paperwork.
+            <h2 className="cue-h2">{"Everything essential.\nNothing else."}</h2>
+            <p className="cue-lede cue-features-lede">
+              Client agreements, considered. For photographers and
+              videographers who prefer quiet confidence to busy software.
+            </p>
+            <p className="cue-features-whisper">
+              Crafted for creatives · Effortless to send · Beautiful to sign
             </p>
           </div>
         </Reveal>
 
-        <Reveal>
-          <div className="cue-grid-3 cue-features-top">
-            {TOP.map(({ icon: Icon, title, body }) => (
-              <div className="cue-card" key={title}>
-                <div className="cue-card-head">
-                  <span className="cue-icon">
-                    <Icon size={15} strokeWidth={2} />
-                  </span>
-                  <h3 className="cue-card-title">{title}</h3>
-                </div>
-                <p className="cue-card-body">{body}</p>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-
-        <Reveal>
-          <div className="cue-grid-3" style={{ marginTop: 16 }}>
-            {BOTTOM.map(({ icon: Icon, title, body, visual }) => (
-              <div key={title}>
-                <div className="cue-feature-visual">{visual}</div>
-                <div className="cue-feature-tail">
-                  <div className="cue-card-head">
-                    <span className="cue-icon">
-                      <Icon size={15} strokeWidth={2} />
-                    </span>
-                    <h3 className="cue-card-title">{title}</h3>
-                  </div>
-                  <p className="cue-card-body">{body}</p>
-                </div>
-              </div>
+        <Reveal className="cue-reveal cue-reveal-stagger">
+          <div className="cue-features-wells">
+            {WELLS.map(({ title, body, visual }) => (
+              <article className="cue-feature-well" key={title}>
+                <div className="cue-feature-stage">{visual}</div>
+                <h3 className="cue-feature-title">{title}</h3>
+                <p className="cue-feature-body">{body}</p>
+              </article>
             ))}
           </div>
         </Reveal>
@@ -191,10 +145,9 @@ export function Capability() {
       <div className="cue-shell">
         <Reveal>
           <div className="cue-eyebrow-block">
-            <h2 className="cue-h2">{"One place for every\nclient agreement"}</h2>
+            <h2 className="cue-h2">{"One place for every\nCue"}</h2>
             <p className="cue-lede">
-              Not a form builder and not studio management software. Cue will do
-              one job properly.
+              Not a form builder. Not a studio suite. One job, done properly.
             </p>
           </div>
         </Reveal>

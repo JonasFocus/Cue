@@ -125,12 +125,12 @@ export function Hero() {
         </div>
 
         <h1 className="cue-h1" style={rise(120)}>
-          {"Get the agreement\nout of the way."}
+          {"Send the Cue.\nGet the yes."}
         </h1>
 
         <p className="cue-hero-sub" style={rise(200)}>
           Cue will create a polished client agreement, send a secure signing
-          link, and keep the signed copy in one place. We are building it now.
+          link, and keep the signed Cue in one place. We are building it now.
         </p>
 
         <div style={{ marginTop: 30, ...rise(280) }}>

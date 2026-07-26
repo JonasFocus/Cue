@@ -1,28 +1,28 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Archive, FileSignature, Send, Sparkles } from "lucide-react";
-import { MockAllowance, MockApp, MockLink, MockRecord } from "./mock";
+import { Archive, Check, FileSignature, Sparkles } from "lucide-react";
+import { MockLink, MockRecord, MockSeal, MockSend, MockSetup, MockTemplates } from "./mock";
 
 /* ── Tabbed walkthrough ── */
 
 const TABS = [
   {
-    tab: "Pick a template",
+    tab: "Send the Cue",
     icon: FileSignature,
-    title: "Start From A Template",
-    lede: "Choose the agreement that fits the job.",
-    body: "Wedding, elopement, portrait, or retainer. Personalise the couple, the date, the deliverables, and the terms, then save it as your own.",
+    title: "Send the Cue",
+    lede: "From template to signing link in a minute.",
+    body: "Start from a wedding, elopement, portrait, or retainer template. Personalise the details, then Cue creates a secure link you can share anywhere.",
     statValue: "Under a minute",
     statLabel: "From template to ready-to-send",
-    visual: <MockAllowance />,
+    visual: <MockTemplates />,
   },
   {
-    tab: "Send the link",
-    icon: Send,
-    title: "Send A Secure Link",
+    tab: "Get the yes",
+    icon: Check,
+    title: "Get the yes",
     lede: "No account for your client.",
-    body: "Cue will create a signing link protected by an unguessable token. Your client will open it on a phone, read a clean mobile layout, and sign.",
+    body: "Your client opens the link on whatever device is in their hand, reads a clean mobile layout, consents, and signs. Nothing to download or install.",
     statValue: "Any device",
     statLabel: "Nothing to download or install",
     visual: <MockLink />,
@@ -30,7 +30,7 @@ const TABS = [
   {
     tab: "Keep the record",
     icon: Archive,
-    title: "Keep The Record",
+    title: "Keep the record",
     lede: "Signed means settled.",
     body: "The moment it is signed, Cue will freeze the agreement, render a final PDF, store the audit trail, and email a copy to both parties.",
     statValue: "Immutable",
@@ -67,10 +67,10 @@ export function Flow() {
     <section className="cue-section">
       <div className="cue-shell">
         <div className="cue-eyebrow-block">
-          <h2 className="cue-h2">{"From inquiry to signed,\nin three steps"}</h2>
+          <h2 className="cue-h2">{"Three steps.\nOne Cue."}</h2>
           <p className="cue-lede">
-            Here is what we are building. None of it is live yet — the waitlist
-            is the one thing on this page that works today.
+            From a template to a sealed PDF — built for the moments before a
+            shoot.
           </p>
         </div>
 
@@ -151,21 +151,21 @@ export function Flow() {
 const STEPS = [
   {
     label: "Step 01",
-    title: "Set up your details once",
-    body: "Add your business name, branding, and standard terms. Cue will reuse them on every agreement from then on.",
-    visual: <MockAllowance />,
+    title: "Set up your studio once",
+    body: "Add your business name, branding, and standard terms. Cue will reuse them on every Cue from then on.",
+    visual: <MockSetup />,
   },
   {
     label: "Step 02",
     title: "Send your first Cue",
     body: "Pick a template, fill in the client and shoot details, and send the signing link straight from your phone or laptop.",
-    visual: <MockApp compact />,
+    visual: <MockSend />,
   },
   {
     label: "Step 03",
     title: "Get the yes on file",
-    body: "Once it is built: your client signs, Cue seals the PDF, and the signed record lands in your library and both inboxes.",
-    visual: <MockRecord />,
+    body: "Your client signs, Cue seals the PDF, and the signed record lands in your library and both inboxes.",
+    visual: <MockSeal />,
   },
 ];
 
@@ -227,10 +227,10 @@ export function Steps() {
     <section id="steps" className="cue-section">
       <div className="cue-shell">
         <div className="cue-eyebrow-block">
-          <h2 className="cue-h2">{"Up and running\nin three steps"}</h2>
+          <h2 className="cue-h2">{"Your first Cue\nin three steps"}</h2>
           <p className="cue-lede">
-            The day Cue opens, your first five agreements will be free — no
-            card.
+            Add your studio once. Send from a template. Get the signed record
+            back.
           </p>
         </div>
 
@@ -260,7 +260,7 @@ export function Steps() {
                 </h3>
                 <p
                   style={{
-                    marginTop: 12,
+                    marginTop: 10,
                     fontSize: 15,
                     lineHeight: 1.55,
                     color: "var(--cue-ink-soft)",

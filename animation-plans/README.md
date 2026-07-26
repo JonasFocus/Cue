@@ -11,6 +11,7 @@ Latest commit stamp: `634fc30`. Bar: [emilkowal.ski](https://emilkowal.ski/) + `
 | 2 | [002-mock-progress-transform](002-mock-progress-transform.md) | DONE | HIGH | — |
 | 3 | [003-reveal-and-hero-tuning](003-reveal-and-hero-tuning.md) | DONE | MEDIUM | — |
 | 4 | [004-pause-offscreen-hero-loop](004-pause-offscreen-hero-loop.md) | DONE | MEDIUM | — |
+| 5 | [005-features-tiles-polish](005-features-tiles-polish.md) | DONE | MEDIUM | — |
 
 ## Findings table (vetted)
 

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Mail, Plus } from "lucide-react";
 import { Reveal } from "./reveal";
 import { Waitlist } from "./waitlist";
 import { CueMark } from "@/components/cue-mark";
@@ -13,27 +13,27 @@ import { CueMark } from "@/components/cue-mark";
 const FAQS = [
   {
     q: "Can I use Cue today?",
-    a: "Not yet. Cue is being built, and this page is ahead of it — there is nothing to sign in to. The waitlist is the whole product for now: leave your email and you will hear from us the day it opens, once.",
+    a: "Cue is opening soon. Join the waitlist and you will be first through the door — with five free Cues waiting, no card required. One email when it launches. That is it.",
   },
   {
     q: "Will a Cue be legally binding?",
-    a: "That is the design. Each Cue will record the signer's identity, their consent, timestamps, and delivery events, then freeze the agreement as an immutable snapshot with a document hash — that kind of audit record is what makes an electronic signature defensible. Cue is not a law firm and gives no legal advice, so use your own agreement terms or have a lawyer review your template.",
+    a: "That is the design. Each Cue will capture signer identity, consent, timestamps, delivery events, and a sealed document hash — a defensible audit trail without enterprise software. Cue is not a law firm and does not give legal advice — bring your own terms, or have a lawyer review your template.",
   },
   {
     q: "Will my client need an account?",
-    a: "No. The plan is a secure link they open on whatever device they are holding, with nothing to download, install, or register for.",
+    a: "No account, no app, no friction. They will open a secure link on the phone already in their hand, review a clean mobile layout, consent, and sign. You get the yes without chasing logins.",
   },
   {
-    q: "What will the free plan include?",
-    a: "Five sent Cues in total, not five per month, each with the standard templates, the final PDF, and the full audit trail. No card at signup. Pricing is the current plan, not a promise — it can change before launch.",
+    q: "What is included for free?",
+    a: "Five sent Cues for real client work — standard templates, a polished signing experience, a final PDF, and the full audit trail on every one. No card at signup. Enough to feel the workflow before you ever pay.",
   },
   {
-    q: "What will happen after a Cue is signed?",
-    a: "Cue will render a final PDF, store the signed record with its audit trail, and email a copy to you and your client. Once sealed, the agreement cannot be edited.",
+    q: "What happens after my client signs?",
+    a: "The yes becomes the record. Cue will seal the agreement, render a final PDF, store the audit trail, and email a copy to both of you — searchable in your library, untouchable once sealed.",
   },
   {
-    q: "Will I be able to use my own agreement wording?",
-    a: "Yes — you will start from a template and edit it, or paste in the terms you already use. Saved templates and custom branding are planned for the Creator plan.",
+    q: "Can I use my own agreement wording?",
+    a: "Yes — your terms, your studio. You will start from a template and edit it, or paste in what you already use. On Creator, saved templates and custom branding will keep every Cue looking like you.",
   },
 ];
 
@@ -45,11 +45,19 @@ export function Faq() {
           <div className="cue-faq">
             <div>
               <h2 className="cue-h2" style={{ textAlign: "left" }}>
-                {"Frequently asked\nquestions"}
+                FAQ
               </h2>
               <p className="cue-lede" style={{ textAlign: "left" }}>
-                Still have questions? Reach out at hello@krevo.io
+                What you get when Cue opens — and how the send, the yes, and the
+                record will work.
               </p>
+              <a
+                className="cue-btn cue-btn-light cue-faq-contact"
+                href="mailto:hello@krevo.io"
+              >
+                <Mail size={16} strokeWidth={1.9} aria-hidden />
+                Email us
+              </a>
             </div>
 
             <div className="cue-faq-list">
@@ -103,14 +111,16 @@ export function Cta() {
           <div className="cue-cta" id="waitlist">
             <div className="cue-cta-grid" aria-hidden />
             <div style={{ position: "relative" }}>
-              <h2 className="cue-h2">{"Send the Cue.\nGet the yes."}</h2>
+              <h2 className="cue-h2">
+                {"Send the Cue.\nGet the yes.\nKeep the record."}
+              </h2>
               <p
                 className="cue-lede"
                 style={{ marginInline: "auto", maxWidth: "52ch" }}
               >
-                Cue is still being built. Leave your email and you will hear from
-                us the day it opens — your first five agreements will be free, no
-                card required.
+                Cue is still being built. Leave your email and you will be first
+                through the door, with five free Cues waiting. No card, no
+                commitment.
               </p>
               <div style={{ marginTop: 28 }}>
                 <Waitlist />

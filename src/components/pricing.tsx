@@ -9,7 +9,7 @@ const PLANS = [
     key: "free",
     name: "Free",
     badge: "$0",
-    blurb: "Try Cue on real client work before you commit to anything.",
+    blurb: "Try Cue on a real send before you commit to anything.",
     features: [
       "Five total sent Cues",
       "Standard agreement templates",
