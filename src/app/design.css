@@ -366,10 +366,15 @@
 }
 
 .cue-badge {
-  display: inline-flex;
+  /* flex + fit-content + margin auto centers reliably. inline-flex under
+     text-align:center overflows left-heavy when max-content exceeds the
+     shell (the audience line is ~450px, phone content ~390px). */
+  display: flex;
   align-items: center;
   gap: 8px;
+  width: fit-content;
   max-width: 100%;
+  margin-inline: auto;
   padding: 4px 12px 4px 4px;
   border-radius: var(--cue-r-pill);
   border: 1px solid var(--cue-line);
@@ -390,7 +395,20 @@
 }
 
 .cue-badge span:last-child {
+  min-width: 0;
   text-wrap: balance;
+}
+
+/* Status + audience line can't sit in one horizontal chip on phone widths
+   without stretching full-bleed and reading left-heavy once the copy wraps. */
+@media (max-width: 767px) {
+  .cue-badge {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    text-align: center;
+  }
 }
 
 @media (min-width: 768px) {
@@ -408,8 +426,8 @@
 
 @media (max-width: 360px) {
   .cue-badge {
-    gap: 6px;
-    padding: 3px 10px 3px 3px;
+    gap: 5px;
+    padding: 7px 14px;
     font-size: 12px;
   }
 }
@@ -457,8 +475,8 @@
   }
 
   .cue-badge {
-    gap: 6px;
-    padding: 3px 10px 3px 3px;
+    gap: 5px;
+    padding: 6px 12px;
     font-size: 12px;
   }
 
