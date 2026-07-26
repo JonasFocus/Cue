@@ -1,68 +1,10 @@
-import {
-  Archive,
-  Check,
-  ChevronRight,
-  FileSignature,
-  Send,
-} from "lucide-react";
+import { Archive, Check, FileSignature, Send } from "lucide-react";
 import { Reveal } from "./reveal";
 import { MockApp, MockBrand, MockLibrary, MockRecord } from "./mock";
 
-/* Compact lifecycle strip — product proof under the core line, not a second hero. */
-const PROOF_STEPS = [
-  { label: "Sent", tone: "sent" as const },
-  { label: "Opened", tone: "wait" as const },
-  { label: "Signed", tone: "ok" as const },
-];
-
-/* ── The statement beat ── */
-
-export function Statement() {
-  return (
-    <section className="cue-section cue-statement-section">
-      <div className="cue-shell">
-        <Reveal>
-          <div className="cue-statement-block">
-            <p className="cue-statement cue-statement-muted">
-              Agreements live in email threads, scanned PDFs, and screenshots on
-              a phone. Chasing a signature costs a day you did not have.
-            </p>
-            <p className="cue-statement cue-statement-ink">
-              Send the Cue. Get the yes. Keep the record.
-            </p>
-
-            <div className="cue-proof" aria-hidden>
-              <span className="cue-proof-meta">
-                <i className="cue-proof-avatar">HW</i>
-                Harper &amp; Wells
-              </span>
-              <span className="cue-proof-steps">
-                {PROOF_STEPS.map((step, i) => (
-                  <span className="cue-proof-step" key={step.label}>
-                    {i > 0 && (
-                      <ChevronRight
-                        size={12}
-                        strokeWidth={2}
-                        className="cue-proof-sep"
-                      />
-                    )}
-                    <span className="cue-proof-pill" data-tone={step.tone}>
-                      {step.label}
-                    </span>
-                  </span>
-                ))}
-              </span>
-            </div>
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
 /* ── Features ── */
 
-/* Soft-wells Features layout — ported from lab /v4. */
+/* Soft-wells Features layout. */
 const WELLS = [
   {
     title: "Distinctly yours",

@@ -416,30 +416,62 @@
   color: var(--cue-muted);
 }
 
-/* ── Hero signing animation ──
-   One shared loop length keeps every beat (fill → send → open → sign → seal)
-   on the same clock. Per-element delays below are absolute seconds. */
+/* ── Hero signing animation (V2 Status) ──
+   One shared 8s loop: signature draws, then Draft → Sent → Opened → Signed
+   on the pill and spine together. Hard-step pills so Sent isn’t buried. */
 
 .cue-sign {
-  --cue-loop: 9s;
+  --cue-loop: 8s;
   position: relative;
+  isolation: isolate;
   margin: 60px auto 0;
   width: min(420px, 100%);
   text-align: left;
 }
 
+.cue-sign-glow {
+  position: absolute;
+  z-index: 0;
+  inset: 8% -8% -12%;
+  background: radial-gradient(
+    55% 50% at 50% 40%,
+    rgb(0 134 255 / 0.22) 0%,
+    transparent 70%
+  );
+  filter: blur(18px);
+  pointer-events: none;
+  opacity: 0.85;
+}
+
 .cue-sign-card {
   position: relative;
   z-index: 1;
-  padding: 18px;
+  overflow: hidden;
+  padding: 20px;
   border-radius: var(--cue-r-card);
   border: 1px solid var(--cue-line);
-  background: var(--cue-panel);
+  background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
   font-size: 13px;
   box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.06),
-    0 34px 70px -34px rgb(4 46 92 / 0.42),
-    0 0 90px -24px rgb(0 134 255 / 0.4);
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 28px 56px -30px rgb(4 46 92 / 0.4),
+    0 0 80px -30px rgb(0 134 255 / 0.35);
+}
+
+.cue-sign-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 8%,
+    rgb(255 255 255 / 0.95) 40%,
+    rgb(0 134 255 / 0.35) 50%,
+    rgb(255 255 255 / 0.95) 60%,
+    transparent 92%
+  );
+  pointer-events: none;
 }
 
 .cue-sign-head {
@@ -448,23 +480,35 @@
   gap: 11px;
 }
 
+.cue-sign-id {
+  min-width: 0;
+}
+
 .cue-sign-avatar {
   display: grid;
   place-items: center;
   flex: none;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 11px;
   background: var(--cue-tint);
   color: var(--cue-accent-deep);
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-weight: 550;
+}
+
+.cue-sign-avatar-photo {
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center 42%;
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.08);
 }
 
 .cue-sign-title {
   display: block;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
 }
 
 .cue-sign-meta {
@@ -478,15 +522,17 @@
   position: relative;
   flex: none;
   margin-left: auto;
-  width: 66px;
+  width: 78px;
   height: 22px;
 }
 
 .cue-sign-pill {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   border-radius: var(--cue-r-pill);
   font-size: 11px;
   font-weight: 500;
@@ -494,6 +540,7 @@
   background: #f0f0f0;
   color: var(--cue-ink-soft);
   animation: var(--cue-loop) var(--cue-ease) infinite;
+  animation-timing-function: steps(1, end);
 }
 
 .cue-sign-pill[data-state="draft"] {
@@ -506,48 +553,119 @@
   color: var(--cue-accent-deep);
 }
 
+.cue-sign-pill[data-state="opened"] {
+  animation-name: cueSignPillOpened;
+  background: #fff4e0;
+  color: #96590a;
+}
+
 .cue-sign-pill[data-state="signed"] {
   animation-name: cueSignPillSigned;
-  background: var(--cue-accent);
-  color: #fff;
+  background: var(--cue-ok-soft);
+  color: var(--cue-ok);
 }
 
-.cue-sign-doc {
-  display: grid;
-  gap: 9px;
-  margin-top: 18px;
+@keyframes cueSignPillDraft {
+  0% {
+    opacity: 1;
+  }
+  52% {
+    opacity: 0;
+  }
+  92%,
+  100% {
+    opacity: 1;
+  }
 }
 
-.cue-sign-line {
-  height: 7px;
-  border-radius: 4px;
-  background: var(--cue-line-soft);
-  overflow: hidden;
+@keyframes cueSignPillSent {
+  0% {
+    opacity: 0;
+  }
+  52% {
+    opacity: 1;
+  }
+  63%,
+  100% {
+    opacity: 0;
+  }
 }
 
-.cue-sign-line i {
-  display: block;
-  height: 100%;
-  background: var(--cue-line);
-  transform: scaleX(0);
-  transform-origin: left;
-  animation: cueSignFill var(--cue-loop) var(--cue-ease) infinite;
+@keyframes cueSignPillOpened {
+  0% {
+    opacity: 0;
+  }
+  63% {
+    opacity: 1;
+  }
+  73%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes cueSignPillSigned {
+  0% {
+    opacity: 0;
+  }
+  73% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .cue-sign-pad {
-  margin-top: 18px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 16px;
   padding: 10px 12px 2px;
-  border: 1px dashed var(--cue-line);
+  border: 1px dashed rgb(0 134 255 / 0.18);
   border-radius: var(--cue-r-sm);
-  background: var(--cue-tint-soft);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(0 134 255 / 0.1) 0%, transparent 55%),
+    var(--cue-tint-soft);
+}
+
+.cue-sign-pad::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgb(255 255 255 / 0.55) 48%,
+    transparent 62%
+  );
+  transform: translateX(-120%);
+  animation: cueSignSheen var(--cue-loop) var(--cue-ease) infinite;
+  pointer-events: none;
+}
+
+@keyframes cueSignSheen {
+  0%,
+  44% {
+    transform: translateX(-120%);
+  }
+  52% {
+    transform: translateX(120%);
+  }
+  53%,
+  100% {
+    transform: translateX(120%);
+  }
 }
 
 .cue-sign-pad-label {
+  display: block;
   font-size: 9px;
   font-weight: 500;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--cue-muted);
+  text-align: left;
 }
 
 .cue-sign-svg {
@@ -567,193 +685,282 @@
   animation: cueSignDraw var(--cue-loop) linear infinite;
 }
 
-.cue-sign-audit {
+@keyframes cueSignDraw {
+  0%,
+  20% {
+    stroke-dashoffset: 1;
+  }
+  48%,
+  84% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 1;
+  }
+}
+
+.cue-sign-spine {
+  position: relative;
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
-  padding-top: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-top: 20px;
+  padding-top: 18px;
   border-top: 1px solid var(--cue-line-soft);
 }
 
-.cue-sign-row {
+.cue-sign-spine-track,
+.cue-sign-spine-progress {
+  position: absolute;
+  top: calc(18px + 7px);
+  left: 16.66%;
+  right: 16.66%;
+  height: 2px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.cue-sign-spine-track {
+  background: var(--cue-line);
+}
+
+.cue-sign-spine-progress {
+  background: linear-gradient(90deg, var(--cue-accent), #5eb1ff);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: cueSignSpineFill var(--cue-loop) linear infinite;
+}
+
+@keyframes cueSignSpineFill {
+  0%,
+  48% {
+    transform: scaleX(0);
+  }
+  52% {
+    transform: scaleX(0.02);
+  }
+  62% {
+    transform: scaleX(0.5);
+  }
+  72% {
+    transform: scaleX(1);
+  }
+  88% {
+    transform: scaleX(1);
+  }
+  92%,
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+.cue-sign-spine-step {
+  position: relative;
+  z-index: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
-  color: var(--cue-ink-soft);
-  opacity: 0;
-  animation: cueSignStep var(--cue-loop) var(--cue-ease) infinite;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0.35;
 }
 
-.cue-sign-row b {
-  margin-left: auto;
-  font-weight: 400;
-  color: var(--cue-muted);
+.cue-sign-spine-step[data-step="sent"] {
+  animation: cueSignStepSent var(--cue-loop) var(--cue-ease) infinite;
 }
 
-.cue-sign-tick {
+.cue-sign-spine-step[data-step="opened"] {
+  animation: cueSignStepOpened var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-sign-spine-step[data-step="signed"] {
+  animation: cueSignStepSigned var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-sign-spine-step > i {
   display: grid;
   place-items: center;
   flex: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--cue-accent);
-  color: #fff;
-}
-
-.cue-sign-chip {
-  position: absolute;
-  z-index: 2;
-  display: none;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 13px;
-  border-radius: var(--cue-r-pill);
-  border: 1px solid var(--cue-line);
   background: var(--cue-panel);
-  font-size: 12px;
-  white-space: nowrap;
-  opacity: 0;
+  border: 1.5px solid var(--cue-line);
+  color: transparent;
+  box-shadow: 0 0 0 3px var(--cue-panel);
+}
+
+.cue-sign-spine-step[data-step="sent"] > i {
+  animation: cueSignTickSent var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-sign-spine-step[data-step="opened"] > i {
+  animation: cueSignTickOpened var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-sign-spine-step[data-step="signed"] > i {
+  animation: cueSignTickSigned var(--cue-loop) var(--cue-ease) infinite;
+}
+
+.cue-sign-spine-copy {
+  display: grid;
+  gap: 2px;
+  line-height: 1.25;
+}
+
+.cue-sign-spine-copy strong {
+  font-weight: 550;
+  letter-spacing: -0.01em;
   color: var(--cue-ink-soft);
-  box-shadow: var(--cue-shadow-card);
-  animation: cueSignChip var(--cue-loop) var(--cue-ease) infinite;
 }
 
-.cue-sign-chip svg {
-  color: var(--cue-accent);
+.cue-sign-spine-copy em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--cue-muted);
 }
 
-@media (min-width: 1120px) {
-  .cue-sign-chip {
-    display: inline-flex;
-  }
-}
-
-.cue-sign-chip[data-i="0"] {
-  top: -24px;
-  left: -84px;
-}
-
-.cue-sign-chip[data-i="1"] {
-  top: 152px;
-  right: -114px;
-}
-
-.cue-sign-chip[data-i="2"] {
-  bottom: 22px;
-  left: -122px;
-}
-
-@keyframes cueSignFill {
+@keyframes cueSignStepSent {
   0%,
-  4% {
-    transform: scaleX(0);
+  49% {
+    opacity: 0.35;
   }
-  16%,
-  93% {
-    transform: scaleX(1);
-  }
-  100% {
-    transform: scaleX(0);
-  }
-}
-
-@keyframes cueSignDraw {
-  0%,
-  46% {
-    stroke-dashoffset: 1;
+  52%,
+  88% {
     opacity: 1;
   }
-  72%,
-  92% {
-    stroke-dashoffset: 0;
-    opacity: 1;
-  }
-  98%,
+  92%,
   100% {
-    stroke-dashoffset: 0;
-    opacity: 0;
+    opacity: 0.35;
   }
 }
 
-@keyframes cueSignStep {
+@keyframes cueSignStepOpened {
   0%,
-  2% {
+  60% {
+    opacity: 0.35;
+  }
+  63%,
+  88% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes cueSignStepSigned {
+  0%,
+  70% {
+    opacity: 0.35;
+  }
+  73%,
+  88% {
+    opacity: 1;
+  }
+  92%,
+  100% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes cueSignTickSent {
+  0%,
+  49% {
+    background: var(--cue-panel);
+    border-color: var(--cue-line);
+    color: transparent;
+  }
+  52%,
+  88% {
+    background: var(--cue-accent);
+    border-color: var(--cue-accent);
+    color: #fff;
+  }
+  92%,
+  100% {
+    background: var(--cue-panel);
+    border-color: var(--cue-line);
+    color: transparent;
+  }
+}
+
+@keyframes cueSignTickOpened {
+  0%,
+  60% {
+    background: var(--cue-panel);
+    border-color: var(--cue-line);
+    color: transparent;
+  }
+  63%,
+  88% {
+    background: var(--cue-accent);
+    border-color: var(--cue-accent);
+    color: #fff;
+  }
+  92%,
+  100% {
+    background: var(--cue-panel);
+    border-color: var(--cue-line);
+    color: transparent;
+  }
+}
+
+@keyframes cueSignTickSigned {
+  0%,
+  70% {
+    background: var(--cue-panel);
+    border-color: var(--cue-line);
+    color: transparent;
+    box-shadow: 0 0 0 3px var(--cue-panel);
+  }
+  73%,
+  88% {
+    background: var(--cue-accent);
+    border-color: var(--cue-accent);
+    color: #fff;
+    box-shadow:
+      0 0 0 3px var(--cue-panel),
+      0 0 0 7px rgb(0 134 255 / 0.16);
+  }
+  92%,
+  100% {
+    background: var(--cue-panel);
+    border-color: var(--cue-line);
+    color: transparent;
+    box-shadow: 0 0 0 3px var(--cue-panel);
+  }
+}
+
+.cue-sign-moment {
+  margin-top: 16px;
+  text-align: center;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  color: var(--cue-accent-deep);
+  opacity: 0;
+  animation: cueSignMoment var(--cue-loop) var(--cue-ease) infinite;
+}
+
+@keyframes cueSignMoment {
+  0%,
+  74% {
     opacity: 0;
     transform: translateY(5px);
   }
-  8%,
-  92% {
-    opacity: 1;
-    transform: none;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-}
-
-@keyframes cueSignChip {
-  0%,
-  3% {
-    opacity: 0;
-    transform: translateY(9px) scale(0.96);
-  }
-  9%,
+  78%,
   88% {
     opacity: 1;
     transform: none;
   }
-  97%,
+  92%,
   100% {
     opacity: 0;
-    transform: translateY(-6px) scale(0.98);
-  }
-}
-
-@keyframes cueSignPillDraft {
-  0%,
-  3% {
-    opacity: 0;
-  }
-  8%,
-  20% {
-    opacity: 1;
-  }
-  25%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes cueSignPillSent {
-  0%,
-  22% {
-    opacity: 0;
-  }
-  28%,
-  66% {
-    opacity: 1;
-  }
-  71%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes cueSignPillSigned {
-  0%,
-  69% {
-    opacity: 0;
-  }
-  74%,
-  92% {
-    opacity: 1;
-  }
-  97%,
-  100% {
-    opacity: 0;
+    transform: translateY(3px);
   }
 }
 
@@ -772,19 +979,26 @@
     animation: none !important;
   }
 
-  .cue-sign-line i {
-    transform: none;
-  }
-
   .cue-sign-path {
     stroke-dashoffset: 0;
   }
 
-  .cue-sign-row,
-  .cue-sign-chip,
-  .cue-sign-pill[data-state="signed"] {
+  .cue-sign-pill[data-state="signed"],
+  .cue-sign-spine-step,
+  .cue-sign-moment {
     opacity: 1;
     transform: none;
+  }
+
+  .cue-sign-spine-step > i {
+    background: var(--cue-accent);
+    border-color: var(--cue-accent);
+    color: #fff;
+    box-shadow: 0 0 0 3px var(--cue-panel);
+  }
+
+  .cue-sign-spine-progress {
+    transform: scaleX(1);
   }
 }
 
@@ -829,130 +1043,7 @@
   }
 }
 
-/* ── Challenge / statement ── */
-
-.cue-statement-section {
-  padding-block: 56px 40px;
-}
-
-@media (min-width: 768px) {
-  .cue-statement-section {
-    padding-block: 72px 48px;
-  }
-}
-
-.cue-statement-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.cue-statement {
-  margin-inline: auto;
-  max-width: 620px;
-  text-align: center;
-  font-family: var(--font-geist), sans-serif;
-  font-size: clamp(20px, 3.2vw, 25px);
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: -0.02em;
-}
-
-.cue-statement-muted {
-  color: var(--cue-muted);
-}
-
-.cue-statement-ink {
-  margin-top: 28px;
-  color: var(--cue-ink);
-}
-
-/* Compact Sent → Opened → Signed strip under the core line. */
-.cue-proof {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 14px 22px;
-  margin-top: 32px;
-  width: min(100%, 520px);
-  min-height: 56px;
-  padding: 12px 18px;
-  border-radius: var(--cue-r-card);
-  border: 1px solid var(--cue-line);
-  background: var(--cue-panel);
-  box-shadow: var(--cue-shadow-card);
-}
-
-.cue-proof-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--cue-ink);
-}
-
-.cue-proof-avatar {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  background: var(--cue-tint);
-  color: var(--cue-accent-deep);
-  font-size: 10px;
-  font-weight: 500;
-  font-style: normal;
-  letter-spacing: 0.02em;
-}
-
-.cue-proof-steps {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.cue-proof-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.cue-proof-sep {
-  color: var(--cue-muted);
-  flex: none;
-}
-
-.cue-proof-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: var(--cue-r-pill);
-  font-size: 11px;
-  font-weight: 500;
-  background: #f0f0f0;
-  color: var(--cue-ink-soft);
-}
-
-.cue-proof-pill[data-tone="sent"] {
-  background: var(--cue-tint);
-  color: var(--cue-accent-deep);
-}
-
-.cue-proof-pill[data-tone="wait"] {
-  background: #fff4e5;
-  color: #9a5b00;
-}
-
-.cue-proof-pill[data-tone="ok"] {
-  /* --cue-accent is 3.59:1 against white at this size; -deep is 5.43:1. */
-  background: var(--cue-accent-deep);
-  color: #fff;
-}
-
-/* ── Features (soft wells — lab /v4) ── */
+/* ── Features (soft wells) ── */
 
 .cue-features-section {
   padding-block: 64px 56px;
