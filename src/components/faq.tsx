@@ -107,7 +107,8 @@ export function Cta() {
       <div className="cue-shell">
         <Reveal>
           {/* Anchor the whole card, not the input inside it: targeting the
-              field scrolls the heading up behind the sticky nav. */}
+              field alone would scroll the heading out of view (and behind
+              the sticky nav on desktop). */}
           <div className="cue-cta" id="waitlist">
             <div className="cue-cta-grid" aria-hidden />
             <div style={{ position: "relative" }}>

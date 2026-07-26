@@ -219,16 +219,32 @@
 /* ── Nav ── */
 
 .cue-nav {
-  position: sticky;
-  top: 0;
+  /* Static on phones/tablets — a sticky 64px bar eats too much of the
+     viewport while reading. Sticky returns with the desktop link row. */
+  position: relative;
   z-index: 40;
   background: rgb(247 247 247 / 0.82);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
 }
 
+@media (min-width: 900px) {
+  .cue-nav {
+    position: sticky;
+    top: 0;
+  }
+}
+
 .cue-nav[data-stuck="true"] {
   border-bottom-color: var(--cue-line);
+}
+
+@media (max-width: 899px) {
+  /* Stuck border is for the sticky desktop bar; skip it when the nav
+     scrolls away with the page. */
+  .cue-nav[data-stuck="true"] {
+    border-bottom-color: transparent;
+  }
 }
 
 .cue-nav-inner {
@@ -1838,9 +1854,9 @@
 /* ── CTA ── */
 
 .cue-cta {
-  /* Clears the 64px sticky nav plus breathing room, so jumping to #waitlist
-     lands the card under the header instead of behind it. */
-  scroll-margin-top: 88px;
+  /* Breathing room for #waitlist jumps. Desktop adds clearance for the
+     sticky nav; mobile nav scrolls away, so a small offset is enough. */
+  scroll-margin-top: 24px;
   position: relative;
   border-radius: var(--cue-r-card);
   border: 1px solid var(--cue-line);
@@ -1855,6 +1871,13 @@
 @media (min-width: 768px) and (min-height: 600px) {
   .cue-cta {
     padding: 84px 24px;
+  }
+}
+
+@media (min-width: 900px) {
+  .cue-cta {
+    /* Clears the 64px sticky nav plus breathing room. */
+    scroll-margin-top: 88px;
   }
 }
 
