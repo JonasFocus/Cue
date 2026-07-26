@@ -36,8 +36,10 @@ export const metadata: Metadata = {
     siteName: "Cue",
     type: "website",
   },
+  /* "summary", not "summary_large_image": paired with the square OG image this
+     keeps a shared link to a compact strip instead of a full-bleed hero card. */
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: SHARE_TITLE,
     description: SHARE_DESCRIPTION,
   },
