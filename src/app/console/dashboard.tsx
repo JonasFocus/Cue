@@ -51,20 +51,30 @@ type Snapshot = {
   waitlist?: WaitlistStats;
 };
 
+type GuestPageResponse = {
+  guests?: Guest[];
+  total?: number;
+  nextBefore?: number | null;
+};
+
 const POLL_MS = 5000;
 
 export function Dashboard({ operator }: { operator: string }) {
   const [tab, setTab] = useState<"overview" | "guests" | "changelog">("overview");
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [guests, setGuests] = useState<Guest[] | null>(null);
-  // The API caps the list; when it does, the count on screen is not the total.
-  const [truncated, setTruncated] = useState(false);
+  const [guestTotal, setGuestTotal] = useState<number | null>(null);
+  const [nextBefore, setNextBefore] = useState<number | null>(null);
+  const [newGuestIds, setNewGuestIds] = useState<Set<number>>(() => new Set());
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState<string | null>(null);
   // Refreshed on each poll, not on a clock: it only feeds a relative-time
   // tooltip, and a 1 Hz tick re-rendered every row and every select for it.
   const [now, setNow] = useState(0);
   const inFlight = useRef(false);
+  const guestsRef = useRef<Guest[] | null>(null);
+  const firstGuestLoad = useRef(true);
   // A poll that lands mid-edit would overwrite the optimistic value with the
   // pre-edit one. Hold guest updates while a mutation is outstanding.
   const mutating = useRef(0);
@@ -83,13 +93,32 @@ export function Dashboard({ operator }: { operator: string }) {
       }
       // Read the two responses independently. A failed health check used to
       // throw before the guest list was parsed, silently discarding it.
-      // `truncated` is additive and may be absent on older responses.
-      const payload: { guests?: Guest[]; truncated?: boolean } | null = list.ok
+      const payload: GuestPageResponse | null = list.ok
         ? await list.json().catch(() => null)
         : null;
       if (payload?.guests && mutating.current === 0) {
-        setGuests(payload.guests);
-        setTruncated(payload.truncated === true);
+        const current = guestsRef.current ?? [];
+        const currentIds = new Set(current.map((guest) => guest.id));
+        const arrivals = firstGuestLoad.current
+          ? []
+          : payload.guests.filter((guest) => !currentIds.has(guest.id));
+        const incomingIds = new Set(payload.guests.map((guest) => guest.id));
+        const merged = [
+          ...payload.guests,
+          ...current.filter((guest) => !incomingIds.has(guest.id)),
+        ];
+        guestsRef.current = merged;
+        setGuests(merged);
+        setGuestTotal(payload.total ?? null);
+        // Once the operator has loaded older pages, their cursor belongs to
+        // the oldest loaded guest. A fresh poll only replaces the newest page
+        // and must not send the next "load more" request back into rows that
+        // are already on screen.
+        if (current.length <= payload.guests.length) {
+          setNextBefore(payload.nextBefore ?? null);
+        }
+        setNewGuestIds(new Set(arrivals.map((guest) => guest.id)));
+        firstGuestLoad.current = false;
       }
 
       const body: Snapshot | null = await health.json().catch(() => null);
@@ -115,11 +144,40 @@ export function Dashboard({ operator }: { operator: string }) {
     }
   }, []);
 
+  const loadMoreGuests = useCallback(async () => {
+    if (nextBefore === null || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/waitlist?before=${nextBefore}`, { cache: "no-store" });
+      if (res.status === 401) {
+        window.location.href = "/console/login";
+        return;
+      }
+      if (!res.ok) throw new Error(`guest list returned ${res.status}`);
+      const payload: GuestPageResponse | null = await res.json().catch(() => null);
+      if (!payload?.guests) throw new Error("guest list returned invalid data");
+
+      const known = new Set((guestsRef.current ?? []).map((guest) => guest.id));
+      const merged = [...(guestsRef.current ?? []), ...payload.guests.filter((g) => !known.has(g.id))];
+      guestsRef.current = merged;
+      setGuests(merged);
+      setGuestTotal(payload.total ?? guestTotal);
+      setNextBefore(payload.nextBefore ?? null);
+      setError(null);
+    } catch (err) {
+      setError(`Could not load older guests — ${(err as Error).message}.`);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [guestTotal, loadingMore, nextBefore]);
+
   const setStatus = useCallback(async (id: number, status: GuestStatus) => {
     mutating.current += 1;
-    setGuests((prev) =>
-      prev ? prev.map((g) => (g.id === id ? { ...g, status } : g)) : prev,
+    const optimistic = (guestsRef.current ?? []).map((g) =>
+      g.id === id ? { ...g, status } : g,
     );
+    guestsRef.current = optimistic;
+    setGuests(optimistic);
     try {
       const res = await fetch("/api/waitlist", {
         method: "PATCH",
@@ -128,7 +186,9 @@ export function Dashboard({ operator }: { operator: string }) {
       });
       if (!res.ok) throw new Error(`status update returned ${res.status}`);
       const { guest } = await res.json();
-      setGuests((prev) => (prev ? prev.map((g) => (g.id === id ? guest : g)) : prev));
+      const updated = (guestsRef.current ?? []).map((g) => (g.id === id ? guest : g));
+      guestsRef.current = updated;
+      setGuests(updated);
       setError(null);
     } catch (err) {
       setError(`${(err as Error).message} — reverting`);
@@ -209,7 +269,7 @@ export function Dashboard({ operator }: { operator: string }) {
             onClick={() => setTab("guests")}
           >
             Guest list
-            {guests ? <b>{truncated ? `${guests.length}+` : guests.length}</b> : null}
+            {guestTotal !== null ? <b>{guestTotal.toLocaleString()}</b> : null}
           </button>
           <button
             type="button"
@@ -233,6 +293,15 @@ export function Dashboard({ operator }: { operator: string }) {
               unaffected. Retrying every {POLL_MS / 1000}s.
             </div>
           )}
+
+          {newGuestIds.size > 0 && (
+            <div className="cx-arrival" role="status">
+              <span className="cx-dot" />
+              {newGuestIds.size === 1
+                ? "1 new person joined the waitlist."
+                : `${newGuestIds.size} new people joined the waitlist.`}
+            </div>
+          )}
         </div>
 
         <main>
@@ -240,9 +309,13 @@ export function Dashboard({ operator }: { operator: string }) {
           {tab === "guests" && (
             <GuestList
               guests={guests}
-              truncated={truncated}
+              total={guestTotal ?? snap?.waitlist?.total ?? null}
+              hasMore={nextBefore !== null}
+              loadingMore={loadingMore}
+              newGuestIds={newGuestIds}
               now={now}
               onStatus={setStatus}
+              onLoadMore={loadMoreGuests}
             />
           )}
           {tab === "changelog" && <Changelog />}
@@ -386,14 +459,22 @@ const STATUS_LABEL: Record<GuestStatus, string> = {
 
 function GuestList({
   guests,
-  truncated,
+  total,
+  hasMore,
+  loadingMore,
+  newGuestIds,
   now,
   onStatus,
+  onLoadMore,
 }: {
   guests: Guest[] | null;
-  truncated: boolean;
+  total: number | null;
+  hasMore: boolean;
+  loadingMore: boolean;
+  newGuestIds: ReadonlySet<number>;
   now: number;
   onStatus: (id: number, status: GuestStatus) => void;
+  onLoadMore: () => void;
 }) {
   const [q, setQ] = useState("");
 
@@ -415,13 +496,23 @@ function GuestList({
         </div>
 
         <header className="cx-guests-head">
-          <h1>Guest list</h1>
+          <div className="cx-guests-title">
+            <h1>Guest list</h1>
+            {total !== null && (
+              <span className="cx-guest-total" aria-label={`${total.toLocaleString()} guests total`}>
+                <span className="cx-dot" />
+                {total.toLocaleString()} live
+              </span>
+            )}
+          </div>
           <p>
             {!guests?.length
               ? "Everyone who asked to be told when Cue opens up."
-              : truncated
-                ? `Showing the ${guests.length} most recent — there are more waiting than fit in one page.`
-                : `${guests.length} ${guests.length === 1 ? "person is" : "people are"} waiting to hear from you.`}
+              : total === null
+                ? "Reading the waitlist…"
+                : hasMore
+                  ? `${total.toLocaleString()} people are waiting. Showing the newest ${guests.length.toLocaleString()}.`
+                  : `${total.toLocaleString()} ${total === 1 ? "person is" : "people are"} waiting to hear from you.`}
           </p>
 
           <label className="cx-search">
@@ -480,7 +571,7 @@ function GuestList({
 
             {filtered?.map((g, i) => (
               <tr
-                className="cx-trow"
+                className={`cx-trow${newGuestIds.has(g.id) ? " cx-new" : ""}`}
                 role="row"
                 key={g.id}
                 style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
@@ -508,6 +599,14 @@ function GuestList({
             ))}
           </tbody>
         </table>
+
+        {hasMore && (
+          <div className="cx-load-more">
+            <button type="button" onClick={onLoadMore} disabled={loadingMore}>
+              {loadingMore ? "Loading older guests…" : "Load 200 older guests"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

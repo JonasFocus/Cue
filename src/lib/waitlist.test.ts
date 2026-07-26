@@ -9,7 +9,16 @@ import {
   nameFromEmail,
   normaliseEmail,
   parseStatusPatch,
+  WAITLIST_HOURLY_SIGNUP_CEILING,
+  WAITLIST_IP_ATTEMPT_LIMIT,
+  WAITLIST_RATE_WINDOW_SECONDS,
 } from "./waitlist.ts";
+
+test("launch limits allow a real traffic spike without dropping abuse protection", () => {
+  assert.equal(WAITLIST_IP_ATTEMPT_LIMIT, 100);
+  assert.equal(WAITLIST_RATE_WINDOW_SECONDS, 60 * 60);
+  assert.equal(WAITLIST_HOURLY_SIGNUP_CEILING, 10_000);
+});
 
 test("accepts ordinary addresses", () => {
   for (const email of [

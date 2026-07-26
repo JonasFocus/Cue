@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { describeError, rateLimit, type RateLimitClient } from "./redis.ts";
+import {
+  WAITLIST_IP_ATTEMPT_LIMIT,
+  WAITLIST_RATE_WINDOW_SECONDS,
+} from "./waitlist.ts";
 
 /* Importing this module constructs the singleton client, but `createRedis`
    only dials when REDIS_URL is set — which it is not under `npm test`. Every
@@ -52,6 +56,27 @@ test("the limit is inclusive and remaining never goes negative", async () => {
     ok: false,
     remaining: 0,
   });
+});
+
+test("the launch quota permits a large shared-network burst", async () => {
+  assert.deepEqual(
+    await rateLimit(
+      "wl:shared-network",
+      WAITLIST_IP_ATTEMPT_LIMIT,
+      WAITLIST_RATE_WINDOW_SECONDS,
+      fake(WAITLIST_IP_ATTEMPT_LIMIT),
+    ),
+    { ok: true, remaining: 0 },
+  );
+  assert.deepEqual(
+    await rateLimit(
+      "wl:shared-network",
+      WAITLIST_IP_ATTEMPT_LIMIT,
+      WAITLIST_RATE_WINDOW_SECONDS,
+      fake(WAITLIST_IP_ATTEMPT_LIMIT + 1),
+    ),
+    { ok: false, remaining: 0 },
+  );
 });
 
 test("a closed client fails open", async () => {

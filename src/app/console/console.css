@@ -506,6 +506,38 @@
   letter-spacing: -0.03em;
 }
 
+.cx-guests-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cx-guest-total,
+.cx-arrival {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cx-guest-total {
+  padding: 5px 8px;
+  border: 1px solid rgb(74 222 128 / 0.2);
+  background: rgb(74 222 128 / 0.07);
+  color: #86efac;
+}
+
+.cx-guest-total .cx-dot,
+.cx-arrival .cx-dot {
+  width: 5px;
+  height: 5px;
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgb(74 222 128 / 0.13);
+}
+
 .cx-guests-head p {
   margin-top: 8px;
   font-size: 13.5px;
@@ -615,6 +647,27 @@
 
 .cx-trow:hover td {
   background: rgb(255 255 255 / 0.016);
+}
+
+/* A poll can add new people without remounting the rows already on screen.
+   Only those arrivals get the brighter, upward entrance. */
+.cx-trow.cx-new td {
+  animation: cxGuestArrival 620ms cubic-bezier(0.2, 0, 0, 1) both;
+  background: linear-gradient(90deg, rgb(74 222 128 / 0.1), transparent 58%);
+  will-change: transform, opacity;
+}
+
+@keyframes cxGuestArrival {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 
 .cx-guest {
@@ -773,9 +826,62 @@
   color: var(--faint);
 }
 
+.cx-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 16px 24px;
+}
+
+.cx-load-more button {
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: rgb(255 255 255 / 0.035);
+  color: var(--dim);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+.cx-load-more button:hover:not(:disabled) {
+  border-color: var(--dim);
+  background: rgb(255 255 255 / 0.07);
+  color: var(--ink);
+}
+
+.cx-load-more button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.cx-load-more button:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
+.cx-arrival {
+  width: fit-content;
+  margin-top: 14px;
+  padding: 7px 10px;
+  border: 1px solid rgb(74 222 128 / 0.2);
+  background: rgb(74 222 128 / 0.07);
+  color: #bbf7d0;
+}
+
 /* Below 640px the grid moves off the table and onto each row, so a guest
    reflows to two lines without rows bleeding into one another. */
 @media (max-width: 640px) {
+  .cx-guests-title {
+    gap: 8px;
+  }
+
+  .cx-guest-total {
+    font-size: 10.5px;
+  }
+
   .cx-table,
   .cx-table tbody {
     display: block;
@@ -822,6 +928,14 @@
 
   .cx-table td.cx-empty {
     padding: 46px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-trow.cx-new td {
+    animation: none;
+    filter: none;
+    transform: none;
   }
 }
 

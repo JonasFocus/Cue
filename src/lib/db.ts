@@ -1,5 +1,9 @@
 import { Pool } from "pg";
-import { type GuestStatus, nameFromEmail } from "./waitlist";
+import {
+  type GuestStatus,
+  nameFromEmail,
+  WAITLIST_HOURLY_SIGNUP_CEILING,
+} from "./waitlist";
 import {
   CHANGE_FIELDS,
   type ChangeEntry,
@@ -108,48 +112,55 @@ export async function waitlistStats(): Promise<WaitlistStats> {
 
 export type GuestPage = {
   guests: Guest[];
-  /** True when rows were dropped: the console must not claim the count is the
-      whole list, and its client-side search only covers what it was given. */
+  /** Exact number of people on the waitlist, not merely the current page. */
+  total: number;
+  /** True when another page of older guests can be requested. */
   truncated: boolean;
-  /** How many rows were actually returned to cap it at. */
+  /** The last id in this page when another page exists. */
+  nextBefore: number | null;
+  /** Number of rows in each request. */
   limit: number;
 };
 
-/* ponytail: fetch limit+1 to detect the overflow instead of paginating, so
-   guest #201 is currently unreachable. Deliberate — the table holds 1 row and
-   the console is one operator's screen; pagination would be code written for
-   a page nobody can reach.
-   TRIGGER: the first time `truncated` comes back true (the 201st signup), or
-   sooner if the operator needs to act on the oldest rows rather than the
-   newest. Then add keyset pagination — take a `before` ISO cursor here, use
-   `WHERE created_at < $2` with the existing waitlist_created_at_idx, and pass
-   the last row's createdAt as ?before= from the console. */
-export async function guestList(limit = 200): Promise<GuestPage> {
-  const { rows } = await pool.query<{
-    id: string;
-    email: string;
-    name: string | null;
-    status: GuestStatus;
-    created_at: Date;
-  }>(
-    `SELECT id, email, name, status, created_at
-       FROM waitlist
-      ORDER BY created_at DESC
-      LIMIT $1`,
-    [limit + 1],
-  );
+/* Keyset pagination keeps the guest list responsive as launch traffic grows.
+   `id` is the cursor rather than `created_at`: a bulk arrival can give many
+   rows one transaction timestamp, which would make a timestamp-only cursor
+   skip people. The primary-key index already supports this order. */
+export async function guestList(limit = 200, beforeId?: number): Promise<GuestPage> {
+  const where = beforeId === undefined ? "" : "WHERE id < $2";
+  const [page, count] = await Promise.all([
+    pool.query<{
+      id: string;
+      email: string;
+      name: string | null;
+      status: GuestStatus;
+      created_at: Date;
+    }>(
+      `SELECT id, email, name, status, created_at
+         FROM waitlist
+         ${where}
+        ORDER BY id DESC
+        LIMIT $1`,
+      beforeId === undefined ? [limit + 1] : [limit + 1, beforeId],
+    ),
+    pool.query<{ total: string }>(`SELECT count(*)::text AS total FROM waitlist`),
+  ]);
 
+  const rows = page.rows;
   const truncated = rows.length > limit;
+  const guests = rows.slice(0, limit).map((r) => ({
+    id: Number(r.id),
+    name: r.name?.trim() || nameFromEmail(r.email),
+    email: r.email,
+    status: r.status,
+    createdAt: r.created_at.toISOString(),
+  }));
 
   return {
-    guests: rows.slice(0, limit).map((r) => ({
-      id: Number(r.id),
-      name: r.name?.trim() || nameFromEmail(r.email),
-      email: r.email,
-      status: r.status,
-      createdAt: r.created_at.toISOString(),
-    })),
+    guests,
+    total: Number(count.rows[0]?.total ?? 0),
     truncated,
+    nextBefore: truncated ? guests.at(-1)!.id : null,
     limit,
   };
 }
@@ -275,8 +286,6 @@ export async function deleteChangelogEntry(id: number): Promise<boolean> {
    and both land, so the real bound is CEILING + in-flight requests — fine for a
    backstop whose job is to turn "unbounded" into "bounded". Swap for a counter
    table with SELECT FOR UPDATE if the exact number ever matters. */
-const HOURLY_SIGNUP_CEILING = 200;
-
 /**
  * Global hourly cap on waitlist inserts, enforced in Postgres.
  *
@@ -293,7 +302,7 @@ export async function signupCeilingReached(): Promise<boolean> {
       `SELECT count(*)::text AS n FROM waitlist
         WHERE created_at >= now() - interval '1 hour'`,
     );
-    return Number(rows[0]?.n ?? 0) >= HOURLY_SIGNUP_CEILING;
+    return Number(rows[0]?.n ?? 0) >= WAITLIST_HOURLY_SIGNUP_CEILING;
   } catch (err) {
     // Fail OPEN on a database error: the insert immediately after would fail
     // anyway, and returning "ceiling reached" here would turn a transient blip

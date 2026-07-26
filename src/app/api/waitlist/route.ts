@@ -14,16 +14,24 @@ async function requireOperator() {
 }
 
 /* Returns real email addresses, so it is gated exactly like the console. */
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await requireOperator())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const before = new URL(request.url).searchParams.get("before");
+  let beforeId: number | undefined;
+  if (before !== null) {
+    const parsed = Number(before);
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+      return NextResponse.json({ error: "invalid cursor" }, { status: 400 });
+    }
+    beforeId = parsed;
+  }
+
   try {
-    // Spread rather than nest, so the existing `{ guests }` shape is unchanged
-    // and `truncated`/`limit` are additive for the console to pick up.
     return NextResponse.json(
-      { ...(await guestList()) },
+      { ...(await guestList(200, beforeId)) },
       { headers: { "cache-control": "no-store" } },
     );
   } catch (err) {

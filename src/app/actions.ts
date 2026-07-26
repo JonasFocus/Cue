@@ -4,7 +4,12 @@ import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { pool, signupCeilingReached } from "@/lib/db";
 import { rateLimit } from "@/lib/redis";
-import { isValidEmail, normaliseEmail } from "@/lib/waitlist";
+import {
+  isValidEmail,
+  normaliseEmail,
+  WAITLIST_IP_ATTEMPT_LIMIT,
+  WAITLIST_RATE_WINDOW_SECONDS,
+} from "@/lib/waitlist";
 
 export type WaitlistState = {
   status: "idle" | "ok" | "error";
@@ -68,7 +73,11 @@ export async function joinWaitlist(
     return { status: "error", message: "Too many attempts. Try again later." };
   }
 
-  const limit = await rateLimit(`wl:${ipHash}`, 5, 3600);
+  const limit = await rateLimit(
+    `wl:${ipHash}`,
+    WAITLIST_IP_ATTEMPT_LIMIT,
+    WAITLIST_RATE_WINDOW_SECONDS,
+  );
   if (!limit.ok) {
     return { status: "error", message: "Too many attempts. Try again later." };
   }

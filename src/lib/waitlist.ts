@@ -2,6 +2,15 @@
    A "use server" module may only export async functions, so nothing in it can
    be unit tested directly. These live here so they can be. */
 
+/* Launch traffic is bursty: a launch email or a creator sharing the page can
+   send hundreds of people to the form at once. These limits leave room for
+   that while retaining a meaningful backstop against one client filling the
+   database with junk. The global ceiling counts only newly inserted rows, so
+   a duplicate submission does not consume the launch budget. */
+export const WAITLIST_IP_ATTEMPT_LIMIT = 100;
+export const WAITLIST_RATE_WINDOW_SECONDS = 60 * 60;
+export const WAITLIST_HOURLY_SIGNUP_CEILING = 10_000;
+
 /* The single source of truth for guest status. The database CHECK constraint,
    the PATCH endpoint's allowlist, and the console dropdown all derive from
    this, so adding a stage means editing one list plus one migration. */
