@@ -1,51 +1,82 @@
-# Cue
+<p align="center">
+  <a href="https://staging.cue.krevo.io">
+    <img src="./public/readme-hero.svg" alt="Cue. Send the Cue. Get the yes. Keep the record." width="100%" />
+  </a>
+</p>
 
-Client agreements and electronic signing for photographers and videographers.
-A Krevo product. The only host that resolves today is
-`staging.cue.krevo.io`; `cue.krevo.io` is the intended production domain and
-has no DNS record yet.
+<p align="center">
+  <a href="https://staging.cue.krevo.io"><strong>Visit staging</strong></a>
+  &nbsp;·&nbsp;
+  <a href="./solution.md"><strong>Read the product brief</strong></a>
+  &nbsp;·&nbsp;
+  <a href="./AGENTS.md"><strong>Engineering guide</strong></a>
+</p>
 
-**Current state:** the marketing site and its waitlist are live. The signing
-product itself is not built — no customer accounts, no templates, no PDFs, no
-email, no Stripe. `/console` is an operator-only ops surface with signup
-disabled.
+<p align="center">
+  <img src="https://img.shields.io/badge/status-pre--launch-8B7CF6?style=flat-square&labelColor=11131D" alt="Pre-launch" />
+  <img src="https://img.shields.io/badge/Next.js-16-11131D?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="Strict TypeScript" />
+  <img src="https://img.shields.io/badge/self--hosted-Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Self-hosted with Docker" />
+</p>
 
-## Read first
+<br />
 
-- [`AGENTS.md`](./AGENTS.md) — engineering guide: stack, conventions, deployment.
-- [`solution.md`](./solution.md) — product spec: positioning, pricing, non-goals.
+> **Cue is a pre-launch client-agreement product for photographers and videographers.**
+> It will help creatives prepare, send, sign, and keep the record of their client agreements without the weight of a general-purpose business platform.
 
-Those two, plus the code, configuration, migrations, and tests, are
-authoritative. This file is a pointer.
+## What is live
 
-## Local development
+| Surface | Status |
+| --- | --- |
+| Marketing site | Live on [staging.cue.krevo.io](https://staging.cue.krevo.io) |
+| Waitlist | Live, validated, deduplicated, and rate-limited |
+| Operator console | Private operations surface for waitlist and service health |
+| Signing product | Not built yet |
+
+Cue does not yet have customer accounts, templates, signing, PDFs, email delivery, object storage, or billing. The public site only promises what works today.
+
+## Run it locally
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+npm run dev
 ```
 
-The page renders without a database. The waitlist form and `/console` need
-`DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, and `IP_SALT` — see
-[`.env.example`](./.env.example). Secrets are generated on the server, never
-committed.
+The landing page renders without services. The waitlist and private console need the server configuration described in [`.env.example`](./.env.example). Keep secrets out of the repository.
 
-## Checks
+## The stack
+
+```text
+Next.js 16 + React 19 + TypeScript
+PostgreSQL 17 + Redis 7 + Better Auth
+Docker Compose + Caddy + a single VPS
+```
+
+The app is intentionally self-hosted. PostgreSQL and Redis stay on the internal Docker network; Caddy terminates HTTPS and proxies only the web application.
+
+## Quality gate
 
 ```bash
 npm run lint
 npx tsc --noEmit
-npm test          # node:test, no framework
+npm test
+npm run build
 ```
 
-## Deploying
+## Ship to staging
 
-Docker Compose behind Caddy on a single VPS — not Vercel. `npm run ship` runs
-the checks, commits, pushes, and deploys to staging. See the Deployment section
-of [`AGENTS.md`](./AGENTS.md) for what it touches and how migrations are applied.
+```bash
+npm run ship "feat: describe the change"
+```
 
-## Rebuilding from an empty database
+That command verifies, commits, pushes, and deploys `main` to staging. Run it only with a clean working tree and a focused commit scope.
 
-Migrations create the schema but not the operator account. See the
-"Rebuilding from nothing" runbook in [`AGENTS.md`](./AGENTS.md) — without that
-step `/console` renders a login that nobody can pass.
+## Source of truth
+
+- [`AGENTS.md`](./AGENTS.md) defines product boundaries, engineering conventions, and deployment safety.
+- [`solution.md`](./solution.md) defines positioning, product direction, pricing, and non-goals.
+- The application, migrations, and tests are authoritative for current behavior.
+
+<p align="center">
+  <sub>Built with focus by <a href="https://krevo.io">Krevo</a>.</sub>
+</p>

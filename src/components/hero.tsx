@@ -109,7 +109,7 @@ export function Hero() {
           link, and keep the signed Cue in one place. We are building it now.
         </p>
 
-        <div style={{ marginTop: 30, ...rise(280) }}>
+        <div className="cue-hero-cta" style={rise(280)}>
           {/* "Create your first Cue" stays the CTA for launch. Until there is
               something to create, the only honest action is interest. */}
           <a href="#waitlist" className="cue-btn cue-btn-dark">

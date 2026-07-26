@@ -86,7 +86,10 @@
   padding-block: 80px 56px;
 }
 
-@media (min-width: 768px) {
+/* min-height keeps short landscape phones on the compact mobile rhythm —
+   a 844×390 landscape otherwise matches min-width:768 and blows section
+   padding to 134/80, pushing the hero CTA below the fold. */
+@media (min-width: 768px) and (min-height: 600px) {
   .cue-section {
     padding-block: 134px 80px;
   }
@@ -103,6 +106,14 @@
   line-height: 1.05;
   letter-spacing: -0.02em;
   white-space: pre-line;
+}
+
+@media (max-width: 767px) {
+  .cue-h2 {
+    /* Authored line breaks leave orphan words like "Cue" on their own line. */
+    white-space: normal;
+    text-wrap: balance;
+  }
 }
 
 .cue-lede {
@@ -128,6 +139,12 @@
     transform 150ms var(--cue-ease),
     background-color 200ms var(--cue-ease),
     box-shadow 200ms var(--cue-ease);
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .cue-btn {
+    min-height: 44px;
+  }
 }
 
 .cue-btn:active {
@@ -230,6 +247,9 @@
   font-size: 20px;
   font-weight: 500;
   letter-spacing: -0.02em;
+  /* Grow the tap target to ~44px without shifting the visual mark. */
+  padding-block: 7px;
+  margin-block: -7px;
 }
 
 .cue-brand-mark {
@@ -267,8 +287,8 @@
 .cue-nav-toggle {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   border: 1px solid var(--cue-line-strong);
   background: var(--cue-panel);
@@ -312,7 +332,7 @@
   overflow: hidden;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 600px) {
   .cue-hero {
     padding-top: 100px;
     padding-bottom: 80px;
@@ -386,6 +406,14 @@
   }
 }
 
+@media (max-width: 360px) {
+  .cue-badge {
+    gap: 6px;
+    padding: 3px 10px 3px 3px;
+    font-size: 12px;
+  }
+}
+
 .cue-h1 {
   margin-top: 22px;
   font-size: clamp(38px, 7.4vw, 56px);
@@ -410,10 +438,47 @@
   margin-inline: auto;
 }
 
+.cue-hero-cta {
+  margin-top: 30px;
+}
+
 .cue-hero-note {
   margin-top: 16px;
   font-size: 13px;
   color: var(--cue-muted);
+}
+
+/* Short landscape phones: wide viewports bump the h1 clamp to 56px, so even
+   the compact mobile padding still leaves the CTA below a 390px fold. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .cue-hero {
+    padding-top: 48px;
+    padding-bottom: 24px;
+  }
+
+  .cue-badge {
+    gap: 6px;
+    padding: 3px 10px 3px 3px;
+    font-size: 12px;
+  }
+
+  .cue-h1 {
+    margin-top: 10px;
+    font-size: clamp(28px, 4.2vw, 36px);
+  }
+
+  .cue-hero-sub {
+    margin-top: 8px;
+    font-size: 15px;
+  }
+
+  .cue-hero-cta {
+    margin-top: 16px;
+  }
+
+  .cue-hero-note {
+    margin-top: 10px;
+  }
 }
 
 /* ── Hero signing animation (V2 Status) ──
@@ -1046,10 +1111,10 @@
 /* ── Features (soft wells) ── */
 
 .cue-features-section {
-  padding-block: 64px 56px;
+  padding-block: 80px 56px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 600px) {
   .cue-features-section {
     padding-block: 88px 80px;
   }
@@ -1075,7 +1140,7 @@
 .cue-features-wells {
   margin-top: 48px;
   display: grid;
-  gap: 12px;
+  gap: 16px;
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -1255,6 +1320,27 @@
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
+/* Three tabs total ~406px with desktop padding — flex-wrap drops the last
+   onto a lonely second row on every iPhone width. Grid keeps one row. */
+@media (max-width: 767px) {
+  .cue-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+  }
+
+  .cue-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+  }
+}
+
 .cue-tabpanel {
   margin-top: 34px;
   display: grid;
@@ -1291,7 +1377,13 @@
   padding: 26px;
   display: grid;
   place-items: center;
-  min-height: 300px;
+  min-height: 220px;
+}
+
+@media (min-width: 900px) {
+  .cue-tabpanel-visual {
+    min-height: 300px;
+  }
 }
 
 /* ── Solution 2x2 ── */
@@ -1738,8 +1830,14 @@
     radial-gradient(70% 120% at 50% 110%, rgb(0 134 255 / 0.14) 0%, transparent 65%),
     var(--cue-panel);
   overflow: hidden;
-  padding: 84px 24px;
+  padding: 60px 24px;
   text-align: center;
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  .cue-cta {
+    padding: 84px 24px;
+  }
 }
 
 .cue-cta-grid {
@@ -1934,6 +2032,19 @@
 .cue-nav-cta {
   padding: 9px 18px;
   font-size: 14px;
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .cue-nav-cta {
+    min-height: 44px;
+  }
+}
+
+/* Brand + CTA + toggle fill the 280px shell at 320 — shave CTA pad for slack. */
+@media (max-width: 360px) {
+  .cue-nav-cta {
+    padding-inline: 12px;
+  }
 }
 
 /* ── Console sign-in ──
@@ -2136,6 +2247,15 @@
 
 .cue-footer-col a:hover {
   color: var(--cue-muted);
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .cue-footer-col a {
+    /* ~18px text + 11px pad → ≥40px hit; -11px margin cancels the pad
+       against the 12px list gap so text-to-text spacing stays ~12px. */
+    padding-block: 11px;
+    margin-block: -11px;
+  }
 }
 
 .cue-footer-legal {

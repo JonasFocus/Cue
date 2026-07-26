@@ -1,0 +1,50 @@
+<svg width="1200" height="560" viewBox="0 0 1200 560" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Cue</title>
+  <desc id="desc">A dark Cue product card for client agreements.</desc>
+  <defs>
+    <linearGradient id="background" x1="80" y1="40" x2="1130" y2="530" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#11111A"/>
+      <stop offset="1" stop-color="#0A0D16"/>
+    </linearGradient>
+    <linearGradient id="orb" x1="890" y1="72" x2="1115" y2="295" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B7CF6"/>
+      <stop offset="0.49" stop-color="#4F9CF9"/>
+      <stop offset="1" stop-color="#44D7C7"/>
+    </linearGradient>
+    <linearGradient id="line" x1="92" y1="467" x2="1092" y2="467" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B7CF6" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#89A9FF" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#44D7C7" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur" x="705" y="-85" width="585" height="585" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="42"/>
+    </filter>
+    <pattern id="grid" width="22" height="22" patternUnits="userSpaceOnUse">
+      <path d="M22 0H0V22" stroke="white" stroke-opacity="0.05"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="560" rx="28" fill="url(#background)"/>
+  <rect width="1200" height="560" rx="28" fill="url(#grid)"/>
+  <circle cx="996" cy="207" r="178" fill="url(#orb)" fill-opacity="0.48" filter="url(#blur)"/>
+  <rect x="72" y="64" width="1056" height="432" rx="22" fill="#11131D" fill-opacity="0.88" stroke="white" stroke-opacity="0.12"/>
+  <rect x="100" y="94" width="42" height="42" rx="13" fill="#F6F7FA"/>
+  <path d="M113 119.5L120.5 110L128 119.5" stroke="#151722" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M117 119.5L120.5 115.5L124 119.5" stroke="#151722" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="160" y="124" fill="#F6F7FA" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="700" letter-spacing="-1.3">Cue</text>
+  <rect x="100" y="181" width="121" height="30" rx="15" fill="#8B7CF6" fill-opacity="0.14" stroke="#A99EFF" stroke-opacity="0.35"/>
+  <circle cx="119" cy="196" r="4" fill="#A99EFF"/>
+  <text x="132" y="201" fill="#C7C2FF" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" letter-spacing="1.2">PRE-LAUNCH</text>
+  <text x="100" y="282" fill="#F6F7FA" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700" letter-spacing="-3.4">Send the Cue.</text>
+  <text x="100" y="346" fill="#B3B7C8" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="500" letter-spacing="-1.4">Get the yes. Keep the record.</text>
+  <text x="100" y="402" fill="#858A9D" font-family="Arial, Helvetica, sans-serif" font-size="18">Client agreements for photographers and videographers.</text>
+  <rect x="800" y="163" width="244" height="222" rx="18" fill="#151825" fill-opacity="0.78" stroke="white" stroke-opacity="0.14"/>
+  <rect x="824" y="188" width="72" height="8" rx="4" fill="#F6F7FA" fill-opacity="0.88"/>
+  <rect x="824" y="211" width="142" height="6" rx="3" fill="#7D8499" fill-opacity="0.5"/>
+  <rect x="824" y="256" width="196" height="1" fill="white" fill-opacity="0.1"/>
+  <rect x="824" y="282" width="120" height="7" rx="3.5" fill="#F6F7FA" fill-opacity="0.76"/>
+  <rect x="824" y="304" width="172" height="6" rx="3" fill="#7D8499" fill-opacity="0.45"/>
+  <rect x="824" y="336" width="94" height="24" rx="12" fill="#72E7D5" fill-opacity="0.14"/>
+  <text x="840" y="352" fill="#8DF3E0" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700">OPENING SOON</text>
+  <path d="M100 468H1100" stroke="url(#line)"/>
+  <text x="100" y="530" fill="#6E7488" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="1.8">A KREVO PRODUCT</text>
+</svg>
