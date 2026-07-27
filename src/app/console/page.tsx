@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
+import { isOperator } from "@/lib/studio";
 import { Dashboard } from "./dashboard";
 import "./console.css";
 
@@ -23,6 +24,9 @@ export default async function ConsolePage() {
     console.error("[console] session lookup failed", (err as Error).message);
   }
   if (!session) redirect("/console/login");
+  // Signup is open now that customers have accounts, so `disableSignUp` no
+  // longer keeps strangers out of this surface — the `role` column does.
+  if (!(await isOperator(session.user.id))) redirect("/app");
 
   return <Dashboard operator={session.user.email} />;
 }

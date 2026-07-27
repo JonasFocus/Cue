@@ -15,7 +15,15 @@ import type { GuestStatus } from "./waitlist";
  * — truthy, and therefore an open door on the one endpoint that returns
  * unmasked email addresses. A Promise has no `user`, so this rejects it.
  */
-export function isOperator(session: unknown): boolean {
+/* Renamed from `isOperator` on 2026-07-26. It never checked whether anyone was
+   an operator — it checks that a *resolved session object* is present, which
+   was a sufficient gate only while `disableSignUp: true` meant the operator was
+   the sole account able to hold one. Opening customer signup turned that into a
+   hole on three API routes, and the misleading name is what hid it: two
+   different functions called `isOperator`, one a shape check and one a role
+   check, with the routes importing the wrong one. The real gate is
+   `requireOperator()` in studio.ts, which calls this and then checks the role. */
+export function isResolvedSession(session: unknown): boolean {
   if (typeof session !== "object" || session === null) return false;
   const { user } = session as { user?: unknown };
   return typeof user === "object" && user !== null;

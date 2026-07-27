@@ -1,0 +1,359 @@
+/* The document itself — "the paper".
+ *
+ * Deliberately shared by the creator's live preview and the client's signing
+ * page. Two stylesheets would eventually drift, and the day they do, a creator
+ * approves one document and a client signs a different-looking one.
+ *
+ * Scoped to `.doc`, which is its own namespace rather than a child of `.ca`:
+ * the signing page at /s/[token] is not part of the app shell and must not
+ * inherit its chrome.
+ */
+
+.doc {
+  --doc-ink: #16181d;
+  --doc-soft: #4d5158;
+  /* 4.72:1 on #ffffff and 4.56:1 on the #fafbfc disclaimer panel — AA at the
+     11–14px sizes this is used at. #767b84 was 4.25:1 and failed both. */
+  --doc-muted: #6b7079;
+  --doc-line: #e6e7ea;
+  --doc-paper: #ffffff;
+  /* Overridden inline from studio.brand_color on the client-facing page. The
+     hex shape is enforced by a CHECK constraint in migration 007, so this can
+     safely be interpolated into a style attribute. */
+  --doc-brand: #0086ff;
+
+  color: var(--doc-ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* A contract is read, not skimmed. 17px with generous leading, and a measure
+     that stays inside the 60–75 characters that prose actually reads well at. */
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 700px) {
+  .doc {
+    font-size: 17px;
+  }
+}
+
+.doc-paper {
+  margin-inline: auto;
+  max-width: 68ch;
+  padding: 30px 22px 40px;
+  background: var(--doc-paper);
+}
+
+@media (min-width: 700px) {
+  .doc-paper {
+    padding: 52px 56px 60px;
+  }
+}
+
+/* ── Masthead ── */
+
+.doc-head {
+  padding-bottom: 22px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--doc-brand);
+}
+
+.doc-studio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.doc-studio-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--doc-brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.doc-title {
+  margin-top: 20px;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(25px, 5.5vw, 33px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* Client / date / location, as a definition list so a screen reader pairs the
+   label with its value instead of reading six loose strings. */
+.doc-facts {
+  display: grid;
+  gap: 10px 26px;
+  margin-top: 20px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .doc-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.doc-fact dt {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doc-fact dd {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* ── Clauses ── */
+
+.doc-body {
+  counter-reset: doc-clause;
+}
+
+.doc-clause {
+  margin-top: 30px;
+  /* Never strand a heading at the foot of a printed page from its clause. */
+  break-inside: avoid;
+}
+
+.doc-clause h2 {
+  display: flex;
+  gap: 10px;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 550;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+/* Numbering comes from CSS, so a conditional clause dropping out cannot leave
+   a gap in the sequence — the numbers are always 1..n as rendered. */
+.doc-clause h2::before {
+  counter-increment: doc-clause;
+  content: counter(doc-clause) ".";
+  flex: none;
+  color: var(--doc-brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-clause p {
+  margin-top: 9px;
+  color: var(--doc-soft);
+  text-wrap: pretty;
+}
+
+.doc-clause p + p {
+  margin-top: 12px;
+}
+
+/* The locked "About this document" clause. Set apart so it reads as a notice
+   rather than as another term buried in the run of them. */
+.doc-clause[data-locked="disclaimer"] {
+  margin-top: 40px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--doc-line);
+  background: #fafbfc;
+}
+
+.doc-clause[data-locked="disclaimer"] h2::before {
+  color: var(--doc-muted);
+}
+
+.doc-clause[data-locked="disclaimer"] p {
+  font-size: 14px;
+  color: var(--doc-muted);
+}
+
+/* ── Signature block ── */
+
+.doc-signatures {
+  margin-top: 40px;
+  padding-top: 26px;
+  border-top: 1px solid var(--doc-line);
+}
+
+.doc-sig-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .doc-sig-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.doc-sig {
+  padding: 16px;
+  border: 1px solid var(--doc-line);
+  border-radius: 12px;
+  break-inside: avoid;
+}
+
+.doc-sig[data-signed="true"] {
+  border-color: rgb(20 122 61 / 0.3);
+  background: #f7fcf9;
+}
+
+.doc-sig-role {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--doc-muted);
+}
+
+.doc-sig-name {
+  margin-top: 3px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Fixed height whether signed or not, so a document does not reflow the moment
+   a signature lands — the page a client is reading must not jump under them. */
+.doc-sig-mark {
+  display: grid;
+  place-items: center;
+  height: 62px;
+  margin-top: 10px;
+  border-bottom: 1px solid var(--doc-line);
+}
+
+.doc-sig-mark img {
+  max-height: 58px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.doc-sig-pending {
+  font-size: 12.5px;
+  color: var(--doc-muted);
+}
+
+/* A typed signature with no drawn mark. Rendered in a script face so it reads
+   as a signature rather than as another line of form data — but it is the
+   signature either way, not a placeholder for a missing one. */
+.doc-sig-typed {
+  font-family: "Snell Roundhand", "Apple Chancery", "Segoe Script", cursive;
+  font-size: 27px;
+  line-height: 1;
+  color: var(--doc-ink);
+  padding-bottom: 2px;
+}
+
+.doc-sig-meta {
+  margin-top: 9px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--doc-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Seal ── */
+
+.doc-seal {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-top: 26px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgb(20 122 61 / 0.28);
+  background: #eefaf2;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #0f5c2e;
+}
+
+.doc-seal > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.doc-hash {
+  margin-top: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+  color: #2b7048;
+}
+
+/* ── Print ──
+   This is the PDF. `window.print()` on the sealed record produces the final
+   document, so print is a first-class layout here rather than an afterthought:
+   no app chrome, no dark-on-dark, real page margins, and no clause split
+   across a page break. */
+
+@page {
+  margin: 18mm 16mm;
+}
+
+@media print {
+  /* Everything that is not the document. Each surface adds its own chrome to
+     this list; these are the shared ones. */
+  .ca-topbar,
+  .ca-side,
+  .ca-tabbar,
+  .doc-no-print {
+    display: none !important;
+  }
+
+  .doc {
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #000;
+  }
+
+  .doc-paper {
+    max-width: none;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .doc-clause {
+    margin-top: 16pt;
+  }
+
+  .doc-clause h2 {
+    font-size: 11.5pt;
+  }
+
+  .doc-clause p {
+    color: #1a1a1a;
+  }
+
+  /* Backgrounds do not print by default; these carry meaning, so ask for them
+     and stay legible in the browsers that decline. */
+  .doc-sig[data-signed="true"],
+  .doc-seal,
+  .doc-clause[data-locked="disclaimer"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    border: 1px solid #bbb;
+  }
+
+  .doc-signatures {
+    break-inside: avoid;
+  }
+}

@@ -1,9 +1,15 @@
 import { betterAuth } from "better-auth";
 import { pool, pruneExpiredSessions } from "./db";
 
-/* Guards the /console surface only. There is no public signup: the operator
-   account is seeded once at deploy time, so `signUp` stays closed and the
-   console cannot be joined by whoever finds the URL. */
+/* Sessions for both surfaces: the customer app at /app and the operator console
+   at /console. One instance, one cookie, one session table.
+
+   Signup used to be disabled outright, and that was what kept whoever found
+   /console out of it. Customers need accounts now, so the guard moved to the
+   `role` column added in 007: /console checks it explicitly (see
+   `isOperator` in src/lib/studio.ts) and every new account is a `creator`.
+   Nothing in this file can grant `operator` — only a direct database write or
+   scripts/seed-operator.mjs can. */
 
 export const auth = betterAuth({
   database: pool,
@@ -11,7 +17,6 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   emailAndPassword: {
     enabled: true,
-    disableSignUp: true,
     minPasswordLength: 12,
   },
   session: {

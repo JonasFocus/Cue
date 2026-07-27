@@ -1981,12 +1981,22 @@
   border: 1px solid var(--cue-line-strong);
   background: var(--cue-panel);
   font: inherit;
-  font-size: 15px;
+  /* 16px on touch: iOS Safari zooms the viewport on focus for anything smaller
+     and never zooms back, which on the sign-in card pushes the password field
+     and submit button off-screen. Every other surface in this repo already does
+     this; these two forms were the gap. */
+  font-size: 16px;
   color: var(--cue-ink);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
   transition:
     border-color 180ms var(--cue-ease),
     box-shadow 180ms var(--cue-ease);
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .cue-input {
+    font-size: 15px;
+  }
 }
 
 .cue-input::placeholder {

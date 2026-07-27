@@ -1,0 +1,614 @@
+/* Screens: the workspace list, the template picker, and studio settings.
+ *
+ * Only what is specific to those three. Buttons, inputs, cards, pills, empty
+ * states, banners and the stagger animation are primitives in app.css and are
+ * used from here rather than restyled. Every token referenced is a --ca-* one
+ * inherited from the .ca shell.
+ */
+
+/* ── Shared page furniture ── */
+
+.cw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.cw-head > div {
+  min-width: 0;
+}
+
+.cw-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--ca-muted);
+  transition: color var(--ca-fast) var(--ca-ease);
+}
+
+/* 13px text is a ~20px tap target. Grow it to 44 with padding and pull the box
+   back with a negative margin, so the touch area meets SC 2.5.8 without the
+   link appearing to float away from the heading beneath it. */
+@media (pointer: coarse) {
+  .cw-back {
+    padding-block: 12px;
+    margin-block: -12px 0;
+  }
+}
+
+.cw-back:hover {
+  color: var(--ca-ink);
+}
+
+.cw-opt {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ca-muted);
+}
+
+/* ── Toolbar: filter chips + search ── */
+
+.cw-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Scrolls rather than wraps: a second row of chips pushes the list below the
+   fold on a phone, and a sideways nudge is a gesture people already have. */
+.cw-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: -2px;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cw-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.cw-chip {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 7px 13px;
+  border-radius: var(--ca-r-pill);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ca-muted);
+  transition:
+    background-color var(--ca-fast) var(--ca-ease),
+    color var(--ca-fast) var(--ca-ease);
+}
+
+@media (max-width: 899px), (pointer: coarse) {
+  .cw-chip {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+}
+
+.cw-chip:hover {
+  background: var(--ca-line-soft);
+  color: var(--ca-ink);
+}
+
+.cw-chip[data-active="true"] {
+  background: var(--ca-tint);
+  color: var(--ca-accent-deep);
+}
+
+.cw-search {
+  /* Positioned: the sr-only submit button inside is absolute, and without an
+     anchor it would attach to the page and scroll the viewport on focus. */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 330px;
+  margin-left: auto;
+  padding-inline: 13px;
+  border-radius: var(--ca-r-pill);
+  border: 1px solid var(--ca-line-strong);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+  color: var(--ca-muted);
+  transition:
+    border-color var(--ca-fast) var(--ca-ease),
+    box-shadow var(--ca-fast) var(--ca-ease);
+}
+
+.cw-search > svg {
+  flex: none;
+}
+
+.cw-search:focus-within {
+  border-color: var(--ca-accent);
+  box-shadow: 0 0 0 3px rgb(0 134 255 / 0.16);
+}
+
+.cw-search-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  /* 16px on touch, or iOS zooms the viewport on focus and never zooms back. */
+  font-size: 16px;
+  color: var(--ca-ink);
+}
+
+/* The ring is on the wrapper, so the input itself must not draw a second one. */
+.cw-search-input:focus-visible {
+  outline: none;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .cw-search-input {
+    min-height: 38px;
+    font-size: 14.5px;
+  }
+}
+
+/* ── The list ──
+   Not a <table>: every row is a link to one Cue, and a table row cannot be one
+   without either a nested-interactive mess or JavaScript row clicks. A grid of
+   links gives the same alignment, keyboard order, and middle-click. */
+
+.cw-list {
+  margin-top: 14px;
+  /* Clips the first and last row's hover fill to the card radius. */
+  overflow: hidden;
+}
+
+.cw-thead {
+  display: none;
+}
+
+.cw-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon title status"
+    "icon sub   date";
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+  min-height: 68px;
+  padding: 12px 14px;
+  transition: background-color var(--ca-fast) var(--ca-ease);
+}
+
+.cw-row + .cw-row {
+  border-top: 1px solid var(--ca-line-soft);
+}
+
+.cw-row:hover {
+  background: var(--ca-panel-soft);
+}
+
+.cw-row:active {
+  background: var(--ca-line-soft);
+}
+
+.cw-doc {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  /* --ca-tone comes from data-tone on the tile, set from the template. */
+  background: var(--ca-tone-soft, var(--ca-line-soft));
+  color: var(--ca-tone, var(--ca-muted));
+}
+
+.cw-title {
+  grid-area: title;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.cw-sub {
+  grid-area: sub;
+  font-size: 12.5px;
+  color: var(--ca-muted);
+}
+
+.cw-status {
+  grid-area: status;
+  justify-self: end;
+}
+
+.cw-date {
+  grid-area: date;
+  justify-self: end;
+  font-size: 12.5px;
+  color: var(--ca-muted);
+  white-space: nowrap;
+}
+
+/* Phone: two lines and a status. The relative time and the client avatar are
+   the two things a thumb-width row can lose without losing meaning — the date
+   answers "when is this shoot", which is the question being asked. */
+.cw-updated,
+.cw-face {
+  display: none;
+}
+
+@media (min-width: 700px) {
+  /* One shared track list. The head's first column swallows the icon column
+     plus its gap (34 + 12), so every fixed column below still lines up. */
+  .cw-thead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 112px 122px 104px 30px;
+    gap: 12px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--ca-line);
+    background: var(--ca-panel-soft);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ca-muted);
+  }
+
+  .cw-row {
+    grid-template-columns: 34px minmax(0, 1fr) 112px 122px 104px 30px;
+    grid-template-areas:
+      "icon title status date updated face"
+      "icon sub   status date updated face";
+    column-gap: 12px;
+    row-gap: 1px;
+    min-height: 62px;
+    padding-inline: 16px;
+  }
+
+  .cw-status,
+  .cw-date {
+    justify-self: start;
+  }
+
+  .cw-updated {
+    grid-area: updated;
+    display: block;
+    font-size: 12.5px;
+    color: var(--ca-muted);
+    white-space: nowrap;
+  }
+
+  .cw-face {
+    grid-area: face;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--ca-tint);
+    color: var(--ca-accent-deep);
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
+.cw-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-inline: 4px;
+  font-size: 12.5px;
+  color: var(--ca-muted);
+}
+
+.cw-foot-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.cw-blank {
+  margin-top: 14px;
+}
+
+.cw-empty-btn {
+  margin-top: 18px;
+}
+
+/* ── Template picker ── */
+
+.cw-new {
+  margin-inline: auto;
+  max-width: 980px;
+}
+
+.cw-quota {
+  margin-top: 18px;
+}
+
+.cw-quota a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cw-tpl-set {
+  margin-top: 20px;
+  padding: 0;
+  border: 0;
+}
+
+.cw-tpl-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 560px) {
+  .cw-tpl-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Three across only once the main pane is genuinely wide — with the sidebar
+   taking 244px, a third column earlier squeezes the blurb to four lines. */
+@media (min-width: 1180px) {
+  .cw-tpl-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.cw-tpl {
+  /* Anchors the sr-only radio inside, same reason as .cw-search. */
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--ca-r-lg);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+  cursor: pointer;
+  transition:
+    transform var(--ca-mid) var(--ca-ease),
+    box-shadow var(--ca-mid) var(--ca-ease),
+    border-color var(--ca-fast) var(--ca-ease);
+}
+
+@media (hover: hover) {
+  .cw-tpl:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ca-shadow);
+  }
+}
+
+.cw-tpl:active {
+  transform: scale(0.99);
+}
+
+.cw-tpl:has(:checked) {
+  border-color: var(--ca-accent);
+  box-shadow:
+    0 0 0 3px rgb(0 134 255 / 0.14),
+    var(--ca-shadow);
+}
+
+/* The radio itself is sr-only, so its focus ring has to be drawn by the card. */
+.cw-tpl:has(:focus-visible) {
+  outline: 2px solid var(--ca-accent);
+  outline-offset: 2px;
+}
+
+.cw-tpl-tile {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--ca-tone-soft);
+  color: var(--ca-tone);
+}
+
+.cw-tpl-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-family: var(--font-geist), sans-serif;
+  font-size: 15.5px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.cw-tpl-tick {
+  margin-left: auto;
+  color: var(--ca-accent-deep);
+  opacity: 0;
+  transform: scale(0.7);
+  transition:
+    opacity var(--ca-fast) var(--ca-ease),
+    transform var(--ca-mid) var(--ca-ease);
+}
+
+.cw-tpl:has(:checked) .cw-tpl-tick {
+  opacity: 1;
+  transform: none;
+}
+
+.cw-tpl-blurb {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ca-muted);
+  text-wrap: pretty;
+}
+
+.cw-tpl-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ca-line-soft);
+  font-size: 12px;
+  color: var(--ca-muted);
+}
+
+.cw-start {
+  margin-top: 18px;
+}
+
+.cw-err {
+  margin-top: 16px;
+}
+
+.cw-start-foot {
+  margin-top: 20px;
+}
+
+.cw-start-foot .ca-help {
+  margin-top: 10px;
+  text-align: center;
+}
+
+/* ── Settings ── */
+
+.cw-form {
+  margin-top: 18px;
+}
+
+.cw-form-pair {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (min-width: 620px) {
+  .cw-form-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* The grid owns the spacing here; the .ca-field sibling rule would add a
+   second gap to the right-hand column. */
+.cw-form-pair > .ca-field + .ca-field {
+  margin-top: 0;
+}
+
+.cw-address {
+  min-height: 86px;
+}
+
+.cw-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cw-brand-swatch {
+  flex: none;
+  width: 52px;
+  height: 44px;
+  padding: 3px;
+  border-radius: var(--ca-r);
+  border: 1px solid var(--ca-line-strong);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+  cursor: pointer;
+}
+
+/* Without these the native control keeps its own inset padding and border, and
+   the swatch reads as a small square floating in a box. */
+.cw-brand-swatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.cw-brand-swatch::-webkit-color-swatch {
+  border: 0;
+  border-radius: 7px;
+}
+
+.cw-brand-swatch::-moz-color-swatch {
+  border: 0;
+  border-radius: 7px;
+}
+
+.cw-brand-hex {
+  max-width: 160px;
+  text-transform: lowercase;
+}
+
+.cw-form-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--ca-line);
+}
+
+.cw-form-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--ca-muted);
+  text-wrap: pretty;
+}
+
+.cw-form-msg[data-tone="ok"] {
+  color: var(--ca-ok);
+}
+
+.cw-form-msg[data-tone="error"] {
+  color: var(--ca-danger);
+}
+
+.cw-plan {
+  margin-top: 16px;
+}
+
+.cw-plan-count {
+  font-size: 14.5px;
+  color: var(--ca-ink);
+}
+
+.cw-meter {
+  height: 6px;
+  margin: 10px 0 12px;
+  border-radius: var(--ca-r-pill);
+  background: var(--ca-line);
+  overflow: hidden;
+}
+
+/* scaleX, not width: a compositor-only property, and the meter is the one thing
+   on this page that changes value. */
+.cw-meter > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ca-accent);
+  transform: scaleX(var(--cw-used, 0));
+  transform-origin: left center;
+  transition: transform var(--ca-slow) var(--ca-ease);
+}
+
+.cw-plan-btn {
+  margin-top: 14px;
+}

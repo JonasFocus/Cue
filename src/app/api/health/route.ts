@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
+import { requireOperator } from "@/lib/studio";
 import { pool, waitlistStats, type WaitlistStats } from "@/lib/db";
 import { redis } from "@/lib/redis";
 import { services } from "@/lib/docker";
@@ -26,14 +25,10 @@ export async function GET() {
   // justification for gating the route. The 500 the try/catch prevents is the
   // real bug; the previous 503 branch published live Postgres up/down and
   // latency to anonymous callers, and its only consumer never rendered it.
-  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
-  try {
-    session = await auth.api.getSession({ headers: await headers() });
-  } catch (err) {
-    console.error("[health] session lookup failed", (err as Error).message);
-  }
-
-  if (!session) {
+  // Returns the container inventory, the Postgres version string and live
+  // waitlist totals, so it needs the operator role — not merely a session.
+  // Customer signup is open; "is anyone logged in?" is not a gate.
+  if (!(await requireOperator())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
 import {
   addChangelogEntry,
   changelogList,
@@ -8,17 +6,13 @@ import {
   updateChangelogEntry,
 } from "@/lib/db";
 import { parseChangelogDraft, parseChangelogPatch } from "@/lib/changelog";
-import { isOperator } from "@/lib/console";
+import { requireOperator } from "@/lib/studio";
 
 export const dynamic = "force-dynamic";
 
 /* Same gate as the guest list. The changelog holds nothing secret, but every
    verb here writes, and the console is the only surface that reads it — a
    public changelog page would be a separate, read-only route. */
-async function requireOperator() {
-  return isOperator(await auth.api.getSession({ headers: await headers() }));
-}
-
 const unauthorized = () =>
   NextResponse.json({ error: "unauthorized" }, { status: 401 });
 

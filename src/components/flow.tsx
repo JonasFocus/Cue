@@ -158,13 +158,13 @@ const STEPS = [
   {
     label: "Step 02",
     title: "Send your first Cue",
-    body: "Pick a template, fill in the client and shoot details, and send the signing link straight from your phone or laptop.",
+    body: "You will pick a template, fill in the client and shoot details, and send the signing link straight from your phone or laptop.",
     visual: <MockSend />,
   },
   {
     label: "Step 03",
     title: "Get the yes on file",
-    body: "Your client signs, Cue seals the PDF, and the signed record lands in your library and both inboxes.",
+    body: "Your client signs and Cue seals the record — the final PDF and the full audit trail, kept in your library.",
     visual: <MockSeal />,
   },
 ];

@@ -1,0 +1,1019 @@
+/* The client-facing signing surface.
+ *
+ * Scoped to `.sg`, its own namespace — the same discipline design.css uses with
+ * `.cue` and app.css with `.ca`. This page is not part of the app shell and
+ * must not inherit a pixel of it.
+ *
+ * The document itself is styled by components/agreement.css, which is shared
+ * with the creator's preview so that the two can never drift. Nothing in here
+ * touches a `.doc-*` class. This file is only the chrome around the paper: the
+ * masthead, the signing panel, the pad, and the confirmation.
+ *
+ * Everything that is not the agreement carries `.doc-no-print`, which
+ * agreement.css already hides — printing this page produces the contract and
+ * nothing else.
+ */
+
+.sg {
+  /* Never put white text directly on --sg-brand: it is studio.brand_color,
+     validated for hex SHAPE only, so a light brand makes the label invisible.
+     Mixing toward black keeps the studio's hue while guaranteeing contrast.
+     The default #0086ff is 3.59:1 white-on-brand; mixed it clears AA. */
+  --sg-brand-ink: color-mix(in oklab, var(--sg-brand) 76%, #0b0b0b);
+  --sg-bg: #f1f2f5;
+  --sg-panel: #ffffff;
+  --sg-ink: #12141a;
+  --sg-soft: #464b54;
+  /* 4.71:1 on --sg-panel. */
+  --sg-muted: #6c717a;
+  --sg-line: #e4e6ea;
+  /* 3.19:1 on --sg-panel — SC 1.4.11 for the boundary of a real control. */
+  --sg-line-strong: #8d929a;
+  --sg-ok: #147a3d;
+  --sg-ok-soft: #e9f7ee;
+  --sg-warn: #96590a;
+  --sg-warn-soft: #fff5e3;
+  --sg-danger: #c2282c;
+  /* Overridden inline from studio.brand_color on .sg-page. */
+  --sg-brand: #0086ff;
+
+  --sg-r: 16px;
+  --sg-r-sm: 10px;
+  --sg-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --sg-pad-h: 150px;
+  --sg-bar-h: 68px;
+
+  min-height: 100dvh;
+  background: var(--sg-bg);
+  color: var(--sg-ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (min-width: 700px) {
+  .sg {
+    --sg-pad-h: 172px;
+  }
+}
+
+.sg :where(h1, h2) {
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.sg :where(a, button, input, textarea, summary):focus-visible {
+  /* Fixed, not the studio's brand: a pale brand colour would make the focus
+     indicator invisible on white, and a keyboard user would lose their place
+     on the one page in the product where that matters most. */
+  outline: 2px solid #0069c9;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.sg ::selection {
+  background: var(--sg-brand);
+  color: #fff;
+}
+
+/* ── Masthead ──
+   Slim on purpose. This page belongs to the photographer, not to Cue, so the
+   only branding above the contract is theirs. */
+
+.sg-top {
+  position: relative;
+  z-index: 2;
+  background: var(--sg-panel);
+  border-bottom: 1px solid var(--sg-line);
+}
+
+.sg-top-in {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 760px;
+  padding: 13px 18px;
+}
+
+.sg-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--sg-brand);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.sg-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.sg-studio {
+  font-size: 14.5px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-prepared {
+  font-size: 12px;
+  color: var(--sg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-state {
+  flex: none;
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 100px;
+  background: #f2f3f5;
+  color: var(--sg-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.sg-state[data-status="signed"] {
+  background: var(--sg-ok-soft);
+  color: var(--sg-ok);
+}
+
+.sg-state[data-status="voided"],
+.sg-state[data-status="declined"] {
+  background: var(--sg-warn-soft);
+  color: var(--sg-warn);
+}
+
+/* ── Column ── */
+
+.sg-main {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 760px;
+  padding: 18px 14px;
+  /* Constant, not toggled with the floating bar: reserving the space always
+     means the bar can never appear and shove the last line of a contract out
+     from under someone's thumb. */
+  padding-bottom: calc(var(--sg-bar-h) + 28px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 700px) {
+  .sg-main {
+    padding: 30px 22px calc(var(--sg-bar-h) + 40px);
+  }
+}
+
+.sg-skip {
+  display: inline-block;
+  margin: 2px 4px 12px;
+  /* Darker than --sg-muted: this sits on --sg-bg, not the panel, where
+     #6c717a is only 4.38:1. This is the keyboard route past the contract. */
+  color: #666b74;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, var(--sg-muted) 40%, transparent);
+}
+
+.sg-skip:hover {
+  color: var(--sg-ink);
+}
+
+/* The paper. A real sheet with a real edge — this is the moment the page has to
+   read as a document rather than as a web form. */
+.sg-paper {
+  border-radius: var(--sg-r);
+  background: #fff;
+  border: 1px solid var(--sg-line);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 24px 48px -32px rgb(10 22 40 / 0.32);
+  overflow: hidden;
+}
+
+/* Zero-height marker at the foot of the document; the consent gate observes it. */
+.sg-sentinel {
+  height: 1px;
+  scroll-margin-top: 40vh;
+}
+
+/* ── Signing panel ── */
+
+.sg-panel {
+  margin-top: 16px;
+  padding: 20px 18px 22px;
+  border-radius: var(--sg-r);
+  background: var(--sg-panel);
+  border: 1px solid var(--sg-line);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+@media (min-width: 700px) {
+  .sg-panel {
+    margin-top: 22px;
+    padding: 28px 30px 30px;
+  }
+}
+
+.sg-panel-head {
+  padding-bottom: 18px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--sg-line);
+}
+
+.sg-panel-title {
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.sg-panel-sub {
+  margin-top: 5px;
+  color: var(--sg-muted);
+  font-size: 13.5px;
+}
+
+.sg-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.sg-field {
+  min-width: 0;
+}
+
+/* Locked until consent. Dimmed rather than hidden so the client can see what
+   they are about to be asked for — a form that grows new fields under you is
+   unsettling, and this page cannot afford to be unsettling. */
+.sg-field[data-locked] {
+  opacity: 0.48;
+  transition: opacity 240ms var(--sg-ease);
+}
+
+.sg-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.005em;
+}
+
+/* ── Who is signing ── */
+
+.sg-who {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.sg-radio {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--sg-line);
+  border-radius: var(--sg-r-sm);
+  cursor: pointer;
+  transition: border-color 140ms var(--sg-ease);
+}
+
+.sg-radio + .sg-radio {
+  margin-top: 8px;
+}
+
+.sg-radio:has(input:checked) {
+  border-color: var(--sg-brand);
+  background: color-mix(in oklab, var(--sg-brand) 5%, #fff);
+}
+
+.sg-radio input {
+  flex: none;
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--sg-brand);
+}
+
+.sg-radio strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 550;
+}
+
+.sg-radio-role {
+  display: block;
+  margin-top: 1px;
+  color: var(--sg-muted);
+  font-size: 12.5px;
+}
+
+/* ── Consent ── */
+
+.sg-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid var(--sg-line-strong);
+  border-radius: var(--sg-r-sm);
+  background: #fcfcfd;
+  font-size: 14.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.sg-consent:has(input:disabled) {
+  cursor: not-allowed;
+  color: var(--sg-muted);
+  border-color: var(--sg-line);
+  background: #fafbfc;
+}
+
+.sg-consent:has(input:checked) {
+  border-color: var(--sg-ok);
+  background: var(--sg-ok-soft);
+}
+
+.sg-consent input {
+  flex: none;
+  /* A legally meaningful checkbox on a phone should be a real target, not a
+     14px square somebody has to aim at. */
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  accent-color: var(--sg-ok);
+}
+
+.sg-gate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-left: 2px;
+  color: var(--sg-muted);
+  font-size: 12.5px;
+}
+
+.sg-gate[data-open] {
+  color: var(--sg-ok);
+}
+
+/* ── Inputs ── */
+
+.sg-input {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--sg-line-strong);
+  border-radius: var(--sg-r-sm);
+  background: #fff;
+  color: var(--sg-ink);
+  /* 16px exactly: anything smaller and iOS Safari zooms the whole page the
+     moment this is focused, which on a signing form is a small disaster. */
+  font: inherit;
+  font-size: 16px;
+  transition: border-color 140ms var(--sg-ease);
+}
+
+.sg-input::placeholder {
+  color: #6c717a;
+}
+
+.sg-input:focus {
+  border-color: var(--sg-brand);
+}
+
+.sg-input[aria-invalid="true"] {
+  border-color: var(--sg-danger);
+}
+
+.sg-input:disabled {
+  background: #f6f7f8;
+  cursor: not-allowed;
+}
+
+.sg-textarea {
+  resize: vertical;
+  min-height: 76px;
+  line-height: 1.5;
+}
+
+.sg-hint {
+  margin-top: 7px;
+  color: var(--sg-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* ── Signature pad ── */
+
+.sg-pad {
+  margin-top: 12px;
+}
+
+.sg-pad-frame {
+  position: relative;
+  /* Fixed height, declared before the canvas ever mounts, so this reserves its
+     own space and the page cannot shift under a client mid-read. It is also a
+     px value rather than a vh one on purpose: a vh height would change when
+     the mobile keyboard opens, which would resize the canvas and cost somebody
+     the signature they already drew. */
+  height: var(--sg-pad-h);
+  border: 1px solid var(--sg-line-strong);
+  border-radius: var(--sg-r-sm);
+  background: #fff;
+  overflow: hidden;
+}
+
+/* The signing baseline. CSS, never painted onto the canvas — a guide line
+   inside the exported PNG would become part of the signature on the record. */
+.sg-pad-frame::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 34px;
+  border-bottom: 1px dashed var(--sg-line);
+  pointer-events: none;
+}
+
+.sg-pad-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Without this the browser claims the gesture for scrolling and the pad
+     fights the page on every downstroke. */
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.sg-pad-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  color: #6c717a;
+  font-size: 12.5px;
+  pointer-events: none;
+  transition: opacity 160ms var(--sg-ease);
+}
+
+.sg-pad-frame[data-marked] .sg-pad-hint {
+  opacity: 0;
+}
+
+.sg-pad[data-disabled] .sg-pad-frame {
+  border-color: var(--sg-line);
+  background: #f6f7f8;
+}
+
+.sg-pad[data-disabled] .sg-pad-canvas {
+  cursor: not-allowed;
+}
+
+.sg-pad-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sg-pad-note {
+  color: var(--sg-muted);
+  font-size: 12.5px;
+}
+
+/* ── Buttons ── */
+
+.sg-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--sg-line-strong);
+  border-radius: 100px;
+  background: #fff;
+  color: var(--sg-soft);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 140ms var(--sg-ease),
+    color 140ms var(--sg-ease);
+}
+
+.sg-ghost:hover:not(:disabled) {
+  background: #f5f6f8;
+  color: var(--sg-ink);
+}
+
+.sg-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sg-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sg-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 22px;
+  border: 0;
+  border-radius: 100px;
+  background: var(--sg-brand-ink);
+  color: #fff;
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.16), 0 10px 22px -12px rgb(0 0 0 / 0.4);
+  transition:
+    transform 140ms var(--sg-ease),
+    filter 140ms var(--sg-ease);
+}
+
+.sg-submit:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.sg-submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sg-submit:disabled {
+  background: #d8dade;
+  color: #82868d;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.sg-legal {
+  color: var(--sg-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.sg-spin {
+  animation: sg-spin 800ms linear infinite;
+}
+
+@keyframes sg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Decline ──
+   Native <details>, per the FAQ instinct in AGENTS.md. Quiet by default: it has
+   to be findable without ever competing with the thing the page is for. */
+
+.sg-decline {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--sg-line);
+}
+
+.sg-decline > summary {
+  color: var(--sg-muted);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+  width: fit-content;
+}
+
+.sg-decline > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The gap is a margin, not a trailing space in `content`: an inline-block trims
+   its own trailing whitespace, so "▸ " rendered flush against the word. And the
+   marker rotates rather than swapping glyph — `content` is not an animatable
+   property, so the transition on the old version never ran. */
+.sg-decline > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 7px;
+  transition: transform 160ms var(--sg-ease);
+}
+
+.sg-decline[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.sg-decline > summary:hover {
+  color: var(--sg-ink);
+}
+
+.sg-decline-form {
+  margin-top: 14px;
+}
+
+.sg-decline-btn {
+  margin-top: 12px;
+  border-color: color-mix(in oklab, var(--sg-danger) 35%, #fff);
+  color: var(--sg-danger);
+}
+
+.sg-decline-btn:hover:not(:disabled) {
+  background: #fef4f4;
+  color: var(--sg-danger);
+}
+
+/* ── Errors ── */
+
+.sg-error {
+  display: none;
+}
+
+.sg-error[data-shown] {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in oklab, var(--sg-danger) 30%, #fff);
+  border-radius: var(--sg-r-sm);
+  background: #fef4f4;
+  color: #96201f;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.sg-error > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ── Floating action bar ──
+   Fixed rather than sticky: `.cue` on <body> sets overflow-x: hidden, which
+   makes the body a scroll container and would anchor a sticky element to it
+   instead of to the viewport. */
+
+.sg-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in oklab, var(--sg-panel) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--sg-line);
+  opacity: 0;
+  transform: translateY(100%);
+  visibility: hidden;
+  transition:
+    transform 320ms var(--sg-ease),
+    opacity 200ms var(--sg-ease),
+    visibility 320ms;
+}
+
+.sg-bar[data-show] {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.sg-bar-in {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-inline: auto;
+  max-width: 760px;
+}
+
+.sg-bar-text {
+  color: var(--sg-muted);
+  font-size: 13.5px;
+}
+
+.sg-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 100px;
+  background: var(--sg-brand-ink);
+  color: #fff;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+/* ── Terminal-state notices ── */
+
+.sg-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: var(--sg-r);
+  border: 1px solid var(--sg-line);
+  background: var(--sg-panel);
+}
+
+.sg-notice-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: #f1f2f5;
+  color: var(--sg-soft);
+}
+
+.sg-notice[data-tone="ok"] {
+  border-color: color-mix(in oklab, var(--sg-ok) 26%, #fff);
+}
+
+.sg-notice[data-tone="ok"] .sg-notice-icon {
+  background: var(--sg-ok-soft);
+  color: var(--sg-ok);
+}
+
+.sg-notice[data-tone="warn"] {
+  border-color: color-mix(in oklab, var(--sg-warn) 26%, #fff);
+}
+
+.sg-notice[data-tone="warn"] .sg-notice-icon {
+  background: var(--sg-warn-soft);
+  color: var(--sg-warn);
+}
+
+.sg-notice-title {
+  font-size: 17.5px;
+  line-height: 1.25;
+}
+
+.sg-notice-body {
+  margin-top: 6px;
+  color: var(--sg-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sg-notice-action {
+  margin-top: 14px;
+}
+
+.sg-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 1px solid var(--sg-line-strong);
+  border-radius: 100px;
+  background: #fff;
+  color: var(--sg-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background 140ms var(--sg-ease);
+}
+
+.sg-print:hover {
+  background: #f5f6f8;
+}
+
+/* ── Confirmation ── */
+
+.sg-main-sealed {
+  padding-bottom: 40px;
+}
+
+.sg-done {
+  margin-bottom: 18px;
+  padding: 26px 20px 24px;
+  border-radius: var(--sg-r);
+  background: var(--sg-panel);
+  border: 1px solid color-mix(in oklab, var(--sg-ok) 24%, #fff);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+@media (min-width: 700px) {
+  .sg-done {
+    padding: 34px 32px 30px;
+  }
+}
+
+.sg-done-tick {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--sg-ok);
+  color: #fff;
+  animation: sg-tick 420ms var(--sg-ease) both;
+}
+
+@keyframes sg-tick {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+}
+
+.sg-done-title {
+  margin-top: 16px;
+  font-size: clamp(23px, 5.5vw, 29px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.sg-done-lede {
+  margin-top: 8px;
+  color: var(--sg-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.sg-done-facts {
+  display: grid;
+  gap: 14px 28px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--sg-line);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .sg-done-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.sg-done-facts dt {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sg-muted);
+}
+
+.sg-done-facts dd {
+  margin-top: 3px;
+  font-size: 14.5px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.sg-done-hash {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--sg-r-sm);
+  background: #f7f8fa;
+  color: var(--sg-muted);
+}
+
+.sg-done-hash > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.sg-done-hash span {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sg-done-hash code {
+  display: block;
+  margin-top: 3px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--sg-soft);
+  overflow-wrap: anywhere;
+}
+
+.sg-done-warn {
+  margin: 18px 0;
+  padding: 13px 15px;
+  border-radius: var(--sg-r-sm);
+  border: 1px solid color-mix(in oklab, var(--sg-warn) 26%, #fff);
+  background: var(--sg-warn-soft);
+  color: #6f420a;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* ── Footer ── */
+
+.sg-foot {
+  margin-inline: auto;
+  max-width: 760px;
+  padding: 4px 22px 34px;
+  color: var(--sg-muted);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+/* ── Reduced motion ──
+   Nothing here is load-bearing, so it all simply stops. The floating bar still
+   appears and disappears, it just does it instantly. */
+
+@media (prefers-reduced-motion: reduce) {
+  .sg *,
+  .sg *::before,
+  .sg *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Print ──
+   agreement.css already hides .doc-no-print and restyles the document. All that
+   is left is to take the page furniture out of the way. */
+
+@media print {
+  .sg {
+    background: #fff;
+    min-height: 0;
+  }
+
+  .sg-main,
+  .sg-main-sealed {
+    max-width: none;
+    padding: 0;
+  }
+
+  .sg-paper {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+}
+
+/* The privacy link in the signing footer. Underlined rather than colour-only:
+   this sits on --sg-bg and must stay distinguishable without relying on hue. */
+.sg-foot-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sg-foot-link:hover {
+  color: var(--sg-ink);
+}
+
+@media (pointer: coarse) {
+  /* SC 2.5.8: these were ~20px. The decline control and the gate's escape hatch
+     are the two most important small controls on the page. */
+  .sg-decline > summary,
+  .sg-skip,
+  .sg-foot-link {
+    display: inline-block;
+    padding-block: 12px;
+  }
+
+  .sg-ghost {
+    min-height: 44px;
+  }
+}

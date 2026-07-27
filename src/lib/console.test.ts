@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  isOperator,
+  isResolvedSession,
   STATUS_SELECT_INITIAL,
   statusSelectStep,
   statusSelectValue,
@@ -12,7 +12,7 @@ import type { GuestStatus } from "./waitlist.ts";
 
 /* ── The auth gate ── */
 
-test("isOperator rejects every shape that is not a session with a user", () => {
+test("isResolvedSession rejects every shape that is not a session with a user", () => {
   for (const value of [
     null,
     undefined,
@@ -26,19 +26,37 @@ test("isOperator rejects every shape that is not a session with a user", () => {
     true,
     [],
   ]) {
-    assert.equal(isOperator(value), false, JSON.stringify(value) ?? String(value));
+    assert.equal(isResolvedSession(value), false, JSON.stringify(value) ?? String(value));
   }
 });
 
-test("isOperator accepts a resolved session carrying a user", () => {
-  assert.equal(isOperator({ user: { id: "u1", email: "op@krevo.io" } }), true);
-  assert.equal(isOperator({ session: { id: "s1" }, user: { id: "u1" } }), true);
+test("isResolvedSession accepts a resolved session carrying a user", () => {
+  assert.equal(isResolvedSession({ user: { id: "u1", email: "op@krevo.io" } }), true);
+  assert.equal(isResolvedSession({ session: { id: "s1" }, user: { id: "u1" } }), true);
 });
 
-test("isOperator rejects a Promise — a dropped `await` must not open the gate", () => {
+/* The bug this rename exists to prevent. Until 2026-07-26 this function was
+   called `isOperator`, and /api/waitlist, /api/changelog and /api/health gated
+   on it. That was a real gate only while `disableSignUp: true` made the seeded
+   operator the sole account able to hold a session. Opening customer signup
+   turned all three into "any stranger who registers can read every waitlist
+   email". Nothing about the function changed — only the world around it.
+
+   So: this asserts the function is NOT an authorisation check, and must never
+   be used as one on its own. `requireOperator()` in studio.ts is the gate. */
+test("isResolvedSession is a shape check, not an authorisation check", () => {
+  const creatorSession = { user: { id: "creator-1", email: "stranger@example.com" } };
+  assert.equal(
+    isResolvedSession(creatorSession),
+    true,
+    "a self-registered creator's session passes this — which is exactly why it cannot gate an operator route alone",
+  );
+});
+
+test("isResolvedSession rejects a Promise — a dropped `await` must not open the gate", () => {
   const unawaited = Promise.resolve({ user: { id: "u1" } });
   assert.equal(!!unawaited, true, "the bug's premise: a Promise is truthy");
-  assert.equal(isOperator(unawaited), false);
+  assert.equal(isResolvedSession(unawaited), false);
   void unawaited;
 });
 

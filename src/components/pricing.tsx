@@ -1,7 +1,7 @@
 import { Check, CircleCheck } from "lucide-react";
 import { Reveal } from "./reveal";
 
-/* Stripe is deliberately not wired for v1 (see solution.md, "Launch billing
+/* Stripe is deliberately not wired for v1 (see docs/solution.md, "Launch billing
    decision"). Every CTA collects interest instead of taking a payment. */
 
 const PLANS = [

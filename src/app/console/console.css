@@ -1516,3 +1516,553 @@
     transition-delay: 0ms !important;
   }
 }
+
+/* ── Customers (/console/studios) ──────────────────────────────────────────
+   The operator's customer-management surface. Appended rather than woven in:
+   nothing above this line changes, so the waitlist and changelog views cannot
+   regress from a table this file did not have yesterday.
+
+   Same vocabulary as the rest of .cx — dark, dense, tables over cards, numbers
+   in tabular-nums. What is different is the measure: eight columns of counts do
+   not fit in the 720px ops column, so this surface breaks out the way the
+   changelog already does. */
+
+.cs-col {
+  max-width: 1180px;
+  /* Native <select> and <input> render light-on-light without this. */
+  color-scheme: dark;
+}
+
+/* Customers is a route, not one of the dashboard's in-place tabs, so its tab is
+   a link. aria-current is the honest attribute for "you are here", and it gets
+   the same underline aria-pressed has above. Scoped to the anchor so the
+   dashboard's own <button> tabs are untouched. */
+a.cx-tab {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+a.cx-tab[aria-current="page"] {
+  color: var(--ink);
+}
+
+a.cx-tab[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+.cs-crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+.cs-crumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--faint);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.cs-crumb a:hover {
+  color: var(--ink);
+}
+
+/* ── Toolbar ── */
+
+.cs-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 40px 0 14px;
+}
+
+.cs-toolbar .cx-search {
+  margin-top: 0;
+  max-width: 340px;
+}
+
+.cs-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-button {
+  min-height: 38px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: rgb(255 255 255 / 0.035);
+  color: var(--dim);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+.cs-button:hover:not(:disabled) {
+  border-color: var(--dim);
+  background: rgb(255 255 255 / 0.07);
+  color: var(--ink);
+}
+
+.cs-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.cs-button:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
+.cs-quiet-link {
+  font-size: 12.5px;
+  color: var(--faint);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.cs-quiet-link:hover {
+  color: var(--ink);
+}
+
+.cs-hint {
+  max-width: 68ch;
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--faint);
+}
+
+.cs-hint code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--dim);
+}
+
+/* ── Tables ──
+   Each one is its own panel, since these sit directly on the pane rather than
+   inside a .cx-guests card. Column counts differ per table; the shared cell
+   styling above does the rest. */
+
+.cs-table,
+.cs-clients,
+.cs-cues {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.cs-table {
+  grid-template-columns:
+    minmax(0, 1.6fr) 96px 66px 66px 74px 78px 118px 108px;
+}
+
+.cs-clients {
+  grid-template-columns: minmax(0, 1.8fr) 72px 78px 132px 118px;
+}
+
+.cs-cues {
+  grid-template-columns: minmax(0, 1.8fr) 132px 82px 132px 118px;
+}
+
+.cx-table td.cs-num,
+.cs-num {
+  justify-content: flex-end;
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+
+.cx-thead th.cs-num {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.cs-date {
+  font-size: 12.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Two lines in one cell: the thing, then the identifier under it. The base
+   `.cx-table td` rule centres its cells on both axes and outranks a bare class,
+   so this one has to name the element too — otherwise the two lines come out
+   centred and the column stops scanning as a column. */
+.cx-table td.cs-name {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 2px;
+}
+
+.cs-name a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.cs-name b {
+  font-size: 13.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-name span {
+  font-size: 11.5px;
+  color: var(--faint);
+  font-family: var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The whole row is clickable in feel, but only the name is a link — a <tr> is
+   not a valid link target and wrapping every cell in one would put eight tab
+   stops on every row. */
+.cs-trow:hover .cs-name b {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Tags ── */
+
+.cs-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgb(255 255 255 / 0.03);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.cs-tag[data-plan="creator"] {
+  border-color: rgb(139 124 246 / 0.35);
+  background: rgb(139 124 246 / 0.1);
+  color: #b9aefb;
+}
+
+.cs-tag[data-plan="studio"] {
+  border-color: rgb(74 222 128 / 0.28);
+  background: rgb(74 222 128 / 0.09);
+  color: #86efac;
+}
+
+.cs-tag[data-tone="ok"] {
+  border-color: rgb(74 222 128 / 0.28);
+  background: rgb(74 222 128 / 0.09);
+  color: #86efac;
+}
+
+.cs-tag[data-tone="wait"] {
+  border-color: rgb(251 191 36 / 0.28);
+  background: rgb(251 191 36 / 0.09);
+  color: #fcd34d;
+}
+
+.cs-tag[data-tone="warn"] {
+  border-color: rgb(248 113 113 / 0.3);
+  background: rgb(248 113 113 / 0.09);
+  color: #fca5a5;
+}
+
+/* Status dots on the usage list, keyed by the same tone map as the tags. */
+.cs-tone-ok {
+  color: var(--ok);
+}
+.cs-tone-wait {
+  color: var(--warn);
+}
+.cs-tone-warn {
+  color: var(--bad);
+}
+.cs-tone-neutral {
+  color: var(--faint);
+}
+
+/* ── Rows with a secondary label ── */
+
+.cx-row-name em {
+  margin-left: 9px;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* A fact is label / value / note rather than the four-column service row. */
+.cs-fact {
+  grid-template-columns: 130px minmax(0, 1fr) auto;
+}
+
+.cs-fact .cx-row-name {
+  white-space: normal;
+}
+
+/* The empty state carries an icon beside its sentence. */
+.cs-col .cx-empty {
+  gap: 8px;
+}
+
+/* ── Pager ── */
+
+.cs-pager {
+  justify-content: space-between;
+  gap: 16px;
+  padding-inline: 4px;
+}
+
+/* ── Account panel ── */
+
+.cs-panel {
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.cs-rule {
+  height: 1px;
+  margin: 24px 0;
+  border: 0;
+  background: var(--hair);
+}
+
+.cs-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.cs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cs-field > span {
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.cs-field input,
+.cs-field select {
+  min-height: 38px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.cs-field input:focus,
+.cs-field select:focus {
+  outline: none;
+  border-color: var(--dim);
+}
+
+.cs-field-wide {
+  grid-column: 1 / -1;
+}
+
+.cs-form-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.cs-plan {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cs-plan .cs-field {
+  min-width: 180px;
+}
+
+.cs-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+
+.cs-spin {
+  animation: csSpin 900ms linear infinite;
+}
+
+@keyframes csSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Read-only notice and the frozen document ── */
+
+.cs-readonly {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 34px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  border: 1px solid rgb(251 191 36 / 0.22);
+  background: rgb(251 191 36 / 0.06);
+  color: #fcd34d;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.cs-readonly svg {
+  flex: none;
+}
+
+.cs-doc {
+  padding: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  max-width: 76ch;
+}
+
+.cs-doc h2 {
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.cs-doc h3 {
+  margin-top: 22px;
+  font-size: 13.5px;
+  color: var(--dim);
+}
+
+.cs-doc p {
+  margin-top: 7px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--dim);
+}
+
+.cs-col .cx-note svg {
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+
+/* ── Narrower windows ──
+   The operator is at a desk, so this is about not breaking rather than about a
+   phone-first layout: drop the columns that are context before the ones that
+   are the answer, and let the forms stack. */
+
+@media (max-width: 1080px) {
+  .cs-table {
+    grid-template-columns: minmax(0, 1.6fr) 92px 66px 74px 78px 118px;
+  }
+
+  .cs-table th:nth-child(3),
+  .cs-table td:nth-child(3),
+  .cs-table th:nth-child(8),
+  .cs-table td:nth-child(8) {
+    display: none;
+  }
+}
+
+@media (max-width: 780px) {
+  .cs-table {
+    grid-template-columns: minmax(0, 1.4fr) 84px 74px 110px;
+  }
+
+  .cs-table th:nth-child(4),
+  .cs-table td:nth-child(4),
+  .cs-table th:nth-child(6),
+  .cs-table td:nth-child(6) {
+    display: none;
+  }
+
+  .cs-clients {
+    grid-template-columns: minmax(0, 1.5fr) 68px 118px;
+  }
+
+  .cs-clients th:nth-child(3),
+  .cs-clients td:nth-child(3),
+  .cs-clients th:nth-child(4),
+  .cs-clients td:nth-child(4) {
+    display: none;
+  }
+
+  .cs-cues {
+    grid-template-columns: minmax(0, 1.5fr) 120px 110px;
+  }
+
+  .cs-cues th:nth-child(3),
+  .cs-cues td:nth-child(3),
+  .cs-cues th:nth-child(4),
+  .cs-cues td:nth-child(4) {
+    display: none;
+  }
+
+  .cs-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cs-fact {
+    grid-template-columns: 108px minmax(0, 1fr);
+  }
+
+  .cs-fact > :last-child {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-spin {
+    animation: none;
+  }
+}
+
+/* At 640px the shared .cx-table rules restack every row into a two-column
+   card, which these tables inherit and which is the right fallback. The one
+   thing that stops making sense is right-aligned numbers: there is no header
+   left to align them against, so they read as stragglers. */
+@media (max-width: 640px) {
+  .cs-col .cx-table td.cs-num {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .cs-col .cx-table td.cs-name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}

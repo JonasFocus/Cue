@@ -1,0 +1,755 @@
+/* The customer application surface.
+ *
+ * Scoped to `.ca`, set on the /app layout — the same discipline design.css uses
+ * with `.cue` and console.css with `.cx`. The palette is deliberately the same
+ * blue and the same radii as the marketing site, because a creator should not
+ * feel like they left the product when they sign in, but the tokens are its
+ * own namespace so a landing-page change cannot reflow the workspace.
+ *
+ * Screen-specific CSS lives beside its route (builder.css, sign.css). This file
+ * is only the shell and the primitives every screen shares.
+ */
+
+.ca {
+  --ca-bg: #f7f7f7;
+  --ca-panel: #ffffff;
+  --ca-panel-soft: #fbfbfb;
+  --ca-ink: #0a0a0a;
+  --ca-ink-soft: #4a4a4a;
+  --ca-muted: #6b6b6b;
+  --ca-line: #e8e8e8;
+  --ca-line-soft: #f1f1f1;
+  /* 3.23:1 on --ca-panel — the minimum SC 1.4.11 wants around a real control. */
+  --ca-line-strong: #8f8f8f;
+  --ca-accent: #0086ff;
+  --ca-accent-deep: #0069c9;
+  --ca-tint: #eaf1fe;
+  --ca-tint-soft: #f4f8ff;
+  --ca-ok: #147a3d;
+  --ca-ok-soft: #e6f6ec;
+  --ca-warn: #96590a;
+  --ca-warn-soft: #fff4e0;
+  --ca-danger: #c2282c;
+  --ca-danger-soft: #fef2f2;
+
+  --ca-r-lg: 16px;
+  --ca-r: 12px;
+  --ca-r-sm: 9px;
+  --ca-r-pill: 100px;
+
+  --ca-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
+  --ca-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -16px rgb(0 0 0 / 0.18);
+  --ca-shadow-lg: 0 1px 2px rgb(0 0 0 / 0.04), 0 24px 48px -24px rgb(4 46 92 / 0.3);
+
+  /* One curve for the whole surface, same as the marketing site: starts fast,
+     settles soft. Two easings in one product reads as two products. */
+  --ca-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --ca-fast: 140ms;
+  --ca-mid: 240ms;
+  --ca-slow: 420ms;
+
+  --ca-side-w: 244px;
+  /* Bottom tab bar height, used as scroll padding so the last row is reachable. */
+  --ca-tabbar-h: 60px;
+
+  min-height: 100dvh;
+  background: var(--ca-bg);
+  color: var(--ca-ink);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* The FAQ pattern: lets block-size animate to and from `auto`. */
+  interpolate-size: allow-keywords;
+}
+
+.ca :where(h1, h2, h3, h4) {
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ca-ink);
+}
+
+.ca ::selection {
+  background: var(--ca-accent);
+  color: #fff;
+}
+
+.ca :where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--ca-accent);
+  outline-offset: 2px;
+  border-radius: var(--ca-r-sm);
+}
+
+/* Template tile colours, referenced by Template["tone"] in src/lib/templates.ts. */
+.ca [data-tone="rose"] { --ca-tone: #e8618c; --ca-tone-soft: #fdeef3; }
+.ca [data-tone="violet"] { --ca-tone: #8b5cf6; --ca-tone-soft: #f3eeff; }
+.ca [data-tone="teal"] { --ca-tone: #0d9488; --ca-tone-soft: #e6f7f5; }
+.ca [data-tone="amber"] { --ca-tone: #c2760a; --ca-tone-soft: #fff5e4; }
+.ca [data-tone="blue"] { --ca-tone: #0086ff; --ca-tone-soft: #eaf1fe; }
+.ca [data-tone="slate"] { --ca-tone: #64748b; --ca-tone-soft: #f1f3f6; }
+
+/* ── Shell ──
+   Sidebar and main pane on desktop; a single scrolling column with a bottom
+   tab bar on phones. The sidebar is not a drawer on mobile — a photographer
+   moving between "Awaiting" and "Signed" one-handed should not open a menu to
+   do it, and thumb reach is at the bottom of the screen. */
+
+.ca-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100dvh;
+}
+
+@media (min-width: 900px) {
+  .ca-shell {
+    grid-template-columns: var(--ca-side-w) minmax(0, 1fr);
+  }
+}
+
+.ca-side {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 18px 12px;
+  border-right: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  /* Sticky, not fixed: the grid column already reserves the width, and fixed
+     would take it out of flow and need a manual offset on the main pane. */
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 900px) {
+  .ca-side {
+    display: flex;
+  }
+}
+
+.ca-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px 14px;
+  font-family: var(--font-geist), sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.ca-brand-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--ca-accent);
+  color: #fff;
+}
+
+.ca-side-label {
+  padding: 16px 8px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ca-muted);
+}
+
+.ca-side-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--ca-r-sm);
+  font-size: 14px;
+  color: var(--ca-ink-soft);
+  transition:
+    background-color var(--ca-fast) var(--ca-ease),
+    color var(--ca-fast) var(--ca-ease);
+}
+
+.ca-side-item:hover {
+  background: var(--ca-line-soft);
+  color: var(--ca-ink);
+}
+
+.ca-side-item[data-active="true"] {
+  background: var(--ca-tint);
+  color: var(--ca-accent-deep);
+  font-weight: 500;
+}
+
+.ca-side-item b {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ca-muted);
+}
+
+.ca-side-item[data-active="true"] b {
+  color: var(--ca-accent-deep);
+}
+
+.ca-side-foot {
+  margin-top: auto;
+  padding: 14px 10px 4px;
+  border-top: 1px solid var(--ca-line);
+}
+
+/* ── Main pane ── */
+
+.ca-main {
+  min-width: 0;
+  padding-bottom: calc(var(--ca-tabbar-h) + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 900px) {
+  .ca-main {
+    padding-bottom: 0;
+  }
+}
+
+.ca-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ca-line);
+  background: rgb(247 247 247 / 0.86);
+  backdrop-filter: blur(12px);
+}
+
+@media (min-width: 900px) {
+  .ca-topbar {
+    padding-inline: 26px;
+  }
+}
+
+.ca-crumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--ca-muted);
+}
+
+.ca-crumb b {
+  font-weight: 500;
+  color: var(--ca-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ca-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.ca-pane {
+  padding: 20px 16px 32px;
+}
+
+@media (min-width: 900px) {
+  .ca-pane {
+    padding: 28px 26px 56px;
+  }
+}
+
+.ca-pane-narrow {
+  margin-inline: auto;
+  max-width: 720px;
+}
+
+.ca-h1 {
+  font-size: clamp(23px, 4vw, 28px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.ca-h2 {
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+
+.ca-sub {
+  margin-top: 7px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ca-muted);
+  text-wrap: pretty;
+}
+
+/* ── Bottom tab bar (phones) ── */
+
+.ca-tabbar {
+  position: fixed;
+  z-index: 30;
+  inset: auto 0 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border-top: 1px solid var(--ca-line);
+  background: rgb(255 255 255 / 0.92);
+  backdrop-filter: blur(14px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: 900px) {
+  .ca-tabbar {
+    display: none;
+  }
+}
+
+.ca-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--ca-tabbar-h);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ca-muted);
+  transition: color var(--ca-fast) var(--ca-ease);
+}
+
+.ca-tab[data-active="true"] {
+  color: var(--ca-accent-deep);
+}
+
+.ca-tab:active {
+  background: var(--ca-line-soft);
+}
+
+/* ── Buttons ── */
+
+.ca-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: none;
+  padding: 9px 16px;
+  border-radius: var(--ca-r-pill);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition:
+    transform var(--ca-fast) var(--ca-ease),
+    background-color var(--ca-mid) var(--ca-ease),
+    box-shadow var(--ca-mid) var(--ca-ease),
+    opacity var(--ca-fast) var(--ca-ease);
+}
+
+/* Every control a thumb has to hit clears 44px on touch, without inflating the
+   same button on a desktop pointer where 36px is comfortable and denser. */
+@media (max-width: 899px), (pointer: coarse) {
+  .ca-btn {
+    min-height: 44px;
+    padding-inline: 18px;
+  }
+}
+
+.ca-btn:active:not(:disabled) {
+  transform: scale(0.965);
+}
+
+.ca-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ca-btn-primary {
+  background: var(--ca-accent-deep);
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(0 60 130 / 0.2), 0 8px 18px -10px rgb(0 134 255 / 0.5);
+}
+
+.ca-btn-primary:hover:not(:disabled) {
+  background: #005cb0;
+}
+
+.ca-btn-dark {
+  background: #0a0a0a;
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18), 0 8px 18px -10px rgb(0 0 0 / 0.35);
+}
+
+.ca-btn-dark:hover:not(:disabled) {
+  background: #262626;
+}
+
+.ca-btn-ghost {
+  background: var(--ca-panel);
+  color: var(--ca-ink);
+  border: 1px solid var(--ca-line);
+  box-shadow: var(--ca-shadow-sm);
+}
+
+.ca-btn-ghost:hover:not(:disabled) {
+  background: var(--ca-panel-soft);
+  border-color: var(--ca-line-strong);
+}
+
+.ca-btn-quiet {
+  color: var(--ca-muted);
+}
+
+.ca-btn-quiet:hover:not(:disabled) {
+  background: var(--ca-line-soft);
+  color: var(--ca-ink);
+}
+
+.ca-btn-danger {
+  color: var(--ca-danger);
+  border: 1px solid rgb(194 40 44 / 0.25);
+  background: var(--ca-panel);
+}
+
+.ca-btn-danger:hover:not(:disabled) {
+  background: var(--ca-danger-soft);
+}
+
+.ca-btn-block {
+  width: 100%;
+}
+
+.ca-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ca-r-sm);
+  color: var(--ca-ink-soft);
+  border: 1px solid transparent;
+  transition:
+    background-color var(--ca-fast) var(--ca-ease),
+    border-color var(--ca-fast) var(--ca-ease);
+}
+
+@media (pointer: coarse) {
+  .ca-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.ca-icon-btn:hover {
+  background: var(--ca-panel);
+  border-color: var(--ca-line);
+}
+
+/* ── Form controls ── */
+
+.ca-field {
+  display: block;
+}
+
+.ca-field + .ca-field {
+  margin-top: 16px;
+}
+
+.ca-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ca-ink);
+}
+
+.ca-help {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ca-muted);
+  text-wrap: pretty;
+}
+
+.ca-input,
+.ca-textarea,
+.ca-select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 13px;
+  border-radius: var(--ca-r);
+  border: 1px solid var(--ca-line-strong);
+  background: var(--ca-panel);
+  font: inherit;
+  /* 16px minimum on touch: iOS Safari zooms the whole viewport on focus for
+     anything smaller, and the page never zooms back out. */
+  font-size: 16px;
+  color: var(--ca-ink);
+  box-shadow: var(--ca-shadow-sm);
+  transition:
+    border-color var(--ca-fast) var(--ca-ease),
+    box-shadow var(--ca-fast) var(--ca-ease);
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .ca-input,
+  .ca-textarea,
+  .ca-select {
+    font-size: 14.5px;
+  }
+}
+
+.ca-input::placeholder,
+.ca-textarea::placeholder {
+  color: var(--ca-muted);
+}
+
+.ca-input:focus-visible,
+.ca-textarea:focus-visible,
+.ca-select:focus-visible {
+  outline: none;
+  border-color: var(--ca-accent);
+  box-shadow: 0 0 0 3px rgb(0 134 255 / 0.16);
+}
+
+.ca-input[aria-invalid="true"],
+.ca-textarea[aria-invalid="true"] {
+  border-color: var(--ca-danger);
+  box-shadow: 0 0 0 3px rgb(229 72 77 / 0.13);
+}
+
+.ca-textarea {
+  min-height: 108px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.ca-select {
+  appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%236b6b6b' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+
+/* ── Cards and surfaces ── */
+
+.ca-card {
+  border-radius: var(--ca-r-lg);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+}
+
+.ca-card-pad {
+  padding: 18px;
+}
+
+@media (min-width: 700px) {
+  .ca-card-pad {
+    padding: 22px;
+  }
+}
+
+.ca-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+/* ── Status pills ──
+   Tones map to STATUS_TONE in src/lib/cue.ts. */
+
+.ca-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--ca-r-pill);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  background: #f0f0f0;
+  color: var(--ca-ink-soft);
+  white-space: nowrap;
+}
+
+.ca-pill[data-tone="wait"] {
+  background: var(--ca-tint);
+  color: var(--ca-accent-deep);
+}
+
+.ca-pill[data-tone="ok"] {
+  background: var(--ca-ok-soft);
+  color: var(--ca-ok);
+}
+
+.ca-pill[data-tone="warn"] {
+  background: var(--ca-warn-soft);
+  color: var(--ca-warn);
+}
+
+/* ── Empty state ── */
+
+.ca-empty {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  padding: 56px 20px;
+  text-align: center;
+}
+
+.ca-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  background: var(--ca-tint);
+  color: var(--ca-accent-deep);
+}
+
+/* ── Banner ──
+   The "this is a template, not legal advice" line and its siblings. Quiet, but
+   never dismissible on the surfaces that need it. */
+
+.ca-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--ca-r);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel-soft);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ca-ink-soft);
+  text-wrap: pretty;
+}
+
+.ca-banner > svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--ca-muted);
+}
+
+.ca-banner[data-tone="info"] {
+  border-color: rgb(0 134 255 / 0.24);
+  background: var(--ca-tint-soft);
+}
+
+.ca-banner[data-tone="warn"] {
+  border-color: rgb(150 89 10 / 0.24);
+  background: var(--ca-warn-soft);
+  color: #7a4708;
+}
+
+.ca-banner[data-tone="warn"] > svg {
+  color: var(--ca-warn);
+}
+
+.ca-banner[data-tone="danger"] {
+  border-color: rgb(194 40 44 / 0.24);
+  background: var(--ca-danger-soft);
+  color: var(--ca-danger);
+}
+
+.ca-banner[data-tone="danger"] > svg {
+  color: var(--ca-danger);
+}
+
+/* ── Motion ──
+   Everything here animates opacity and transform only, so it stays on the
+   compositor. `@starting-style` gives an enter animation with no JavaScript and
+   no mount flag — the element animates the first time it is painted. */
+
+@keyframes ca-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.ca-rise {
+  animation: ca-rise var(--ca-slow) var(--ca-ease) both;
+}
+
+/* Staggered list entrance. --i is set inline by the row; capped so a 200-row
+   workspace does not spend four seconds arriving. */
+.ca-stagger > * {
+  animation: ca-rise var(--ca-slow) var(--ca-ease) both;
+  animation-delay: calc(min(var(--i, 0) * 26ms, 320ms));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ca *,
+  .ca *::before,
+  .ca *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Utilities ── */
+
+.ca-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ca-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ca-spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ca-spin {
+  animation: ca-spin 800ms linear infinite;
+}
+
+@keyframes ca-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Long client names and email addresses must not blow out a grid column. */
+.ca-truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ca-nums {
+  font-variant-numeric: tabular-nums;
+}

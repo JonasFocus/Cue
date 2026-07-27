@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Bug,
   Check,
@@ -279,6 +280,12 @@ export function Dashboard({ operator }: { operator: string }) {
           >
             Changelog
           </button>
+          {/* A route, not a tab: the customer surface is server-rendered and
+              reads across every studio, so it does not belong in this polling
+              client component. */}
+          <Link className="cx-tab" href="/console/studios">
+            Customers
+          </Link>
         </nav>
 
         {/* One region, always in the DOM, contents swapped. A `role="status"`

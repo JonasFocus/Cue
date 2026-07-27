@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   alternates: { canonical: `/legal/terms` },
-  openGraph: { title: 'Terms — Cue', description: 'The terms that cover this site and the Cue waitlist.', url: `/legal/terms` },
+  openGraph: { title: 'Terms — Cue', description: 'The terms that cover the Cue site, waitlist, and application.', url: `/legal/terms` },
   title: "Terms — Cue",
   description:
-    "The terms for using the Cue website and waitlist while the product is still being built.",
+    "The terms for using the Cue website, waitlist, and application while the product is still being built.",
 };
 
 const UPDATED = "25 July 2026";
@@ -31,17 +31,51 @@ export default function TermsPage() {
           Terms
         </h1>
         <p className="cue-lede" style={{ textAlign: "left" }}>
-          Last updated {UPDATED}. These terms cover this website and its
-          waitlist. They do not cover the Cue product, because it does not exist
-          yet.
+          Last updated {UPDATED}. These terms cover this website, its waitlist,
+          and the Cue application — creating a studio account, preparing
+          agreements, and signing one someone sent you.
         </p>
 
-        <h2 style={heading}>What this site is</h2>
+        <h2 style={heading}>What this is</h2>
         <p style={body}>
-          A marketing page for a product being built by Krevo, plus a form that
-          collects email addresses. There are no customer accounts, no signing
-          service, and nothing to pay for. Anything described on this site is
-          what we plan to build.
+          A product being built by Krevo: a marketing page, a waitlist form, and
+          an application that prepares client agreements from templates, issues a
+          signing link, and keeps the signed record. It is pre-launch and free.
+          There is nothing to pay for and no billing of any kind.
+        </p>
+
+        <h2 style={heading}>What Cue does and does not do</h2>
+        <p style={body}>
+          Cue prepares a document from a template you fill in, gives you a link
+          to share, records who signed it and when, and keeps that record. It
+          does not send email — no email provider is connected, so sharing the
+          link is entirely up to you. It does not collect payments, hold money,
+          or chase anyone for a signature.
+        </p>
+        <p style={body}>
+          <strong>The templates are a starting point, not a contract drafted for
+          you.</strong> They have not been reviewed for your jurisdiction or your
+          circumstances. You are responsible for what your agreement says and for
+          having it reviewed. See &ldquo;Not legal advice&rdquo; below.
+        </p>
+
+        <h2 style={heading}>If you send agreements</h2>
+        <p style={body}>
+          You are responsible for the content of every Cue you send and for
+          having the right to enter the client details you type in. Do not use
+          Cue to send anything unlawful, or to impersonate anyone. Once you send
+          a Cue its wording is frozen, and once every party has signed, the
+          record is sealed and neither you nor we can alter it — that permanence
+          is the point of the product, so read what you send before you send it.
+        </p>
+
+        <h2 style={heading}>If you were sent an agreement</h2>
+        <p style={body}>
+          You do not need an account and you are not a customer of Krevo. The
+          agreement is between you and whoever sent it; Cue only carries it and
+          records the signature. If you disagree with what it says, take it up
+          with the sender rather than with us — we cannot change it, and after
+          sealing, neither can they.
         </p>
 
         <h2 style={heading}>Nothing here is a contract or an offer</h2>
@@ -85,9 +119,8 @@ export default function TermsPage() {
 
         <h2 style={heading}>Changes</h2>
         <p style={body}>
-          These terms will be rewritten before Cue opens to customers, and again
-          when there is a service to attach them to. The date at the top shows
-          the current version. Questions go to{" "}
+          These terms will be rewritten again before Cue starts charging for
+          anything. The date at the top shows the current version. Questions go to{" "}
           <a className="cue-link" href="mailto:hello@krevo.io">hello@krevo.io</a>.
         </p>
       </div>

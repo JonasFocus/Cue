@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://staging.cue.krevo.io"><strong>Visit staging</strong></a>
   &nbsp;·&nbsp;
-  <a href="./solution.md"><strong>Read the product brief</strong></a>
+  <a href="./docs/solution.md"><strong>Read the product brief</strong></a>
   &nbsp;·&nbsp;
   <a href="./AGENTS.md"><strong>Engineering guide</strong></a>
 </p>
@@ -22,7 +22,7 @@
 <br />
 
 > **Cue is a pre-launch client-agreement product for photographers and videographers.**
-> It will help creatives prepare, send, sign, and keep the record of their client agreements without the weight of a general-purpose business platform.
+> It helps creatives prepare, send, sign, and keep the record of their client agreements without the weight of a general-purpose business platform.
 
 ## What is live
 
@@ -31,9 +31,12 @@
 | Marketing site | Live on [staging.cue.krevo.io](https://staging.cue.krevo.io) |
 | Waitlist | Live, validated, deduplicated, and rate-limited |
 | Operator console | Private operations surface for waitlist and service health |
-| Signing product | Not built yet |
+| Customer app (`/app`) | Built — accounts, six templates, the builder, sealed records |
+| Client signing (`/s/[token]`) | Built — no account, consent gate, drawn signature, sealed audit trail |
 
-Cue does not yet have customer accounts, templates, signing, PDFs, email delivery, object storage, or billing. The public site only promises what works today.
+Built but **not yet deployed**: the application landed on 2026-07-26 and staging still runs the marketing site alone.
+
+Cue still has no email delivery, no server-side PDF rendering (the final PDF is print-to-PDF), no object storage, and no billing. The public site deliberately still describes the product in the future tense until this is live.
 
 ## Run it locally
 
@@ -74,7 +77,7 @@ That command verifies, commits, pushes, and deploys `main` to staging. Run it on
 ## Source of truth
 
 - [`AGENTS.md`](./AGENTS.md) defines product boundaries, engineering conventions, and deployment safety.
-- [`solution.md`](./solution.md) defines positioning, product direction, pricing, and non-goals.
+- [`docs/`](./docs/README.md) holds the reference material: the [product brief](./docs/solution.md), [architecture](./docs/architecture.md), [security posture](./docs/security.md), [ideal customer](./docs/ideal-customer.md), and the internal [changelog](./docs/private-changelog.md).
 - The application, migrations, and tests are authoritative for current behavior.
 
 <p align="center">

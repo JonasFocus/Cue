@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
 import { guestList, setGuestStatus } from "@/lib/db";
 import { parseStatusPatch } from "@/lib/waitlist";
-import { isOperator } from "@/lib/console";
+import { requireOperator } from "@/lib/studio";
 
 export const dynamic = "force-dynamic";
 
-async function requireOperator() {
-  // The predicate is in @/lib/console so it is testable: a dropped `await`
-  // here would otherwise leave a truthy Promise gating the guest list.
-  return isOperator(await auth.api.getSession({ headers: await headers() }));
-}
-
-/* Returns real email addresses, so it is gated exactly like the console. */
+/* Returns real email addresses, so it uses the same gate as /console —
+   `requireOperator` in studio.ts, which checks the `role` column. It must not
+   gate on session presence alone: customer signup is open. */
 export async function GET(request: Request) {
   if (!(await requireOperator())) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

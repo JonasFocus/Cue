@@ -1,0 +1,1496 @@
+/* The builder, the share screen, and the sealed record.
+ *
+ * Lives beside its route, per the note at the top of app.css: this file is the
+ * screen, `.ca-*` in app.css is the vocabulary. Anything here that could be a
+ * primitive is a bug in this file, not a missing token.
+ *
+ * Everything animates transform, opacity, or block-size only — nothing paints a
+ * layout property in a transition. The reduced-motion rule in app.css already
+ * flattens `.ca *`, so this file adds one only where it kills something app.css
+ * cannot see (a pseudo-element transition).
+ */
+
+.bf,
+.bf-share,
+.bf-record {
+  /* Clears the sticky app topbar when a pane pins itself below it. */
+  --bf-top: 76px;
+  --bf-form-w: 34rem;
+}
+
+/* ── Head ── */
+
+.bf-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 16px 12px;
+}
+
+.bf-head-main {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.bf-head-title {
+  overflow-wrap: anywhere;
+}
+
+/* The title is editable in place. It reads as a heading until a pointer lands
+   on it, because a page whose h1 is obviously an input looks like a form, and
+   this is a document. */
+.bf-title-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: -10px;
+}
+
+.bf-title-wrap > svg {
+  position: absolute;
+  right: 10px;
+  flex: none;
+  color: var(--ca-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ca-fast) var(--ca-ease);
+}
+
+.bf-title-wrap:hover > svg,
+.bf-title-wrap:focus-within > svg {
+  opacity: 1;
+}
+
+.bf-title {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 34px 4px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ca-r-sm);
+  background: transparent;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(23px, 4vw, 28px);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--ca-ink);
+  transition:
+    background-color var(--ca-fast) var(--ca-ease),
+    border-color var(--ca-fast) var(--ca-ease);
+}
+
+.bf-title:hover {
+  background: var(--ca-panel);
+  border-color: var(--ca-line);
+}
+
+.bf-title:focus {
+  outline: none;
+  background: var(--ca-panel);
+  border-color: var(--ca-accent);
+  box-shadow: 0 0 0 3px rgb(0 134 255 / 0.16);
+}
+
+.bf-head-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-top: 9px;
+  font-size: 13px;
+  color: var(--ca-muted);
+}
+
+.bf-head-template {
+  font-size: 13px;
+  color: var(--ca-muted);
+}
+
+.bf-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* The primary send lives in the sticky bar on a phone. Two of them on screen at
+   once is two chances to be pressed by accident. */
+.bf-send-desktop {
+  display: none;
+}
+
+/* ── Save state ── */
+
+.bf-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ca-muted);
+  animation: ca-rise var(--ca-mid) var(--ca-ease) both;
+}
+
+.bf-save[data-state="saved"] {
+  color: var(--ca-ok);
+}
+
+.bf-save[data-state="error"] {
+  color: var(--ca-danger);
+}
+
+/* ── Edit / Preview switch (phones) ──
+   A real segmented control with a sliding indicator: the fill moves so the eye
+   follows it, instead of one colour blinking off and another blinking on. */
+
+.bf-modes {
+  position: relative;
+  display: grid;
+  /* No gap: the indicator's width is `calc(50% - 3px)` of the padding box, so a
+     gap between the two buttons would put the ink half a gap off the label. */
+  grid-template-columns: 1fr 1fr;
+  margin: 2px 16px 14px;
+  padding: 3px;
+  border-radius: var(--ca-r-pill);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+}
+
+.bf-mode {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  border-radius: var(--ca-r-pill);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ca-muted);
+  transition: color var(--ca-mid) var(--ca-ease);
+}
+
+.bf-mode[aria-pressed="true"] {
+  color: var(--ca-ink);
+}
+
+.bf-mode-ink {
+  position: absolute;
+  z-index: 0;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: var(--ca-r-pill);
+  background: var(--ca-line-soft);
+  transition: transform var(--ca-mid) var(--ca-ease);
+}
+
+.bf[data-mode="preview"] .bf-mode-ink {
+  transform: translateX(100%);
+}
+
+/* ── Panes ── */
+
+.bf-panes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+  padding: 0 16px;
+}
+
+.bf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  /* Room for the sticky send bar and the app's tab bar under it. */
+  padding-bottom: calc(76px + var(--ca-tabbar-h, 60px) + env(safe-area-inset-bottom));
+}
+
+/* Scoped to the phone rather than overridden on the desktop: an override would
+   have to restore `display` to a value, and `revert` would hand `.bf-form` back
+   `block`, silently dropping its flex gap. */
+@media (max-width: 999px) {
+  .bf[data-mode="edit"] .bf-preview,
+  .bf[data-mode="preview"] .bf-form {
+    display: none;
+  }
+}
+
+.bf-preview {
+  min-width: 0;
+  padding-bottom: calc(76px + var(--ca-tabbar-h, 60px) + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1000px) {
+  .bf-head,
+  .bf-panes {
+    padding-inline: 26px;
+  }
+
+  /* Both panes, always. The switch is a phone affordance and stops existing. */
+  .bf-modes {
+    display: none;
+  }
+
+  .bf-panes {
+    grid-template-columns: minmax(0, var(--bf-form-w)) minmax(0, 1fr);
+    gap: 30px;
+  }
+
+  .bf-form {
+    padding-bottom: 64px;
+  }
+
+  .bf-send-desktop {
+    display: inline-flex;
+  }
+
+  /* The money shot: the document pinned beside the form, scrolling on its own.
+     `overscroll-behavior` keeps a trackpad flick inside the paper instead of
+     handing the rest of the gesture to the page. */
+  .bf-preview {
+    position: sticky;
+    top: var(--bf-top);
+    max-height: calc(100dvh - var(--bf-top) - 26px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 0;
+    border-radius: var(--ca-r-lg);
+    border: 1px solid var(--ca-line);
+    background: var(--ca-panel);
+    box-shadow: var(--ca-shadow);
+  }
+}
+
+.bf-preview-inner {
+  min-height: 100%;
+}
+
+.bf-preview-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ca-line);
+  background: rgb(255 255 255 / 0.88);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ca-muted);
+}
+
+.bf-preview-bar > svg {
+  flex: none;
+}
+
+.bf-preview-count {
+  margin-left: auto;
+}
+
+.bf-paper {
+  background: var(--ca-panel);
+}
+
+@media (max-width: 999px) {
+  .bf-preview {
+    border-radius: var(--ca-r-lg);
+    border: 1px solid var(--ca-line);
+    background: var(--ca-panel);
+    overflow: hidden;
+    box-shadow: var(--ca-shadow-sm);
+  }
+}
+
+/* ── Legal banner ──
+   Not dismissible, not collapsible, not behind a tooltip. */
+
+.bf-legal strong {
+  font-weight: 600;
+  color: var(--ca-ink);
+}
+
+.bf-frozen {
+  align-items: flex-start;
+}
+
+.bf-frozen strong {
+  color: inherit;
+}
+
+.bf-frozen-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ── Progress ── */
+
+.bf-progress {
+  padding: 14px 16px;
+  border-radius: var(--ca-r);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+}
+
+.bf-progress-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ca-muted);
+}
+
+.bf-progress-top strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ca-ink);
+}
+
+.bf-progress-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ca-warn);
+  text-align: right;
+}
+
+.bf-progress-flag > svg {
+  flex: none;
+}
+
+.bf-progress-flag[data-ok="true"] {
+  color: var(--ca-ok);
+}
+
+.bf-bar {
+  height: 5px;
+  margin-top: 10px;
+  border-radius: var(--ca-r-pill);
+  background: var(--ca-line-soft);
+  overflow: hidden;
+}
+
+.bf-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--ca-accent), var(--ca-accent-deep));
+  transition: width var(--ca-slow) var(--ca-ease);
+}
+
+.bf-missing {
+  margin-top: 9px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ca-muted);
+  text-wrap: pretty;
+}
+
+.bf-missing strong {
+  font-weight: 500;
+  color: var(--ca-ink-soft);
+}
+
+/* ── Sections ──
+   Native <details>, same instinct as the marketing FAQ. */
+
+.bf-group {
+  border-radius: var(--ca-r-lg);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+}
+
+.bf-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 16px;
+  min-height: 52px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.bf-group-head::-webkit-details-marker {
+  display: none;
+}
+
+.bf-group-chevron {
+  flex: none;
+  color: var(--ca-muted);
+  transition: transform var(--ca-mid) var(--ca-ease);
+}
+
+.bf-group[open] .bf-group-chevron {
+  transform: rotate(-180deg);
+}
+
+.bf-group-heading {
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15.5px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.bf-group-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: var(--ca-r-pill);
+  background: var(--ca-line-soft);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ca-muted);
+}
+
+.bf-group-count[data-complete] {
+  background: var(--ca-ok-soft);
+  color: var(--ca-ok);
+}
+
+.bf-group::details-content {
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+  transition:
+    block-size var(--ca-mid) var(--ca-ease),
+    opacity var(--ca-fast) var(--ca-ease),
+    content-visibility var(--ca-mid) var(--ca-ease) allow-discrete;
+}
+
+.bf-group[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-group::details-content {
+    transition: none;
+  }
+}
+
+/* Padding on the inner div rather than the content pseudo-element, so a focus
+   ring on the first control is not clipped by `overflow: clip` above. */
+.bf-group-body {
+  padding: 2px 16px 18px;
+  border-top: 1px solid var(--ca-line-soft);
+}
+
+/* ── Fields ── */
+
+.bf-field {
+  display: block;
+  padding-top: 18px;
+}
+
+.bf-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ca-ink);
+}
+
+/* Block, not flex. A flex container turns each text run around an inline <code>
+   or <svg> into its own flex item, which breaks a sentence into three gapped
+   fragments — help text has inline markup in it and has to read as prose. */
+.bf-help {
+  margin-top: 7px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ca-muted);
+  text-wrap: pretty;
+}
+
+.bf-help > svg {
+  margin-right: 3px;
+  vertical-align: -2px;
+}
+
+.bf-help code {
+  padding: 1px 4px;
+  border-radius: 5px;
+  background: var(--ca-line-soft);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+}
+
+.bf-center {
+  text-align: center;
+}
+
+.bf-optional {
+  margin-left: 5px;
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--ca-muted);
+}
+
+.bf-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 14px;
+}
+
+@media (min-width: 520px) {
+  .bf-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Safari renders a date input with its own intrinsic width and centres the
+   text; pin it to the field like every other control. */
+.bf-date {
+  min-height: 44px;
+  text-align: left;
+}
+
+.bf-date::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+/* ── Affixed numeric inputs (money, percent, exact slider value) ── */
+
+.bf-affixed {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--ca-r);
+  border: 1px solid var(--ca-line-strong);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow-sm);
+  transition:
+    border-color var(--ca-fast) var(--ca-ease),
+    box-shadow var(--ca-fast) var(--ca-ease);
+}
+
+.bf-affixed:focus-within {
+  border-color: var(--ca-accent);
+  box-shadow: 0 0 0 3px rgb(0 134 255 / 0.16);
+}
+
+.bf-affixed[data-disabled] {
+  opacity: 0.55;
+}
+
+.bf-affix {
+  display: grid;
+  place-items: center;
+  flex: none;
+  padding-inline: 13px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ca-muted);
+}
+
+.bf-affixed[data-suffix] .bf-affix {
+  padding-left: 4px;
+  padding-right: 14px;
+}
+
+.bf-affix-unit {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.bf-affixed-input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 13px 11px 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  /* 16px on touch or iOS Safari zooms the viewport and never zooms back. */
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ca-ink);
+}
+
+.bf-affixed[data-suffix] .bf-affixed-input {
+  padding-left: 13px;
+}
+
+.bf-affixed-input:focus {
+  outline: none;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .bf-affixed-input {
+    font-size: 15px;
+  }
+}
+
+/* ── Switch ──
+   44px of hit area around a 26px knob. The knob moves on transform so the
+   browser can composite it; the track colour crossfades under it. */
+
+.bf-field-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.bf-switch-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bf-switch-text .bf-label {
+  margin-bottom: 0;
+}
+
+.bf-switch {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 44px;
+  margin-top: -8px;
+  margin-right: -6px;
+  border-radius: var(--ca-r-sm);
+  background: transparent;
+}
+
+.bf-switch-track {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 27px;
+  border-radius: var(--ca-r-pill);
+  /* 3.23:1 on white. #d8d8d8 was 1.43:1 — the off state was the whole state
+     indicator and the whole component boundary, and it was invisible. */
+  background: #8f8f8f;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.09);
+  transition: background-color var(--ca-mid) var(--ca-ease);
+}
+
+.bf-switch[aria-checked="true"] .bf-switch-track {
+  background: var(--ca-accent-deep);
+}
+
+.bf-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.22),
+    0 2px 6px -2px rgb(0 0 0 / 0.2);
+  transition: transform var(--ca-mid) var(--ca-ease);
+}
+
+.bf-switch[aria-checked="true"] .bf-switch-knob {
+  transform: translateX(17px);
+}
+
+/* Squash on press, in the direction of travel. */
+.bf-switch:active:not(:disabled) .bf-switch-knob {
+  width: 25px;
+}
+
+.bf-switch[aria-checked="true"]:active:not(:disabled) .bf-switch-knob {
+  transform: translateX(13px);
+}
+
+.bf-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Segmented choice ──
+   Real radios underneath: arrow keys, one tab stop, and a form group for free.
+   Options with long prose labels stack rather than being crushed. */
+
+.bf-seg {
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--ca-r);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel-soft);
+}
+
+.bf-seg[data-layout="row"] {
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.bf-seg-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--ca-r-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ca-ink-soft);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color var(--ca-fast) var(--ca-ease),
+    color var(--ca-fast) var(--ca-ease),
+    box-shadow var(--ca-fast) var(--ca-ease);
+}
+
+.bf-seg[data-layout="col"] .bf-seg-item {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+@media (pointer: coarse) {
+  .bf-seg-item {
+    min-height: 44px;
+  }
+}
+
+/* The input is the accessible control; it is just not the visible one. */
+.bf-seg-item input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.bf-seg-item:hover {
+  background: var(--ca-line-soft);
+}
+
+.bf-seg-item:has(input:checked) {
+  background: var(--ca-panel);
+  color: var(--ca-ink);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.07),
+    inset 0 0 0 1px var(--ca-line);
+}
+
+.bf-seg-item:has(input:focus-visible) {
+  outline: 2px solid var(--ca-accent);
+  outline-offset: 1px;
+}
+
+.bf-seg-item:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bf-seg-item > span {
+  position: relative;
+  pointer-events: none;
+}
+
+/* ── Slider ──
+   The control this screen is judged on. Full-width track, 28px thumb, filled
+   portion in accent, visible detents, and a value that pops on every step.
+   See the ponytail note in fields.tsx: iOS Safari has no Vibration API, so all
+   of the feel has to be here. */
+
+.bf-slider {
+  --bf-pct: 0%;
+}
+
+.bf-slider-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.bf-slider-head .bf-label {
+  margin-bottom: 0;
+}
+
+.bf-slider-out {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.bf-slider-num {
+  display: inline-block;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-size: 21px;
+  font-weight: 550;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ca-ink);
+  animation: bf-pop 220ms var(--ca-ease);
+}
+
+@keyframes bf-pop {
+  from {
+    transform: scale(1.14);
+    color: var(--ca-accent-deep);
+  }
+}
+
+.bf-slider-unit {
+  font-size: 12.5px;
+  color: var(--ca-muted);
+}
+
+.bf-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  margin-top: 8px;
+}
+
+.bf-range {
+  /* 3.06:1 on the white card. --ca-line-soft is 1.13:1, which left the
+     control's full extent invisible — only the filled portion read as a
+     slider (SC 1.4.11 covers the boundary of a control, not just its state). */
+  --bf-range-track: #c4c4c4;
+  position: relative;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  cursor: grab;
+}
+
+.bf-range:active {
+  cursor: grabbing;
+}
+
+.bf-range:focus-visible {
+  outline: none;
+}
+
+/* Two vendor blocks, not one selector list: a browser drops the whole rule if
+   it does not recognise one selector in it, so ::-webkit and ::-moz have to be
+   written twice. */
+.bf-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: var(--ca-r-pill);
+  background-image: linear-gradient(
+    to right,
+    var(--ca-accent) var(--bf-pct),
+    var(--bf-range-track) var(--bf-pct)
+  );
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+}
+
+.bf-range::-moz-range-track {
+  height: 8px;
+  border-radius: var(--ca-r-pill);
+  background-image: none;
+  background-color: var(--bf-range-track);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+}
+
+.bf-range::-moz-range-progress {
+  height: 8px;
+  border-radius: var(--ca-r-pill);
+  background: var(--ca-accent);
+}
+
+/* Detents, as a background layer on the track itself rather than an element
+   over it: a sibling would have to sit above the track to be visible, and then
+   it would also sit above the 28px thumb. --bf-ticks comes in inline, and the
+   spacing falls out of it — one gradient, not twenty-four elements. Only drawn
+   where the step grid is coarse enough to count; a 1-of-5000 slider would be a
+   grey smear. */
+.bf-slider[data-ticks] .bf-range::-webkit-slider-runnable-track {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgb(10 10 10 / 0.17) 0 1px,
+      transparent 1px calc(100% / var(--bf-ticks))
+    ),
+    linear-gradient(to right, var(--ca-accent) var(--bf-pct), var(--ca-line-soft) var(--bf-pct));
+}
+
+/* Firefox paints ::-moz-range-progress over the track, so the ticks show on the
+   unfilled side only. That reads fine and is not worth a second mechanism. */
+.bf-slider[data-ticks] .bf-range::-moz-range-track {
+  background-image: repeating-linear-gradient(
+    to right,
+    rgb(10 10 10 / 0.17) 0 1px,
+    transparent 1px calc(100% / var(--bf-ticks))
+  );
+}
+
+.bf-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -10px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 1.5px var(--ca-accent-deep) inset,
+    0 1px 3px rgb(0 0 0 / 0.2),
+    0 6px 14px -6px rgb(0 60 130 / 0.45);
+  transition: transform var(--ca-fast) var(--ca-ease);
+}
+
+.bf-range::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--ca-accent-deep);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 1px 3px rgb(0 0 0 / 0.2),
+    0 6px 14px -6px rgb(0 60 130 / 0.45);
+  transition: transform var(--ca-fast) var(--ca-ease);
+}
+
+/* The tactile part. Grows under the finger, and grows further while dragging. */
+.bf-range:active::-webkit-slider-thumb {
+  transform: scale(1.16);
+}
+
+.bf-range:active::-moz-range-thumb {
+  transform: scale(1.16);
+}
+
+.bf-range:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 1.5px var(--ca-accent-deep) inset,
+    0 0 0 4px rgb(0 134 255 / 0.25);
+}
+
+.bf-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgb(0 134 255 / 0.25);
+}
+
+.bf-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.bf-slider-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ca-muted);
+}
+
+.bf-linkbtn {
+  margin-top: 10px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ca-accent-deep);
+  text-decoration: underline;
+  text-decoration-color: rgb(0 105 201 / 0.3);
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--ca-fast) var(--ca-ease);
+}
+
+.bf-linkbtn:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ── Clauses ── */
+
+.bf-clauses-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ca-muted);
+}
+
+.bf-clause-list {
+  margin-top: 14px;
+  border-top: 1px solid var(--ca-line-soft);
+}
+
+.bf-clause {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--ca-line-soft);
+  transition: opacity var(--ca-mid) var(--ca-ease);
+}
+
+.bf-clause-name {
+  min-width: 0;
+  font-size: 13.5px;
+  color: var(--ca-ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.bf-clause[data-out] {
+  opacity: 0.5;
+}
+
+.bf-clause[data-out] .bf-clause-name {
+  text-decoration: line-through;
+  text-decoration-color: var(--ca-muted);
+}
+
+.bf-clause-btn {
+  margin-left: auto;
+  padding-inline: 10px;
+  font-size: 12.5px;
+}
+
+.bf-clause-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ca-muted);
+}
+
+/* ── Signers ── */
+
+.bf-party-list {
+  margin-top: 12px;
+}
+
+.bf-party {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ca-line-soft);
+}
+
+.bf-party-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.bf-party-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.bf-party-meta {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  color: var(--ca-muted);
+}
+
+.bf-addbtn {
+  margin-top: 14px;
+}
+
+.bf-addparty {
+  margin-top: 4px;
+  animation: ca-rise var(--ca-mid) var(--ca-ease) both;
+}
+
+.bf-addparty .ca-row {
+  margin-top: 18px;
+}
+
+/* ── Send ── */
+
+.bf-sendcard .ca-banner,
+.bf-sendcard .ca-btn-block {
+  margin-top: 14px;
+}
+
+.bf-sendcard .bf-help {
+  margin-top: 8px;
+}
+
+.bf-void {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 2px 0;
+}
+
+/* Sticky action bar. Sits above the app's own tab bar rather than over it, and
+   clears the home indicator on an iPhone. */
+.bf-sendbar {
+  position: fixed;
+  z-index: 25;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--ca-tabbar-h, 60px) + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--ca-line);
+  background: rgb(255 255 255 / 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.bf-sendbar .ca-btn {
+  margin-left: auto;
+}
+
+.bf-sendbar-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ca-warn);
+}
+
+.bf-sendbar-state > svg {
+  flex: none;
+}
+
+.bf[data-mode="preview"] .bf-sendbar-state {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .bf-sendbar {
+    display: none;
+  }
+}
+
+/* ── Notes ── */
+
+.bf-notes-help {
+  margin-bottom: 12px;
+}
+
+/* ── Share screen ── */
+
+.bf-share {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-inline: auto;
+  max-width: 640px;
+  padding: 22px 16px calc(40px + var(--ca-tabbar-h, 60px));
+}
+
+@media (min-width: 900px) {
+  .bf-share {
+    padding: 34px 26px 64px;
+  }
+}
+
+.bf-share-hero {
+  padding: 10px 0 4px;
+  text-align: center;
+  animation: ca-rise var(--ca-slow) var(--ca-ease) both;
+}
+
+.bf-share-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  background: var(--ca-ok-soft);
+  color: var(--ca-ok);
+  animation: bf-seal 620ms var(--ca-ease) both;
+}
+
+/* One settle, not a bounce. Celebratory but calm — the creator is about to text
+   a client, not collect a badge. */
+@keyframes bf-seal {
+  from {
+    opacity: 0;
+    transform: scale(0.78);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+}
+
+.bf-share-card {
+  animation: ca-rise var(--ca-slow) var(--ca-ease) both;
+}
+
+.bf-share-card .ca-h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bf-share-card .ca-h2 > svg {
+  flex: none;
+  color: var(--ca-muted);
+}
+
+.bf-link {
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: var(--ca-r);
+  border: 1px dashed var(--ca-line-strong);
+  background: var(--ca-panel-soft);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ca-ink);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.bf-share-actions {
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.bf-share-note {
+  margin-top: 16px;
+}
+
+.bf-message {
+  margin: 12px 0 14px;
+  padding: 14px;
+  border-radius: var(--ca-r);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel-soft);
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ca-ink-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bf-share-foot {
+  justify-content: center;
+}
+
+/* ── Sealed record ── */
+
+.bf-record {
+  padding: 20px 16px calc(40px + var(--ca-tabbar-h, 60px));
+}
+
+@media (min-width: 900px) {
+  .bf-record {
+    padding: 26px 26px 64px;
+  }
+}
+
+.bf-record-head {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.bf-record-head-main {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.bf-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bf-record-sealed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ca-ok);
+}
+
+.bf-record-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+@media (min-width: 1080px) {
+  .bf-record-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+    gap: 26px;
+  }
+}
+
+.bf-record-doc {
+  border-radius: var(--ca-r-lg);
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  box-shadow: var(--ca-shadow);
+  overflow: hidden;
+}
+
+.bf-record-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.bf-record-side .ca-h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bf-record-side .ca-h2 > svg {
+  flex: none;
+  color: var(--ca-muted);
+}
+
+.bf-record-side .bf-help {
+  margin-top: 8px;
+}
+
+/* Shown in full, wrapping wherever it must. A truncated hash cannot be checked,
+   which makes it decoration. */
+.bf-hash {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--ca-r-sm);
+  background: var(--ca-line-soft);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ca-ink-soft);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* ── Audit trail ── */
+
+/* globals.css resets `ul` but not `ol`, and this is an ordered list on purpose —
+   the order of an audit trail is the information. */
+.bf-trail {
+  position: relative;
+  margin: 14px 0 0;
+  padding-left: 4px;
+  list-style: none;
+}
+
+.bf-trail-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.bf-trail-item:last-child {
+  padding-bottom: 0;
+}
+
+/* The rail, drawn from each mark down to the next rather than as one absolute
+   line, so it always ends at the last event. */
+.bf-trail-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 2px;
+  left: 11px;
+  width: 1px;
+  background: var(--ca-line);
+}
+
+.bf-trail-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  border: 1px solid var(--ca-line);
+  background: var(--ca-panel);
+  color: var(--ca-muted);
+}
+
+.bf-trail-text {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.bf-trail-label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ca-ink);
+  text-wrap: pretty;
+}
+
+.bf-trail-who {
+  display: block;
+  margin-top: 1px;
+  font-size: 12.5px;
+  color: var(--ca-ink-soft);
+}
+
+.bf-trail-time {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--ca-muted);
+}
+
+/* ── Print ──
+   agreement.css drops shared chrome and `.doc-no-print`. These are this
+   screen's own containers: the border and shadow around the paper would print
+   as a box drawn around the contract. */
+
+@media print {
+  .bf-record,
+  .bf-record-body,
+  .bf-record-doc,
+  .bf-record-side {
+    display: block;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .bf-record-side {
+    display: none;
+  }
+
+  .bf,
+  .bf-modes,
+  .bf-sendbar,
+  .bf-form,
+  .bf-preview-bar {
+    display: none !important;
+  }
+}

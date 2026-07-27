@@ -12,7 +12,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
   videographers. `cue.krevo.io` is the intended production domain but has no DNS
   record yet; only `staging.cue.krevo.io` resolves. It is a Krevo product but a
   separate codebase from the main Krevo application.
-- [`solution.md`](./solution.md) is the product spec: positioning, copy, pricing,
+- [`docs/solution.md`](./docs/solution.md) is the product spec: positioning, copy, pricing,
   architecture, and non-goals. Read it before changing product surface or copy.
 - Live code, configuration, and tests are authoritative. Keep tasks focused and
   preserve unrelated working-tree changes.
@@ -21,7 +21,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Product truth
 
 - The customer-facing object is **a Cue**. The core line is
-  **"Send the Cue. Get the yes. Keep the record."** `solution.md` names
+  **"Send the Cue. Get the yes. Keep the record."** `docs/solution.md` names
   **"Create your first Cue"** as the launch CTA — hold it until there is
   something to create; until then every button on the public site reads
   **"Join the waitlist"**.
@@ -33,10 +33,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
   payment product, or invoicing tool. Reject scope that drifts toward those.
 - Cue is not a law firm and gives no legal advice. Keep that disclaimer in the
   footer and avoid claiming legal enforceability beyond the audit record.
-- The public site must not advertise `/console`. It is the operator's ops
-  surface, signup is disabled, and a visitor can never get in — a "Sign in" link
-  in the nav promises a customer account system that does not exist. The
-  operator reaches it by bookmark.
+- The public site must not advertise `/console` — it is the operator's ops
+  surface, reached by bookmark. Customer sign-in lives at `/app/login`.
 - Describe unbuilt behaviour in the future tense on the public site. Present
   tense on the signing, PDF, email, and audit features reads as a claim that
   they work today.
@@ -45,15 +43,24 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 What exists:
 
-- **The marketing landing page.** `src/app/page.tsx` composes it from
-  `src/components/*`. Its only working action is the waitlist.
-- **The waitlist.** `src/app/actions.ts` (`"use server"`) validates the email,
-  rate-limits on a salted hash of the client IP through Redis, and inserts into
-  the Postgres `waitlist` table. It sends no mail — no email provider is wired.
-- **An operator-only console** at `/console`, guarded by Better Auth
-  (`src/lib/auth.ts`) with `disableSignUp: true`. The single operator account is
-  seeded by `scripts/seed-operator.mjs`. It reads waitlist stats and container
-  health. It is **not** a customer account system.
+- **The marketing landing page** (`src/app/page.tsx` from `src/components/*`)
+  and **the waitlist** (`src/app/actions.ts`): validates the email, rate-limits
+  on a salted hash of the client IP through Redis, inserts into `waitlist`.
+  It sends no mail.
+- **An operator-only console** at `/console`. Signup is no longer disabled —
+  customers need accounts — so the guard is now the `role` column added in
+  migration 007. `/console` checks `isOperator()` (`src/lib/studio.ts`) and
+  redirects a creator to `/app`. Nothing in `auth.ts` can grant `operator`; only
+  a direct database write or `scripts/seed-operator.mjs` can. It is **not** a
+  customer account system.
+- **The customer application** at `/app` (added 2026-07-26): auth, workspace,
+  template picker, builder, share screen, sealed record. Scoped to `.ca`.
+- **The client signing flow** at `/s/[token]`, public and account-free — a
+  read-to-the-end consent gate, a hand-written `<canvas>` pad, and a server
+  action that re-derives every fact from the token.
+- **The agreement engine**: `src/lib/agreement.ts` (pure), six templates as data
+  in `templates.ts`, lifecycle rules in `cue.ts`, I/O in `cue-db.ts`. A template
+  is a question spec plus conditional clauses — a shoot type is data, not code.
 - **Four API routes**: `/api/auth/[...all]` (Better Auth), `/api/health`
   (operator-gated probes), `/api/ping` (container liveness), `/api/waitlist`
   (operator-gated guest list and status PATCH).
@@ -62,11 +69,25 @@ What exists:
   describing exactly what `actions.ts` and `db.ts` do, and nothing more. No
   compliance claims (GDPR, SOC 2, DPO) — none have been done.
 
-What does not exist, and must not be described as if it did: the signing flow,
-templates, PDF rendering, the audit record, customer accounts, object storage,
-a background worker, an email provider, and Stripe.
+What does not exist, and must not be described as if it did: **an email
+provider** (nothing is ever mailed — sharing the link is the only delivery, and
+both the share screen and the sealed page say so), **server-side PDF rendering**
+(the "final PDF" is `window.print()` against the print stylesheet in
+`src/components/agreement.css`), object storage, a background worker, saved or
+custom templates, multiple users per studio, and Stripe.
 
-- Pricing is static. Per the launch billing decision in `solution.md`, define the
+The landing page still describes the product in the future tense. It has not
+been updated to match the app and must not be, until the app is deployed and
+the claims are actually true of production.
+
+Five invariants carry the product: content freezes when a Cue leaves `draft`;
+the client is served `cue.snapshot`, never a re-render; `cue_event` is
+append-only; `shoot_date` is read via `to_char`; money is integer cents. Each is
+explained at its definition in `src/lib/{cue,cue-db,agreement}.ts` and pinned by
+`cue.test.ts` / `agreement.test.ts`. Read the comment and the test before
+changing any of them — every one of the five has a non-obvious reason.
+
+- Pricing is static. Per the launch billing decision in `docs/solution.md`, define the
   Free, Creator, and Studio plans in the product but **do not wire Stripe for
   version one**.
 - Placeholder testimonials were **deleted** on 2026-07-25 rather than shipped.
@@ -85,11 +106,11 @@ a background worker, an email provider, and Stripe.
   (`src/lib/redis.ts`, rate limiting only — it fails open).
 - `src/lib/docker.ts` reads container health from a read-only
   docker-socket-proxy over HTTP. The app never touches `/var/run/docker.sock`.
-- Still planned per `solution.md` and not started: a PDF/reminder worker,
+- Still planned per `docs/solution.md` and not started: a PDF/reminder worker,
   S3-compatible object storage, a transactional email provider, and error and
   uptime monitoring.
 - Deployment is Docker Compose behind Caddy on a single VPS, never Vercel.
-  `solution.md` recommends DigitalOcean; the box actually in use is a Linode
+  `docs/solution.md` recommends DigitalOcean; the box actually in use is a Linode
   (see Deployment). Nothing in the stack depends on the provider.
 
 ## Design system
@@ -115,9 +136,12 @@ a background worker, an email provider, and Stripe.
 - Follow file-local style. Use `@/` imports for `src/` modules, keep strict
   typing, and do not silence errors with `any` or broad casts.
 - Prefer Server Components. Add `"use client"` only for browser APIs, local
-  interaction, or client hooks. Today that is seven files: `nav.tsx`,
-  `flow.tsx` (`Flow` and `Steps`), `reveal.tsx`, `anim-host.tsx`,
-  `waitlist.tsx`, `console/dashboard.tsx`, and `console/login/form.tsx`.
+  interaction, or client hooks. On the marketing site that is `nav.tsx`,
+  `flow.tsx` (`Flow` and `Steps`), `reveal.tsx`, `anim-host.tsx`, `waitlist.tsx`,
+  `console/dashboard.tsx`, and `console/login/form.tsx`. In `/app` and `/s` it is
+  the auth forms, the app nav, the builder and its fields, and the signing
+  controls — everything else there is server-rendered, and the signing page in
+  particular must stay that way.
 - Reach for native platform features before dependencies. The FAQ uses native
   `<details>` rather than an accordion library; keep that instinct.
 - Do not add dependencies without asking first. Suggest, then wait.
@@ -192,16 +216,6 @@ ssh root@172.236.109.208 'cd /opt/cue && set -a && . ./.env && set +a && \
 ```
 
 It is idempotent — it exits without changes if the account already exists.
-
-## When the product is built
-
-- Store the final rendered agreement, signer information, consent, timestamps,
-  delivery events, and a document hash as an immutable audit record.
-- Rate-limit public signing endpoints and protect invite links with unguessable
-  tokens.
-- Enforce HTTPS and secure session cookies; keep PostgreSQL off the public
-  network; keep secrets out of source control.
-- Maintain nightly encrypted off-site database backups and test restores.
 
 ## Maintaining this file
 
