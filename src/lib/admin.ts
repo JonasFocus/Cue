@@ -321,6 +321,11 @@ export type StudioDetail = {
   ownerName: string;
   ownerEmailVerified: boolean;
   ownerSince: string;
+  /* Read so the detail page can show what the invite gate would actually
+     decide, via the same accessDecision() the gate calls. An operator holds no
+     invite and never needs one, and without the role the page would report
+     that as "no invite on file" — alarming, and wrong. */
+  ownerRole: string;
 };
 
 export async function studioDetail(id: number): Promise<StudioDetail | null> {
@@ -342,12 +347,14 @@ export async function studioDetail(id: number): Promise<StudioDetail | null> {
     owner_name: string;
     owner_verified: boolean;
     owner_since: Date;
+    owner_role: string;
   }>(
     `SELECT st.id, st.name, st.legal_name, st.email, st.phone, st.address,
             st.brand_color, st.plan, st.sent_count, st.created_at, st.updated_at,
             st.owner_user_id,
             u.email AS owner_email,
             u.name  AS owner_name,
+            u.role  AS owner_role,
             u."emailVerified" AS owner_verified,
             u."createdAt"     AS owner_since
        FROM studio st
@@ -375,6 +382,7 @@ export async function studioDetail(id: number): Promise<StudioDetail | null> {
     ownerName: r.owner_name,
     ownerEmailVerified: r.owner_verified,
     ownerSince: r.owner_since.toISOString(),
+    ownerRole: r.owner_role,
   };
 }
 
@@ -734,7 +742,19 @@ export async function adminCueDetail(
    record is immutable by the client, by the studio, and by us. Support access
    is not tamper access. */
 
-export const ADMIN_ACTIONS = ["studio.profile", "studio.plan"] as const;
+/* The invite actions carry no target_studio_id — an invite exists before any
+   studio does — so they are audited by invite *id* in `meta`, never by email.
+   An invitee's address is personal data belonging to somebody who has not even
+   signed up yet; the invite table holds it and can delete it, while admin_event
+   refuses UPDATE and DELETE and would keep it forever. Same rule as the note on
+   recordAdminEvent below. */
+export const ADMIN_ACTIONS = [
+  "studio.profile",
+  "studio.plan",
+  "invite.create",
+  "invite.access",
+  "invite.delete",
+] as const;
 export type AdminAction = (typeof ADMIN_ACTIONS)[number];
 
 /** Returns the new plan, or null when no studio has that id. */

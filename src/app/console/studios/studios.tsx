@@ -26,7 +26,9 @@ import {
 
 const INITIAL: AdminActionState = { status: "idle", message: "" };
 
-function Feedback({ state, pending }: { state: AdminActionState; pending: boolean }) {
+/* Exported for the invites surface, which posts to its own actions but returns
+   the same {status, message} shape and should not grow a second look for it. */
+export function Feedback({ state, pending }: { state: AdminActionState; pending: boolean }) {
   if (pending) {
     return (
       <span className="cs-feedback" role="status">

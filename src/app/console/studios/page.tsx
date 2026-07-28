@@ -98,6 +98,9 @@ export default async function StudiosPage({
             Customers
             <b>{overview.studios.toLocaleString()}</b>
           </Link>
+          <Link className="cx-tab" href="/console/invites">
+            Invites
+          </Link>
         </nav>
 
         <main className="cx-pane">

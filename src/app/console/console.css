@@ -1597,6 +1597,12 @@ a.cx-tab[aria-current="page"]::after {
 }
 
 .cs-button {
+  /* inline-flex, not the button default: several of these carry a leading icon,
+     and inline-block drops it onto its own line above the label. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 38px;
   padding: 9px 14px;
   border-radius: 10px;
@@ -2064,5 +2070,226 @@ a.cx-tab[aria-current="page"]::after {
   .cs-col .cx-table td.cs-name {
     grid-column: 1;
     grid-row: 1;
+  }
+}
+
+/* ── Centring the customer surface ────────────────────────────────────────────
+   The column was already centred; what sat left was everything inside it. This
+   centres the parts that read as page furniture — the hero copy, its figures,
+   the section labels and the toolbar — and deliberately leaves the tables
+   alone.
+
+   Tables stay left-aligned because a data table is scanned down a column, not
+   read across a line. Centred cells give every row a different left edge, which
+   is exactly the ragged effect that makes eight columns of counts hard to
+   compare. Symmetry is not the goal; legibility is, and the two disagree here.
+
+   Scoped to .cs-col so the dashboard's own hero and guest list are untouched. */
+
+.cs-col .cx-hero-body {
+  text-align: center;
+  padding: 30px 32px 30px;
+}
+
+/* .cx-hero-sub caps its measure at 46ch, which centres as a block hugging the
+   left of the panel unless the auto margins are put back. */
+.cs-col .cx-hero-sub {
+  margin-inline: auto;
+}
+
+.cs-col .cx-figures {
+  justify-content: center;
+  gap: 40px;
+}
+
+/* The hero status line and the plan tag on the customer page are inline-flex,
+   so text-align above already centres them — but the detail page's status line
+   wraps an email address, and at a narrow width the second line should stay
+   centred with the first. */
+.cs-col .cx-hero-status {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Section labels sit above left-aligned tables, so they keep their left edge —
+   a centred label over a left-aligned table looks like a mistake rather than a
+   choice. The intro paragraphs under them do centre, because they are prose. */
+.cs-col .cs-hint {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.cs-col .cx-label {
+  text-align: center;
+}
+
+/* The toolbar becomes one centred group. `.cs-count` gave up its margin-left:
+   auto — pushed to the far right it was no longer part of the group it
+   describes. */
+.cs-toolbar {
+  justify-content: center;
+}
+
+.cs-toolbar .cs-count {
+  margin-left: 0;
+}
+
+.cs-col .cx-note {
+  max-width: 74ch;
+  margin-inline: auto;
+  text-align: center;
+}
+
+/* Centred, the leading icon lands at the ragged left edge of a wrapped
+   paragraph and reads as debris. Above the text it reads as a mark on it. */
+.cs-col .cx-note svg {
+  display: block;
+  margin: 0 auto 7px;
+  vertical-align: baseline;
+}
+
+.cs-col .cs-pager {
+  justify-content: space-between;
+}
+
+/* The breadcrumb is navigation, not content: it belongs at the top left corner
+   of the page, where a back link is looked for. */
+.cs-crumb {
+  justify-content: flex-start;
+}
+
+/* ── Invites (/console/invites) ───────────────────────────────────────────────
+   A list of cards rather than a table. Each row carries a person, a state, a
+   date picker and three buttons — that is a form per row, and forms do not fit
+   in table cells without the whole thing collapsing at the first narrow
+   window. */
+
+.ci-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ci-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px 22px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  transition: border-color 160ms ease;
+}
+
+.ci-row:hover {
+  border-color: var(--line-strong);
+}
+
+.ci-who {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ci-who b {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.ci-who span {
+  font-size: 12.5px;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+
+.ci-who em {
+  margin-top: 4px;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+  color: var(--faint);
+}
+
+.ci-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  justify-content: flex-end;
+}
+
+/* The controls span both columns and sit under a hairline: they are what you do
+   to the row, not more of what the row says. */
+.ci-controls {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hair);
+}
+
+.ci-until {
+  max-width: 190px;
+}
+
+/* Destructive, but not shouting. Red on hover only — a row of permanently red
+   buttons makes the whole list read as a hazard, and revoking somebody's trial
+   is a normal Tuesday. */
+.ci-danger:hover:not(:disabled) {
+  border-color: #e5484d;
+  background: rgb(229 72 77 / 0.1);
+  color: #ff9ea1;
+}
+
+.ci-copy[data-copied] {
+  border-color: var(--ok);
+  color: var(--ink);
+}
+
+.ci-copy svg,
+.ci-controls svg,
+.ci-compose svg {
+  vertical-align: -1px;
+}
+
+.ci-compose .cs-form-foot {
+  margin-top: 16px;
+}
+
+.ci-field-note {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+
+.ci-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+@media (max-width: 780px) {
+  .ci-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ci-meta {
+    justify-content: flex-start;
+  }
+
+  .ci-until {
+    max-width: none;
+    flex: 1 1 100%;
   }
 }

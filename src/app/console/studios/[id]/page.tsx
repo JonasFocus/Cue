@@ -22,6 +22,15 @@ import {
   STATUS_TONE,
 } from "@/lib/cue";
 import { PLAN_LABEL } from "@/lib/cue";
+import {
+  accessDecision,
+  inviteByEmail,
+  inviteState,
+  INVITE_STATE_LABEL,
+  INVITE_STATE_TONE,
+  type Access,
+  type Invite,
+} from "@/lib/invite";
 import { requireOperator } from "@/lib/studio";
 import { PlanControl, ProfileForm } from "../studios";
 import "../../console.css";
@@ -62,6 +71,18 @@ function day(iso: string): string {
   });
 }
 
+/* The second line of the Access row: the date that explains the state, not the
+   period regardless of it. A revoked invite reporting "no end date" is true of
+   its window and useless next to the word Revoked — what the operator wants
+   there is when it was withdrawn. */
+function accessNote(access: Access, invite: Invite | null): string {
+  if (access.reason === "operator") return "operators hold no invite and never lapse";
+  if (!invite) return "no invite for this address — they cannot sign in";
+  if (invite.revokedAt) return `withdrawn ${day(invite.revokedAt)}`;
+  if (!invite.expiresAt) return "no end date";
+  return `${access.reason === "expired" ? "ended" : "until"} ${day(invite.expiresAt)}`;
+}
+
 function trailDetail(entry: AdminTrailEntry): string {
   const meta = entry.meta ?? {};
   if (entry.action === "studio.plan") {
@@ -97,7 +118,7 @@ export default async function StudioPage({
   const cueId = Number(rawCue);
   const wantsCue = rawCue !== undefined && Number.isSafeInteger(cueId) && cueId > 0;
 
-  const [usage, clients, cues, trail, detail] = await Promise.all([
+  const [usage, clients, cues, trail, detail, invite] = await Promise.all([
     studioUsage(studioId),
     wantsCue ? Promise.resolve([]) : studioClients(studioId),
     wantsCue ? Promise.resolve([]) : studioCues(studioId),
@@ -105,9 +126,19 @@ export default async function StudioPage({
     // Scoped by studio id as well as Cue id, so a Cue reached through the wrong
     // customer's URL is a 404 rather than a quietly mismatched screen.
     wantsCue ? adminCueDetail(studioId, cueId) : Promise.resolve(null),
+    // Keyed on the owner's address, which is what binds an account to an
+    // invite — see the note in src/lib/invite.ts.
+    inviteByEmail(studio.ownerEmail),
   ]);
 
   if (wantsCue && !detail) notFound();
+
+  /* The same pure function the gate calls, not a second opinion about it. A
+     support screen that says "active" while requireStudio() is redirecting
+     them to /app/locked is worse than showing nothing at all. */
+  const now = new Date();
+  const access = accessDecision({ role: studio.ownerRole, invite }, now);
+  const inviteLabel = invite ? inviteState(invite, now) : null;
 
   const allowance =
     studio.plan === "free"
@@ -133,6 +164,9 @@ export default async function StudioPage({
           </Link>
           <Link className="cx-tab" href="/console/studios" aria-current="page">
             Customers
+          </Link>
+          <Link className="cx-tab" href="/console/invites">
+            Invites
           </Link>
         </nav>
 
@@ -333,6 +367,48 @@ export default async function StudioPage({
                   ))}
                 </tbody>
               </table>
+
+              {/* Read-only on purpose. Every control that changes an invite
+                  lives on /console/invites, so there is one place where access
+                  is granted and withdrawn rather than two that can disagree —
+                  and the revalidatePath in the invite actions only has one
+                  page to keep honest. */}
+              <p className="cx-label">Access</p>
+              <div className="cx-list">
+                <div className="cx-row">
+                  <span
+                    className={`cs-tone-${
+                      access.reason === "operator"
+                        ? "neutral"
+                        : inviteLabel
+                          ? INVITE_STATE_TONE[inviteLabel]
+                          : "warn"
+                    }`}
+                  >
+                    <span className="cx-dot" />
+                  </span>
+                  <span className="cx-row-name">
+                    {access.reason === "operator"
+                      ? "Operator"
+                      : inviteLabel
+                        ? INVITE_STATE_LABEL[inviteLabel]
+                        : "No invite"}
+                    <em>
+                      {access.allowed ? "can use the app" : "locked out of the app"}
+                    </em>
+                  </span>
+                  <span className="cx-row-note">{accessNote(access, invite)}</span>
+                  <span className="cx-row-num">
+                    {invite ? (
+                      <Link className="cs-quiet-link" href="/console/invites">
+                        Manage
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
+                  </span>
+                </div>
+              </div>
 
               <p className="cx-label">Account</p>
               <p className="cs-hint">

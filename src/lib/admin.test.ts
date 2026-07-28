@@ -197,7 +197,10 @@ test("shoot_date is read through to_char, never as a Date", () => {
 test("every admin action is recordable", () => {
   assert.ok(ADMIN_ACTIONS.length > 0);
   for (const action of ADMIN_ACTIONS) {
-    assert.match(action, /^studio\.[a-z]+$/);
+    // `<subject>.<verb>`, so the trail groups by what was acted on. Studio
+    // actions carry a target_studio_id; invite actions carry an id in `meta`,
+    // because an invite predates the studio it may one day become.
+    assert.match(action, /^(studio|invite)\.[a-z]+$/);
   }
 });
 
