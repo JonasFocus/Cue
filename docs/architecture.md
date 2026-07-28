@@ -215,28 +215,31 @@ confirmation rather than showing an error.
 
 ## Deployment
 
-Docker Compose behind Caddy on a single Linode VPS. Never Vercel.
+Vercel, since 2026-07-28. Postgres is Neon and the rate limiter is Upstash, both
+through the Vercel Marketplace, both in `us-east-1` with functions pinned to
+`iad1`.
 
 ```
-                    ┌──────────────── VPS ────────────────┐
-  client ──HTTPS──► │ caddy ──► app (Next.js)             │
-                    │            ├──► postgres  ┐         │
-                    │            ├──► redis     │ network:│
-                    │            └──► dockerproxy│ internal│
-                    └─────────────────────────────────────┘
+  client ──HTTPS──► Vercel edge ──► Next.js function (iad1)
+                                      ├──► Neon Postgres (pooled)
+                                      └──► Upstash Redis (REST)
 ```
 
-`postgres`, `redis` and `dockerproxy` sit on an `internal: true` network with no
-published ports and no egress. The app reads container health through a
-read-only docker-socket-proxy — never `/var/run/docker.sock` directly.
+Three things differ from the VPS it replaced, and each is load-bearing:
 
-Redis is used for rate limiting only, and **fails open**: it being down must not
-stop a legitimate signup or signing. The abuse ceiling that must not fail open
-lives in Postgres instead.
+- **Security headers live in `next.config.ts`.** Caddy used to send the CSP,
+  HSTS and the rest; Vercel sends none of them by default.
+- **Client IP comes from `x-forwarded-for` only.** Vercel overwrites that header
+  to prevent spoofing and documents nothing about `x-real-ip`, so `x-real-ip` is
+  not read at all. The value is salted into `cue_party.ip_hash`.
+- **`statement_timeout` is set on the database role**, not in the pool. Neon's
+  pooled endpoint rejects unknown startup parameters, which is what
+  node-postgres sends that option as.
 
-Deploy: commit, push, then `ssh root@… '/opt/cue/scripts/deploy.sh'`. It fetches,
-rebuilds, restarts, runs pending migrations, waits for the health check, and
-prunes build cache. Exact commands are in [`AGENTS.md`](../AGENTS.md).
+Redis is still rate limiting only and still **fails open**; the abuse ceiling
+that must not fail open lives in Postgres.
+
+Migrations are not run by any deploy. See [`AGENTS.md`](../AGENTS.md).
 
 ---
 
@@ -253,7 +256,7 @@ Not oversights — decisions. See [`solution.md`](./solution.md) for the reasoni
 | Background worker | Nothing is queued, so nothing needs one yet. |
 | Saved/custom templates | The six system templates are code. Per-Cue clause removal covers most of the need. |
 | Multiple users per studio | `studio.owner_user_id` is 1:1 and `UNIQUE`. |
-| Database backups | **None.** A deliberate, owner-accepted risk on staging. |
+| Database backups | Neon point-in-time restore. The nightly `pg_dump` died with the VPS; no separate copy is kept, by decision. |
 
 ---
 

@@ -202,10 +202,10 @@ Honest list. These are not hypothetical.
 
 | Gap | Severity |
 | --- | --- |
-| **No database backups.** | **High.** Accepted on staging. Not acceptable the day a real client signs a real agreement — that is an unrecoverable legal record. |
+| **No backup beyond Neon PITR.** | **Medium, accepted 2026-07-28.** Neon point-in-time restore covers an accidental delete or a bad migration; there is no second, independent copy. Know the retention window your plan gives. |
 | No email verification on signup | Medium. Anyone can register any address. Matters more once studios carry real client data. |
 | No 2FA, no password reset | Medium. Reset requires an email provider, which is not wired. |
-| Share tokens in access logs | Medium. Caddy logs the full request URI to `/data/access.log`, and the token is a path segment — so anyone with read access to that volume (a log shipper, a backup) recovers every signing link. Strip or hash `/s/*` paths in the log directive. |
+| Share tokens in request logs | Medium. The token is a path segment, so any full-URI log records every signing link. Caddy's access log is gone with the VPS; the equivalent now is Vercel's runtime logs and any log drain attached to the project. |
 | Signature PNGs in Postgres | Low now, wrong at scale. Object storage is the planned home. |
 | No audit-log export | Low. The record is visible in the UI and printable, but not extractable as data. |
 | No penetration test | Nothing here has been externally reviewed. |
@@ -218,4 +218,4 @@ There is no incident process, no on-call, and no monitoring beyond the health
 check. For a pre-launch product with no customers that is a defensible trade —
 it stops being defensible the moment a real agreement is signed on it.
 
-The minimum before that: backups with a tested restore, and error monitoring.
+The minimum before that: error monitoring. Backups are Neon PITR by decision.

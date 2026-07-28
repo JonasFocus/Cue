@@ -47,3 +47,11 @@ next-env.d.ts
 
 # Local, machine-specific notes — never committed
 CLAUDE.local.md
+
+# Agent skills installed by Vercel Marketplace integrations
+.agents/
+.claude/skills/
+skills-lock.json
+
+# Overnight loop state — working notes, not part of the product
+.loop/
