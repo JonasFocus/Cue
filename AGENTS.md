@@ -112,17 +112,29 @@ changing any of them — every one of the five has a non-obvious reason.
 - `next/font` supplies Geist (headings) and Inter (body). Do not add font
   packages; the CSS reads `--font-geist` and `--font-inter`.
 - `lucide-react` is the only icon dependency.
-- Runtime dependencies beyond React and Next: `better-auth` (console sessions),
-  `pg` (`src/lib/db.ts`, one pooled client stashed on `globalThis`), and `redis`
-  (`src/lib/redis.ts`, rate limiting only — it fails open).
-- `src/lib/docker.ts` reads container health from a read-only
-  docker-socket-proxy over HTTP. The app never touches `/var/run/docker.sock`.
+- Runtime dependencies beyond React and Next: `better-auth` (sessions), `pg`
+  (`src/lib/db.ts`, one pooled client stashed on `globalThis`), `@upstash/redis`
+  (`src/lib/redis.ts`, rate limiting only — it fails open), and
+  `@vercel/functions` (`attachDatabasePool`).
+- **Security headers live in `next.config.ts`**, not in a proxy. Caddy used to
+  send the CSP, HSTS, `X-Frame-Options`, `Permissions-Policy` and COOP; Vercel
+  sends none of them by default. `X-Robots-Tag` is derived from `VERCEL_ENV` at
+  build time, so preview deployments are never indexable.
+- **Client IP comes from `x-forwarded-for` only** (`src/lib/client-ip.ts`).
+  Vercel overwrites that header to prevent spoofing; nothing documents the same
+  for `x-real-ip`, so it is not read. The value is salted into
+  `cue_party.ip_hash` as signature evidence — do not widen this.
+- **`statement_timeout` is set on the database role, not in the pool.** Neon's
+  pooled endpoint rejects unknown startup parameters, and node-postgres sends
+  that option as one, so setting it in `db.ts` fails *every* pooled connection.
+  See the comment there before reinstating it.
 - Still planned per `docs/solution.md` and not started: a PDF/reminder worker,
   S3-compatible object storage, a transactional email provider, and error and
   uptime monitoring.
-- Deployment is Docker Compose behind Caddy on a single VPS, never Vercel.
-  `docs/solution.md` recommends DigitalOcean; the box actually in use is a Linode
-  (see Deployment). Nothing in the stack depends on the provider.
+- Deployment is **Vercel** (migrated 2026-07-28 from Docker Compose behind Caddy
+  on a Linode). Postgres is Neon and the rate limiter is Upstash, both via the
+  Vercel Marketplace, both in `us-east-1` alongside functions pinned to `iad1`
+  in `vercel.json`. Nothing in the app depends on the provider.
 
 ## Design system
 
@@ -171,7 +183,6 @@ npm run lint
 npx tsc --noEmit
 npm run test      # node:test, no framework — see src/lib/waitlist.test.ts
 npm run build
-npm run ship      # verify → commit → push → deploy to production (see Deployment)
 ```
 
 Tests use Node's built-in runner, so there is no test dependency. Put pure
@@ -181,97 +192,57 @@ signing, PDF, and audit paths must not ship untested.
 
 ## Deployment
 
-Production is `https://cue.krevo.io` on a Linode VPS at `172.236.109.208`
-(IPv6 `2600:3c06::2000:a6ff:fe3f:9057`), running Docker Compose behind Caddy.
-There is **no separate staging environment**: this one box serves production,
-so a push to `main` followed by a deploy is a production release.
-
-Deploys pull from `origin/main`, so commit and push first, then:
+Production is **https://cue.krevo.io** on Vercel, project `cue` under
+`cloverings1s-projects`. A push to `main` deploys to production; every other
+branch gets a preview.
 
 ```bash
-ssh root@cue.krevo.io '/opt/cue/scripts/deploy.sh'
+vercel deploy --prod     # or just push to main
+vercel env pull .env.local --environment production
 ```
 
-Use the **hostname, not the IPv4 literal**. On an IPv6-only network with
-DNS64/NAT64 an IPv4 literal has no route at all — ssh, ping and traceroute fail
-while the site loads normally. The hostname gets a synthesized AAAA and works
-everywhere.
+- Secrets live in Vercel project settings, never in the repo. `BETTER_AUTH_SECRET`
+  and `IP_SALT` are marked sensitive, so `vercel env pull` writes `[SENSITIVE]`
+  rather than the value — that is expected, not a failure. Verify them by
+  logging in, not by reading them back.
+- Neon injects `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct).
+  Upstash injects `KV_REST_API_URL` and `KV_REST_API_TOKEN` — **not** the
+  `UPSTASH_REDIS_REST_*` names `Redis.fromEnv()` looks for, which is why
+  `redis.ts` reads the pair explicitly.
 
-`deploy.sh` fetches, rebuilds, restarts, runs pending migrations, waits for the
-health check, and prunes build cache. It fails loudly and prints logs if the app
-does not become healthy.
+### Migrations
 
-- Secrets live only in `/opt/cue/.env` on the box (see `.env.example`). They are
-  never in the repo and never in a chat window.
-- Schema changes go in `db/migrations/NNN_name.sql` and are applied by
-  `scripts/migrate.sh`, which tracks them in `schema_migrations`. Write them to
-  be safe to re-run. `db/migrations/` is the only path that *applies* schema; a
-  Postgres entrypoint `init.sql` would run solely on a fresh volume, which is why
-  it was removed. Not every migration is hand-authored: the Better Auth tables
-  (`user`, `session`, `account`, `verification`) are generated by the Better Auth
-  CLI and the generated SQL is committed as a migration
-  (`db/migrations/005_auth_schema.sql`) so the schema lives in the repo. Regenerate
-  it with the CLI after a `better-auth` upgrade rather than editing it by hand.
-- SSH is key-only; password authentication is disabled.
-- Postgres and Redis are on an `internal: true` network with no published ports
-  and no egress. The app reads container health through a read-only
-  docker-socket-proxy, never `/var/run/docker.sock` directly.
-- **Backups** run nightly at 00:00 UTC via `cue-backup.timer` →
-  `scripts/cue-backup.sh`, keeping 30 days of `pg_dump` output in
-  `/var/backups/cue/` (mode 600 — dumps carry email addresses and password
-  hashes). They live outside `/opt/cue` because that is a git checkout
-  `deploy.sh` runs `git reset --hard` against. The script skips a run while a
-  deploy holds `/var/lib/cue/deploy.pid`, and refuses to publish a dump that
-  fails gzip, lacks pg_dump's completion marker, or is missing a core table —
-  `pg_dump | gzip` reports *gzip's* exit status, so a dump cut off mid-table
-  is valid gzip and looks like a good backup. Restore with the app stopped:
-
-  ```bash
-  docker compose stop app
-  gunzip -c /var/backups/cue/cue-<stamp>.sql.gz \
-    | docker compose exec -T postgres psql -U cue -d cue
-  docker compose start app
-  ```
-
-  The dump carries `--clean --if-exists`, so it drops what it replaces. Verify
-  a dump without touching the live database by restoring into a scratch
-  database (`CREATE DATABASE cue_restore_test`) and comparing row counts.
-  **Copies are on-box only** — they survive a bad migration or a dropped
-  table, not the loss of the Linode.
-
-### Rebuilding from nothing
-
-Migrations create the schema but not the operator, so a fresh Postgres volume
-gives a console that renders a login nobody can pass. After the first deploy
-against an empty database:
+**Nothing runs migrations automatically.** Builds happen per-deployment, in
+parallel, including on previews — so wiring `migrate.sh` into the build command
+would be wrong. Run it by hand *before* deploying code that needs the schema:
 
 ```bash
-ssh root@172.236.109.208 'cd /opt/cue && set -a && . ./.env && set +a && \
-  docker compose run --rm --no-deps \
-    -e DATABASE_URL="postgresql://cue:$POSTGRES_PASSWORD@postgres:5432/cue" \
-    -e BETTER_AUTH_SECRET="$BETTER_AUTH_SECRET" \
-    -e OPERATOR_EMAIL=you@example.com -e OPERATOR_PASSWORD="$(openssl rand -base64 24)" \
-    app node scripts/seed-operator.mjs'
+vercel env pull .env.local --environment production
+./scripts/migrate.sh --status      # list applied vs pending
+./scripts/migrate.sh               # apply
 ```
 
-It is idempotent — it exits without changes if the account already exists.
+It uses `MIGRATE_DATABASE_URL`, falling back to `DATABASE_URL_UNPOOLED`, and
+**refuses a pooled endpoint**: `pg_advisory_lock` is session-scoped and a
+transaction-mode pooler drops it silently, which would leave the
+`-- no-transaction` path with no protection at all.
 
-Migrations and `deploy.sh` do not schedule anything, so a rebuilt box has no
-watchdog and no backups until the units are installed. `deploy.sh` puts the
-scripts in `/usr/local/bin`; the units in `scripts/systemd/` only schedule
-them, and are deliberately left out of `deploy.sh` so it cannot silently
-re-enable a timer somebody stopped on purpose:
+Schema changes go in `db/migrations/NNN_name.sql`. Write them to be safe to
+re-run. The Better Auth tables are generated by its CLI and committed as
+`005_auth_schema.sql`; regenerate rather than hand-editing.
 
-```bash
-ssh root@172.236.109.208 'install -m 644 /opt/cue/scripts/systemd/*.{service,timer} \
-  /etc/systemd/system/ && systemctl daemon-reload && \
-  systemctl enable --now cue-health.timer cue-backup.timer && \
-  systemctl list-timers "cue-*"'
-```
+### Backups
 
-`cue-health.timer` runs every 2 minutes; `cue-backup.timer` daily at 00:00 UTC
-with `Persistent=true`, so a reboot spanning midnight runs the missed backup
-rather than skipping the night.
+Neon point-in-time restore. There is no `pg_dump` cron any more — the nightly
+30-day dump died with the VPS. Check the retention your Neon plan actually
+gives you; this is the only copy of every signed agreement.
+
+### The old VPS
+
+The Linode at `172.236.109.208` still exists and still answers on
+`staging.cue.krevo.io`. It is the rollback until it is decommissioned. Its
+`/opt/cue` checkout is on the last VPS-capable commit; `main` no longer contains
+the Dockerfile, compose file, Caddyfile or deploy scripts.
 
 ## Maintaining this file
 
