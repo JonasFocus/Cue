@@ -55,3 +55,7 @@ skills-lock.json
 
 # Overnight loop state — working notes, not part of the product
 .loop/
+
+# Database dumps — they carry email addresses and password hashes
+*.sql
+!db/migrations/*.sql
