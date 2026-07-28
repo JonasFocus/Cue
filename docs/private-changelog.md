@@ -12,6 +12,63 @@ Dates are the day work landed, newest first.
 
 ---
 
+## 2026-07-27 — Pre-staging rescan
+
+The app was committed and pushed (`3f481b0`) before deploying. A rescan found
+two ways to corrupt a signed legal record — both in ground that had never been
+audited, because the data-integrity review commissioned during the build never
+delivered.
+
+**Fixed**
+
+- **`addParty` could attach a signatory to a sent Cue.** It read the status,
+  then INSERTed with no predicate. Two tabs interleave and the party lands after
+  the snapshot froze. Because `getCueByToken` serves parties *live* rather than
+  from the snapshot, that person appeared on the signing page and could sign —
+  producing a sealed record whose signature block named somebody the frozen
+  document did not list, with a `doc_hash` that still verified. The check now
+  lives in the statement, as `removeParty` already did.
+- **`sendCue` froze a snapshot built from unlocked reads.** Everything the
+  snapshot is made of was read before BEGIN, so a concurrent autosave could
+  commit a new client name or fee in between. Added an optimistic
+  `updated_at` guard.
+- **`SliderField` clamped to `MAX_SAFE_INTEGER`, not `q.max`.** A creator could
+  type 999,999,999 into "Images delivered", and the delivery clause reads "will
+  receive **at least** {{photo_count}}" — a binding promise of a billion
+  photographs.
+- **`snapshot.version` was written and never read.** No live failure, but the
+  first schema change would 500 `/s/[token]`, which is the client's only view of
+  a contract they may already have signed. It now degrades to the "no longer
+  open" page that both callers already handle.
+- Deleted the allowance pre-check in `sendCue`. The locked re-read inside the
+  transaction is the real check; the pre-check could only ever be *wrong* — an
+  operator upgrading a plan mid-request would tell a paying customer they had
+  used their five free Cues.
+
+**Got wrong on the first attempt, worth remembering.** The `updated_at` guard
+was written with `date_trunc('milliseconds', …)` because `toISOString()` is
+millisecond-precision and the raw comparison never matched. That version passed
+every check and was still broken: in a tight race both writes land inside the
+same millisecond, compare equal, and the stale snapshot goes through. Caught
+only by running the race 25 times and asserting the *invariant* (snapshot and
+row agree) rather than an outcome. `updated_at` is now read as microsecond text
+through `to_char`, the same reason `admin.ts` does it for its keyset cursor and
+the same family as the `shoot_date` rule.
+
+**Documentation.** The operator customer console was in none of the docs. Added
+to `AGENTS.md`, `docs/architecture.md` and `docs/security.md`. Also corrected
+two now-false claims in `architecture.md`: the condition grammar gained `&`, and
+a numeric `0` now means "none" for clause gating. Raised the `AGENTS.md` size
+limit from 10 KB to 16 KB — the rule was written when Cue was a landing page.
+
+**Deliberately deferred** (recorded in the plan): 10 open frontend findings, 10
+open accessibility findings, `studioList`'s keyset cursor sorting on a mutable
+key so active accounts are skipped while paging, the dead `.ca-topbar` costing
+76px of builder preview height, and the console's `display: grid` tables losing
+their implicit role.
+
+---
+
 ## 2026-07-26 — The application
 
 The big one. Cue went from a landing page with a waitlist to a working product:

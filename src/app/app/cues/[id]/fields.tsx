@@ -424,7 +424,15 @@ function SliderField({ q, value, onChange, disabled }: Common) {
             onChange={(e) => {
               const cleaned = e.target.value.replace(/[^\d]/g, "").slice(0, 9);
               setDraft(cleaned);
-              onChange(cleaned === "" ? min : clamp(Number(cleaned), min, Number.MAX_SAFE_INTEGER));
+              /* Clamp to `max`, not MAX_SAFE_INTEGER. The "exact number" escape
+                 hatch exists so a value can sit *off the step grid*, not so it
+                 can leave the range — and these numbers end up in a contract:
+                 the delivery clause reads "will receive at least {{photo_count}}",
+                 so an unbounded field is a binding promise of a billion photos.
+                 It also fixes the mismatch where the range input pinned itself
+                 to `max` while the stored var said more, and one nudge of the
+                 thumb silently rewrote the answer. */
+              onChange(cleaned === "" ? min : clamp(Number(cleaned), min, max));
             }}
           />
           {q.unit && (

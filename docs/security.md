@@ -14,9 +14,29 @@ Three, in descending order of trust:
 
 | Boundary | Credential | Can do |
 | --- | --- | --- |
-| Operator (`/console`) | session + `role = 'operator'` | read waitlist and container health |
+| Operator (`/console`) | session + `role = 'operator'` | read waitlist and container health; read **any** studio's account, usage, Cues and client list; edit a studio's profile and plan |
 | Creator (`/app`) | Better Auth session | everything within their own `studio_id` |
 | Client (`/s/[token]`) | the token, and nothing else | read one Cue, sign once, decline once |
+
+The operator boundary is the widest and the most data-sensitive: `/console/studios`
+shows **other studios' clients** by name and email. Four limits, all structural
+rather than by convention:
+
+- `src/lib/admin.ts` contains no statement that writes to `cue`, `cue_party` or
+  `cue_event`. It writes to exactly `studio` and `admin_event`, and
+  `admin.test.ts` asserts that by scanning the source. **A sealed agreement is
+  immutable to us in exactly the way it is to both parties.**
+- It never *selects* `share_token`, `signature_png`, `ip_hash` or `user_agent`.
+  The token matters most: it is a bearer credential, and rendering it would let
+  an operator open a live signing link and produce a signature attributable to
+  the client — impersonation through the back door.
+- Every mutation writes an `admin_event`, and that table refuses UPDATE **and**
+  DELETE. A log operators can quietly edit is not a log.
+- There is no "sign in as this customer". With signature evidence in play, an
+  operator session producing `cue_party` rows attributable to a customer would
+  turn a support tool into a forgery tool, inside the one record whose entire
+  value is attribution. The legitimate need behind it is served by the read-only
+  Cue view.
 
 There is no path from creator to operator through the application. `role` is
 set only by a direct database write or `scripts/seed-operator.mjs`; nothing in

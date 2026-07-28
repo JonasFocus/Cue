@@ -61,6 +61,16 @@ What exists:
 - **The agreement engine**: `src/lib/agreement.ts` (pure), six templates as data
   in `templates.ts`, lifecycle rules in `cue.ts`, I/O in `cue-db.ts`. A template
   is a question spec plus conditional clauses — a shoot type is data, not code.
+- **The operator customer console** at `/console/studios` and
+  `/console/studios/[id]`, backed by `src/lib/admin.ts`. Cue is B2B: customers
+  are studios and they have clients of their own, so this surface shows
+  activation, usage, and **other studios' client lists** — treat it as the most
+  data-sensitive screen in the product. Every route and action gates on
+  `requireOperator()`. It can edit a studio's profile and plan and **nothing
+  else**: `admin.ts` writes only to `studio` and `admin_event`, and never selects
+  `share_token`, `signature_png`, `ip_hash` or `user_agent`. Operator mutations
+  are logged to `admin_event` (migration `008`), which refuses UPDATE and DELETE.
+  There is deliberately no impersonation.
 - **Four API routes**: `/api/auth/[...all]` (Better Auth), `/api/health`
   (operator-gated probes), `/api/ping` (container liveness), `/api/waitlist`
   (operator-gated guest list and status PATCH).
@@ -221,4 +231,6 @@ It is idempotent — it exits without changes if the account already exists.
 
 - Add a rule only for durable architecture, exact commands, or repeated
   mistakes. Remove stale rules promptly.
-- Keep this file under 10 KB.
+- Keep this file under 16 KB. (Was 10 KB, set when Cue was a landing page
+  with a waitlist. Raised 2026-07-27 rather than deleting deployment runbook
+  detail to satisfy a number.)

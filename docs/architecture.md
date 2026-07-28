@@ -19,6 +19,7 @@ Redis. No microservices, no queue, no worker.
 | Customer app | `/app/*` | Creators | Better Auth session |
 | Client signing | `/s/[token]` | The creator's client | the token itself |
 | Operator console | `/console` | Jonas | session + `role = 'operator'` |
+| Customer management | `/console/studios` | Jonas | session + `role = 'operator'` |
 
 Each surface has its own CSS namespace so a change to one cannot reflow
 another: `.cue` (marketing, `design.css`), `.ca` (app, `app.css`), `.cx`
@@ -56,15 +57,23 @@ database. `agreement.test.ts` and `cue.test.ts` are the specification.
 
 ### The condition grammar
 
-Deliberately three forms and nothing more: `key`, `!key`, `key=value`.
+Atoms: `key`, `!key`, `key=value`. Joined with `&`, which means AND. No OR, no
+parentheses, no precedence — if a template ever wants OR, write two clauses.
 
-Every condition in every template fits. A parser would be a parser to maintain,
-test, and eventually sandbox. If a clause ever needs "a AND b", give it two
-nested clauses or a derived var — do not grow the grammar.
+The `&` was added on 2026-07-26 after the single-atom version produced five
+wrong contracts. Answers to hidden questions are deliberately *kept* in `vars`
+(toggling a section off and back on must not lose what was typed), so a clause
+gated on a sub-question stayed true after its parent toggle was switched off:
+turning "take a deposit" off still produced a document demanding 30% up front,
+and marking the deposit refundable produced one that said both "non-refundable
+once paid" and "refundable in full". The earlier rule here said to reach for a
+derived var instead — in practice that meant inventing bookkeeping vars whose
+only job was to express an AND, which is worse than the AND.
 
-`0` and `false` are *answers*, not absences. A slider at zero (no late fee, no
-prints) must not silently hide the clause that says so, which is why `matches()`
-does not lean on JavaScript falsiness.
+A numeric `0` means **none** for clause gating, so its clause is dropped —
+otherwise `revisions: 0` rendered "0 rounds of revisions are included" and the
+`no_revisions` clause was unreachable. This is *gating*, not answeredness: the
+builder's own `isAnswered` still treats a deliberate 0 as answered.
 
 ### One renderer, three consumers
 
@@ -84,6 +93,9 @@ changelog, and Better Auth's four tables.
 user ──1:1── studio ──1:N── cue ──┬──1:N── cue_party   (who signs, and their evidence)
  │                                └──1:N── cue_event   (append-only audit trail)
  └── role: 'creator' | 'operator'
+
+admin_event   (append-only; operator actions. Deliberately NO foreign keys —
+               see below)
 ```
 
 | Column | Why it is the way it is |
@@ -94,6 +106,16 @@ user ──1:1── studio ──1:N── cue ──┬──1:N── cue_par
 | `cue.shoot_date` | A real `date`, but always read through `to_char(…, 'YYYY-MM-DD')`. node-postgres parses `date` to local midnight, and `.toISOString()` then prints the *previous day* for every US timezone. |
 | `studio.sent_count` | Denormalised. The free allowance is five sends *forever*, so the alternative is counting every historical Cue on every page load. |
 | money everywhere | Integer cents. Never float. |
+
+`admin_event` (migration `008`) records every operator mutation and refuses
+**both** UPDATE and DELETE — unlike `cue_event`, nothing cascades into it, so
+there is no legitimate delete, and a log of operator actions that operators can
+quietly remove is not a log. It carries **no foreign keys in either direction**,
+which is a correctness requirement rather than a preference: `ON DELETE SET NULL`
+toward `cue` issues an *UPDATE*, which the append-only trigger refuses — so an FK
+there would make `DELETE FROM cue` raise for any draft an operator had ever
+looked at. Toward `"user"`, a cascade would erase the trail along with the
+operator it describes.
 
 `cue_event` has a `BEFORE UPDATE` trigger that raises. Not `DELETE` — row
 triggers fire for cascades, and every Cue logs a `created` event at birth, so
@@ -142,12 +164,24 @@ client open a link to a Cue the creator still believes is a draft.
 ```
 render snapshot → sha256(canonical JSON) → randomBytes(16).base64url
   └─ BEGIN
+       SELECT plan, sent_count FROM studio WHERE id=? FOR UPDATE   ← allowance
        UPDATE cue SET status='sent', share_token, snapshot, doc_hash, sent_at
-              WHERE studio_id=? AND id=? AND status='draft'   ← guard
+              WHERE studio_id=? AND id=? AND status='draft'        ← freeze
+                AND updated_at = ?                                 ← content
        UPDATE studio SET sent_count = sent_count + 1
        INSERT cue_event 'sent'
      COMMIT
 ```
+
+Three guards, each for a different failure. The **studio lock** serialises the
+allowance check: two free-plan sends at `sent_count = 4` would otherwise both
+read 4 and both increment. The **status predicate** stops a Cue being sent
+twice. The **`updated_at` predicate** is the subtle one — everything the
+snapshot is built from is read *before* BEGIN, so without it a concurrent
+autosave from a second tab could commit a new client name or fee in between and
+this would freeze a document that no longer matched the row, leaving the client
+signing a page that named them one way in the prose and another in the
+signature block.
 
 Counted on send, never on create: a draft costs nothing, and a creator
 exploring the builder must not burn their five free Cues doing it.
@@ -236,3 +270,22 @@ in `agreement.ts`, and add a control to `fields.tsx`.
 **A new status** — add it to `CUE_STATUSES`, to the `CHECK` constraint in a new
 migration, and to `TRANSITIONS`. A test cross-checks the SQL constraint against
 the TypeScript list so the two cannot drift.
+
+---
+
+## Two traps this codebase has already fallen into
+
+**Read-then-write across a status change.** Every write that depends on a Cue
+still being a draft must carry that predicate *in the statement*, not in an
+`if` above it. `addParty` did the latter and could attach a signatory to a Cue
+that had been sent from another tab — producing a sealed record whose signature
+block named somebody the frozen document did not list. `removeParty` and
+`deleteCue` show the correct shape.
+
+**Timestamps through JavaScript lose precision.** `timestamptz` keeps
+microseconds; node-postgres hands back a JS `Date` and `toISOString()` truncates
+to milliseconds. `sendCue`'s optimistic guard and `admin.ts`'s keyset cursor both
+read the column as microsecond text through `to_char` for exactly this reason. A
+millisecond-truncated version of the send guard was written first and passed
+stale snapshots through, because in a tight race both writes land inside the same
+millisecond. The same family as the `shoot_date` rule above.

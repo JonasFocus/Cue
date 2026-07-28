@@ -37,7 +37,13 @@ import type { Studio } from "./studio";
 const CUE_COLUMNS = `id, studio_id, template_slug, title, client_name, client_email,
                      to_char(shoot_date, 'YYYY-MM-DD') AS shoot_date,
                      location, vars, omitted_clauses, notes, status, share_token,
-                     doc_hash, created_at, updated_at, sent_at, opened_at, sealed_at`;
+                     doc_hash, created_at, sent_at, opened_at, sealed_at,
+                     -- Microsecond-precision text, not the raw timestamptz: it is
+                     -- the optimistic-concurrency token for sendCue, and a JS Date
+                     -- round-trip truncates it to milliseconds. Two writes inside
+                     -- one millisecond would then compare equal and the guard would
+                     -- pass a stale snapshot through.
+                     to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at`;
 
 type CueRow = {
   id: string;
@@ -55,7 +61,7 @@ type CueRow = {
   share_token: string | null;
   doc_hash: string | null;
   created_at: Date;
-  updated_at: Date;
+  updated_at: string;
   sent_at: Date | null;
   opened_at: Date | null;
   sealed_at: Date | null;
@@ -100,7 +106,7 @@ function toCue(row: CueRow): Cue {
     shareToken: row.share_token,
     docHash: row.doc_hash,
     createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    updatedAt: row.updated_at,
     sentAt: row.sent_at?.toISOString() ?? null,
     openedAt: row.opened_at?.toISOString() ?? null,
     sealedAt: row.sealed_at?.toISOString() ?? null,
@@ -216,16 +222,30 @@ export async function getCue(studioId: number, id: number): Promise<Cue | null> 
   return rows[0] ? toCue(rows[0]) : null;
 }
 
+/* jsonb comes back as `any` in all but name, and `version: 1` was being written
+   and never read. That is fine while `renderAgreement` is the only writer — and
+   stops being fine the first time the shape changes, because a v1 row reaching a
+   v2 renderer throws inside a Server Component. The blast radius is the worst
+   available: /s/[token] is the client's only view of a contract they may already
+   have signed, and an exception there is a 500 with no fallback.
+   Returning null instead lands on the "no longer open for signing" page, which
+   both callers already handle. Add the `version === 2` branch when there is one. */
+function readSnapshot(value: unknown): Snapshot | null {
+  const snapshot = value as Snapshot | null;
+  if (!snapshot || snapshot.version !== 1) return null;
+  return Array.isArray(snapshot.document?.clauses) ? snapshot : null;
+}
+
 /* The frozen document, for the creator's own record page. Kept off `Cue` on
    purpose: the snapshot is the largest column in the table and the workspace
    list would carry one per row for nothing. Scoped by studio_id like every
    other read here, so authorisation lives in the WHERE clause. */
 export async function getSnapshot(studioId: number, id: number): Promise<Snapshot | null> {
-  const { rows } = await pool.query<{ snapshot: Snapshot | null }>(
+  const { rows } = await pool.query<{ snapshot: unknown }>(
     `SELECT snapshot FROM cue WHERE studio_id = $1 AND id = $2`,
     [studioId, id],
   );
-  return rows[0]?.snapshot ?? null;
+  return readSnapshot(rows[0]?.snapshot);
 }
 
 export async function getParties(cueId: number): Promise<Party[]> {
@@ -263,8 +283,9 @@ export async function getEvents(cueId: number): Promise<CueEvent[]> {
 const CUE_COLUMNS_C = `c.id, c.studio_id, c.template_slug, c.title, c.client_name,
                        c.client_email, to_char(c.shoot_date, 'YYYY-MM-DD') AS shoot_date,
                        c.location, c.vars, c.omitted_clauses, c.notes, c.status,
-                       c.share_token, c.doc_hash, c.created_at, c.updated_at,
-                       c.sent_at, c.opened_at, c.sealed_at`;
+                       c.share_token, c.doc_hash, c.created_at,
+                       c.sent_at, c.opened_at, c.sealed_at,
+                       to_char(c.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at`;
 
 /** The signing page's only read. Returns the frozen snapshot, never a template. */
 export async function getCueByToken(
@@ -299,12 +320,14 @@ export async function getCueByToken(
   const row = rows[0];
   // A row with no snapshot means the token was issued without the send
   // transaction completing, which cannot happen — but a signing page that
-  // renders a half-built document is worse than a 404.
-  if (!row || !row.snapshot) return null;
+  // renders a half-built document is worse than a 404. `readSnapshot` extends
+  // the same reasoning from "absent" to "not a shape this build can render".
+  const snapshot = row ? readSnapshot(row.snapshot) : null;
+  if (!row || !snapshot) return null;
 
   return {
     cue: toCue(row),
-    snapshot: row.snapshot,
+    snapshot,
     parties: await getParties(Number(row.id)),
     studio: {
       name: row.s_name,
@@ -471,20 +494,33 @@ export async function deleteCue(studioId: number, id: number): Promise<boolean> 
 
 /* ── Parties ── */
 
+/* The `EXISTS` is both the authorisation and the freeze check, in the same
+   statement as the write — the rule this file states at `getCue` and that
+   `removeParty` below already follows.
+
+   It was a read-then-write, and the gap was reachable from two tabs: read the
+   status as `draft`, have the other tab send in between, and the INSERT still
+   landed. `getCueByToken` serves parties LIVE rather than from the snapshot, so
+   the new signer appeared on the signing page and could sign — producing a
+   sealed record whose signature block names somebody the frozen document does
+   not list as a party, with a `doc_hash` that still verifies. A signed legal
+   record whose text and signatures disagree is the worst thing this product
+   can produce. */
 export async function addParty(
   studioId: number,
   cueId: number,
   input: { role: PartyRole; name: string; email?: string | null },
 ): Promise<Party | null> {
-  const cue = await getCue(studioId, cueId);
-  if (!cue || cue.status !== "draft") return null;
-
   const { rows } = await pool.query<PartyRow>(
     `INSERT INTO cue_party (cue_id, role, name, email, sort_order)
-          VALUES ($1, $2, $3, $4,
-                  COALESCE((SELECT max(sort_order) + 1 FROM cue_party WHERE cue_id = $1), 0))
+          SELECT $1, $2, $3, $4,
+                 COALESCE((SELECT max(sort_order) + 1 FROM cue_party WHERE cue_id = $1), 0)
+           WHERE EXISTS (
+                 SELECT 1 FROM cue
+                  WHERE id = $1 AND studio_id = $5 AND status = 'draft'
+                 )
        RETURNING ${PARTY_COLUMNS}`,
-    [cueId, input.role, input.name, input.email || null],
+    [cueId, input.role, input.name, input.email || null, studioId],
   );
   return rows[0] ? toParty(rows[0]) : null;
 }
@@ -518,10 +554,14 @@ export async function sendCue(studio: Studio, id: number): Promise<SendResult> {
   const cue = await getCue(studio.id, id);
   if (!cue) return { ok: false, error: "not_found" };
   if (!canTransition(cue.status, "sent")) return { ok: false, error: "wrong_status" };
-  // Fast reject from the session's denormalised count. The transaction below
-  // re-reads under a studio lock — this one is only so we do not build a
-  // snapshot the creator is clearly not allowed to send.
-  if (!canSend(studio.plan, studio.sentCount)) return { ok: false, error: "allowance" };
+
+  /* No allowance pre-check here on purpose. The transaction below re-reads plan
+     and sent_count under `SELECT … FOR UPDATE`, which is the real check; a
+     second one against `studio` as it looked when the request started can only
+     ever be *wrong* — an operator upgrading a plan mid-request would make it
+     tell a paying customer they had used their five free Cues. The only thing
+     it saved was one `renderAgreement` call, and `hasBlanks` below already
+     runs after that anyway. */
 
   const template = templateBySlug(cue.templateSlug);
   if (!template) return { ok: false, error: "not_found" };
@@ -576,9 +616,9 @@ export async function sendCue(studio: Studio, id: number): Promise<SendResult> {
 
   return withTransaction(async (client) => {
     /* Lock the studio before touching the Cue. Two free-plan sends racing at
-       sent_count = 4 would otherwise both pass the pre-check above and both
-       increment, burning past FREE_SENT_ALLOWANCE. FOR UPDATE serialises them
-       on the one row that holds the counter. */
+       sent_count = 4 would otherwise both read 4 and both increment, burning
+       past FREE_SENT_ALLOWANCE. FOR UPDATE serialises them on the one row that
+       holds the counter. */
     const { rows: studioRows } = await client.query<{ plan: Plan; sent_count: number }>(
       `SELECT plan, sent_count FROM studio WHERE id = $1 FOR UPDATE`,
       [studio.id],
@@ -589,11 +629,25 @@ export async function sendCue(studio: Studio, id: number): Promise<SendResult> {
       return { ok: false, error: "allowance" } as const;
     }
 
+    /* `updated_at` is an optimistic guard on the CONTENT, not just the status.
+       Everything the snapshot is built from — the cue row and its parties — was
+       read before BEGIN, so a concurrent autosave from a second tab could
+       commit a new client name or fee in between and this would freeze a
+       document that no longer matches the row. The client would then sign a
+       page naming them one way in the prose and another in the signature block.
+       The `cue_touch` trigger maintains `updated_at` on every write, so this
+       costs nothing; a lost race is retryable and the builder already has copy
+       for it. */
     const { rowCount } = await client.query(
+      // `cue.updatedAt` is microsecond-precision text (see CUE_COLUMNS), so this
+      // compares losslessly. A millisecond-truncated version of this guard was
+      // written first and silently let stale snapshots through — in a tight
+      // race both writes land inside the same millisecond and compare equal.
       `UPDATE cue
           SET status = 'sent', share_token = $3, snapshot = $4, doc_hash = $5, sent_at = now()
-        WHERE studio_id = $1 AND id = $2 AND status = 'draft'`,
-      [studio.id, id, token, JSON.stringify(snapshot), docHash],
+        WHERE studio_id = $1 AND id = $2 AND status = 'draft'
+          AND updated_at = $6::timestamptz`,
+      [studio.id, id, token, JSON.stringify(snapshot), docHash, cue.updatedAt],
     );
     if (rowCount !== 1) return { ok: false, error: "wrong_status" } as const;
 
