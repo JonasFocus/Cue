@@ -299,13 +299,42 @@ export const BLANK = "————";
 export function fillTokens(body: string, ctx: Record<string, string>): string {
   return body.replace(TOKEN, (_, key: string) => {
     const value = ctx[key.toLowerCase()];
-    return value === undefined || value === "" ? BLANK : value;
+    /* Whitespace counts as unfilled, the same way `truthy` above trims before
+       deciding. A pasted newline in a textarea is not an answer, and treating it
+       as one produced the worst bug this file can produce: the paragraph filter
+       below drops a whitespace-only paragraph, so the clause rendered as a
+       heading over nothing, `hasBlanks` found no marker, and a contract with no
+       terms in it passed the send gate. Blanking it here fixes that at the
+       source and puts a visible ———— in the preview for the creator to fill. */
+    return value === undefined || value.trim() === "" ? BLANK : value;
   });
 }
 
-/** True when the rendered document still has unfilled slots. */
+/**
+ * True when the rendered document is missing something a reader needs.
+ *
+ * `sendCue` calls this the authority on whether a Cue is ready to send, and the
+ * builder's Send button reads the same function — so what it has to support is
+ * "nothing is missing", not "no blank paragraphs". A document it passes gets
+ * frozen, and a sent Cue cannot be edited.
+ *
+ * `renderAgreement` runs `fillTokens` over exactly three strings — the title,
+ * each clause heading, and each body — and this used to inspect one of them.
+ * No template puts a token in a heading today, but the product's whole
+ * extension model is that a new shoot type is *data*, and `renderAgreement`
+ * supports heading tokens; the first author to use one would otherwise get a
+ * silently broken gate.
+ *
+ * A creator who types the marker into their own text will trip this. That was
+ * already true of the paragraph check and is the right trade: one confusing
+ * block on a draft they can still edit, against sending a contract with a hole
+ * in it.
+ */
 export function hasBlanks(doc: RenderedDocument): boolean {
-  return doc.clauses.some((c) => c.paragraphs.some((p) => p.includes(BLANK)));
+  if (doc.title.includes(BLANK)) return true;
+  return doc.clauses.some(
+    (c) => c.heading.includes(BLANK) || c.paragraphs.some((p) => p.includes(BLANK)),
+  );
 }
 
 export function renderAgreement(

@@ -445,3 +445,91 @@ test("question keys are unique within a template", () => {
     assert.equal(new Set(keys).size, keys.length, `${template.slug} has duplicate question keys`);
   }
 });
+
+/* ── A document with nothing in it must not be sendable ──
+
+   `hasBlanks` is what `sendCue` calls "the authority on is this ready to send",
+   and the builder's Send button reads the same function. What it has to support
+   is not "no blank paragraphs" but "nothing is missing" — a document it passes
+   is frozen, a sent Cue cannot be edited, and the only remedy is voiding and
+   rebuilding.
+
+   Three routes reached the same broken state on the `blank` template, whose
+   whole content is the creator's own terms. Each is tested below, because the
+   first attempt at this fixed one route and made a second easier to hit. */
+
+test("every way a document can be incomplete is caught", () => {
+  const base: Pick<Template, "clauses" | "questions"> = {
+    questions: [],
+    clauses: [{ id: "c", heading: "Coverage", body: "Eight hours." }],
+  };
+  const noLocation = { ...CUE, location: null };
+
+  const cases: Record<string, ReturnType<typeof renderAgreement>> = {
+    "an unfilled token in a paragraph": renderAgreement(
+      { ...base, clauses: [{ id: "c", heading: "Coverage", body: "At {{shoot.location}}." }] },
+      STUDIO, noLocation, {},
+    ),
+    "an unfilled token in a clause heading": renderAgreement(
+      { ...base, clauses: [{ id: "c", heading: "Coverage at {{shoot.location}}", body: "Eight hours." }] },
+      STUDIO, noLocation, {},
+    ),
+    "an unfilled token in the document title": renderAgreement(
+      base, STUDIO, { ...noLocation, title: "Shoot at {{shoot.location}}" }, {},
+    ),
+    "an answer that is only whitespace": renderAgreement(
+      { ...base, clauses: [{ id: "c", heading: "Terms", body: "{{terms}}" }] },
+      STUDIO, CUE, { terms: "   \n  " },
+    ),
+  };
+
+  for (const [what, doc] of Object.entries(cases)) {
+    assert.equal(hasBlanks(doc), true, `hasBlanks missed ${what}`);
+  }
+});
+
+test("a complete document still passes, tokens in heading and title included", () => {
+  const doc = renderAgreement(
+    { questions: [], clauses: [{ id: "c", heading: "Coverage at {{shoot.location}}", body: "At {{shoot.location}}." }] },
+    STUDIO, { ...CUE, title: "Shoot at {{shoot.location}}" }, {},
+  );
+  assert.equal(hasBlanks(doc), false);
+  assert.equal(doc.clauses[0]!.heading, "Coverage at The Old Mill");
+  assert.equal(doc.title, "Shoot at The Old Mill");
+});
+
+test("a freeform Cue cannot be sent without terms, by any route", () => {
+  const blank = templateBySlug("blank")!;
+  const answered = { ...defaultVars(blank), total_fee: 250000 };
+
+  // Route 1: the creator never typed anything.
+  assert.equal(hasBlanks(renderAgreement(blank, STUDIO, CUE, answered)), true, "empty body");
+
+  // Route 2: a pasted newline is not an agreement.
+  assert.equal(
+    hasBlanks(renderAgreement(blank, STUDIO, CUE, { ...answered, body: "\n  \n" })),
+    true,
+    "whitespace body",
+  );
+
+  // Route 3: the clause is locked, so removing it does nothing. This is the one
+  // the previous attempt made *worse* — ungating the clause put it in the
+  // builder's clause picker with a Remove button, one click from the same bug.
+  const omitted = renderAgreement(blank, STUDIO, CUE, { ...answered, body: "Real terms." }, ["body"]);
+  assert.ok(omitted.clauses.some((c) => c.id === "body"), "a locked clause cannot be removed");
+});
+
+test("a freeform Cue with real terms renders them and is sendable", () => {
+  const blank = templateBySlug("blank")!;
+  const doc = renderAgreement(blank, STUDIO, CUE, {
+    ...defaultVars(blank),
+    total_fee: 250000,
+    body: "Coverage runs eight hours.\n\nTravel is billed at cost.",
+  });
+  const terms = doc.clauses.find((c) => c.id === "body");
+  assert.deepEqual(terms?.paragraphs, [
+    "Coverage runs eight hours.",
+    "Travel is billed at cost.",
+  ]);
+  assert.equal(hasBlanks(doc), false);
+});

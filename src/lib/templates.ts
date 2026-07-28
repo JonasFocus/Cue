@@ -1315,7 +1315,20 @@ const BLANK: Template = {
       heading: "The booking",
       body: `{{client.name}} engages {{studio.legal_name}} for the work described below, on {{shoot.date}} at {{shoot.location}}.`,
     },
-    { id: "body", heading: "Terms", showIf: "body", body: `{{body}}` },
+    /* Locked, and deliberately NOT gated on `showIf: "body"`.
+     *
+     * On this template the creator's terms are the entire agreement — the
+     * booking clause above literally says "for the work described below". A
+     * `showIf` that is false REMOVES a clause, and a removed clause leaves no
+     * marker for `hasBlanks` to find, so an unanswered body used to render a
+     * contract with no terms in it that passed the send gate and went to a
+     * client to sign.
+     *
+     * Ungating alone is not enough: an unlocked clause appears in the builder's
+     * clause picker with a Remove button, which is the same bug one click away.
+     * `locked` is what makes it undroppable — see the `omitted` handling in
+     * renderAgreement. */
+    { id: "body", heading: "Terms", locked: true, body: `{{body}}` },
     {
       id: "fee",
       heading: "Fee",
