@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cue staging health watchdog. This file is the source of truth; deploy.sh
+# Cue production health watchdog. This file is the source of truth; deploy.sh
 # installs it to /usr/local/bin/cue-health, which lives outside /opt/cue so a
 # `git reset --hard` mid-deploy cannot delete the copy that is executing.
 #
@@ -15,7 +15,7 @@
 # external service; this only keeps the box self-healing and leaves evidence.
 set -uo pipefail
 
-URL=https://staging.cue.krevo.io/api/ping
+URL=https://cue.krevo.io/api/ping
 DIR=/var/lib/cue
 STATUS=$DIR/status.json
 LOG=/var/log/cue-health.log

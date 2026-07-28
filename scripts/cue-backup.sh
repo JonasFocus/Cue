@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cue staging database backup. This file is the source of truth; deploy.sh
+# Cue production database backup. This file is the source of truth; deploy.sh
 # installs it to /usr/local/bin/cue-backup, which lives outside /opt/cue so a
 # `git reset --hard` mid-deploy cannot rewrite the copy that is executing.
 #

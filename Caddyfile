@@ -2,7 +2,13 @@
 	email jonasbubela@gmail.com
 }
 
-staging.cue.krevo.io {
+# Both hostnames, one block, on purpose. `cue.krevo.io` is the production origin
+# and `staging.cue.krevo.io` is kept resolving as the rollback: flipping
+# PUBLIC_URL back is the whole recovery, and it only works if the old hostname
+# still answers. Once production is proven, staging becomes a 308 to it and
+# CUE_ROBOTS=all goes in .env — in that order, because a shared block would
+# otherwise make staging indexable alongside production.
+cue.krevo.io, staging.cue.krevo.io {
 	encode zstd gzip
 
 	header {

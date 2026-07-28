@@ -237,7 +237,7 @@ export function Dashboard({ operator }: { operator: string }) {
             <CueMark size={13} />
           </span>
           <span className="cx-wordmark">
-            Console<span>staging.cue.krevo.io</span>
+            Console<span>cue.krevo.io</span>
           </span>
           <span className="cx-who">{operator}</span>
           <button

@@ -9,9 +9,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Scope
 
 - Cue is a client agreement and electronic-signing service for photographers and
-  videographers. `cue.krevo.io` is the intended production domain but has no DNS
-  record yet; only `staging.cue.krevo.io` resolves. It is a Krevo product but a
-  separate codebase from the main Krevo application.
+  videographers. Production is **`cue.krevo.io`** (A and AAAA added 2026-07-28).
+  `staging.cue.krevo.io` resolves to the same box and is kept only as the
+  cutover rollback. It is a Krevo product but a separate codebase from the main
+  Krevo application.
 - [`docs/solution.md`](./docs/solution.md) is the product spec: positioning, copy, pricing,
   architecture, and non-goals. Read it before changing product surface or copy.
 - Live code, configuration, and tests are authoritative. Keep tasks focused and
@@ -170,7 +171,7 @@ npm run lint
 npx tsc --noEmit
 npm run test      # node:test, no framework — see src/lib/waitlist.test.ts
 npm run build
-npm run ship      # verify → commit → push → deploy to staging (see Deployment)
+npm run ship      # verify → commit → push → deploy to production (see Deployment)
 ```
 
 Tests use Node's built-in runner, so there is no test dependency. Put pure
@@ -180,13 +181,21 @@ signing, PDF, and audit paths must not ship untested.
 
 ## Deployment
 
-Staging is `https://staging.cue.krevo.io` on a Linode VPS at `172.236.109.208`,
-running Docker Compose behind Caddy. Deploys pull from `origin/main`, so commit
-and push first, then:
+Production is `https://cue.krevo.io` on a Linode VPS at `172.236.109.208`
+(IPv6 `2600:3c06::2000:a6ff:fe3f:9057`), running Docker Compose behind Caddy.
+There is **no separate staging environment**: this one box serves production,
+so a push to `main` followed by a deploy is a production release.
+
+Deploys pull from `origin/main`, so commit and push first, then:
 
 ```bash
-ssh root@172.236.109.208 '/opt/cue/scripts/deploy.sh'
+ssh root@cue.krevo.io '/opt/cue/scripts/deploy.sh'
 ```
+
+Use the **hostname, not the IPv4 literal**. On an IPv6-only network with
+DNS64/NAT64 an IPv4 literal has no route at all — ssh, ping and traceroute fail
+while the site loads normally. The hostname gets a synthesized AAAA and works
+everywhere.
 
 `deploy.sh` fetches, rebuilds, restarts, runs pending migrations, waits for the
 health check, and prunes build cache. It fails loudly and prints logs if the app

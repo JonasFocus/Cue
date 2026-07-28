@@ -44,3 +44,6 @@ next-env.d.ts
 # Browser-automation debug dumps
 .playwright-mcp/
 .gstack/
+
+# Local, machine-specific notes — never committed
+CLAUDE.local.md

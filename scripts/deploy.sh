@@ -223,9 +223,9 @@ main() {
     echo >&2
 
     if rollback; then
-      printf '\033[33m⚠ deploy of %s failed — rolled back to %s, staging is serving the previous commit\033[0m\n' "$after" "$before" >&2
+      printf '\033[33m⚠ deploy of %s failed — rolled back to %s, the site is serving the previous commit\033[0m\n' "$after" "$before" >&2
     else
-      printf '\033[31m✗ deploy of %s failed AND rollback failed — staging is down, recover by hand:\033[0m\n' "$after" >&2
+      printf '\033[31m✗ deploy of %s failed AND rollback failed — the site is down, recover by hand:\033[0m\n' "$after" >&2
       echo "    cd /opt/cue && git log --oneline -5 && docker compose ps" >&2
     fi
     exit 1
@@ -251,7 +251,7 @@ main() {
   smoke_log="$(mktemp)"
   smoke_status=0
   ( set -a; . ./.env; set +a
-    SMOKE_BASE="${SMOKE_BASE:-https://staging.cue.krevo.io}" \
+    SMOKE_BASE="${SMOKE_BASE:-https://cue.krevo.io}" \
       ./scripts/smoke.sh ) >"$smoke_log" 2>&1 || smoke_status=$?
 
   if [ "$smoke_status" -eq 0 ]; then
@@ -306,7 +306,7 @@ main() {
     docker compose ps --format 'table {{.Service}}\t{{.Status}}' >&2
   fi
 
-  printf '\033[32m✓ deployed %s\033[0m — https://staging.cue.krevo.io\n' "$after"
+  printf '\033[32m✓ deployed %s\033[0m — https://cue.krevo.io\n' "$after"
 }
 
 main "$@"

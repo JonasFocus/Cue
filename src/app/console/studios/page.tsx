@@ -85,7 +85,7 @@ export default async function StudiosPage({
             <CueMark size={13} />
           </span>
           <span className="cx-wordmark">
-            Console<span>staging.cue.krevo.io</span>
+            Console<span>cue.krevo.io</span>
           </span>
           <span className="cx-who">{operator.email}</span>
         </header>

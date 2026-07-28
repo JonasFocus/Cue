@@ -1,11 +1,11 @@
 <p align="center">
-  <a href="https://staging.cue.krevo.io">
+  <a href="https://cue.krevo.io">
     <img src="./public/readme-hero.svg" alt="Cue. Send the Cue. Get the yes. Keep the record." width="100%" />
   </a>
 </p>
 
 <p align="center">
-  <a href="https://staging.cue.krevo.io"><strong>Visit staging</strong></a>
+  <a href="https://cue.krevo.io"><strong>Visit Cue</strong></a>
   &nbsp;·&nbsp;
   <a href="./docs/solution.md"><strong>Read the product brief</strong></a>
   &nbsp;·&nbsp;
@@ -28,13 +28,13 @@
 
 | Surface | Status |
 | --- | --- |
-| Marketing site | Live on [staging.cue.krevo.io](https://staging.cue.krevo.io) |
+| Marketing site | Live on [cue.krevo.io](https://cue.krevo.io) |
 | Waitlist | Live, validated, deduplicated, and rate-limited |
 | Operator console | Private operations surface for waitlist and service health |
 | Customer app (`/app`) | Built — accounts, six templates, the builder, sealed records |
 | Client signing (`/s/[token]`) | Built — no account, consent gate, drawn signature, sealed audit trail |
 
-Built but **not yet deployed**: the application landed on 2026-07-26 and staging still runs the marketing site alone.
+The application landed on 2026-07-26 and is deployed: `/app`, `/s/[token]` and `/console` all serve on `cue.krevo.io`.
 
 Cue still has no email delivery, no server-side PDF rendering (the final PDF is print-to-PDF), no object storage, and no billing. The public site deliberately still describes the product in the future tense until this is live.
 
@@ -66,13 +66,13 @@ npm test
 npm run build
 ```
 
-## Ship to staging
+## Ship to production
 
 ```bash
 npm run ship "feat: describe the change"
 ```
 
-That command verifies, commits, pushes, and deploys `main` to staging. Run it only with a clean working tree and a focused commit scope.
+That command verifies, commits, pushes, and deploys `main` to production. There is no separate staging environment — one box serves the live site. Run it only with a clean working tree and a focused commit scope.
 
 ## Source of truth
 

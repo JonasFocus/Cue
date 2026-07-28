@@ -22,7 +22,7 @@ const SHARE_DESCRIPTION =
    every shared staging link previewed as an address that resolves nowhere.
    `cue.krevo.io` still has no A record, so it cannot be the fallback either —
    staging is the only host that resolves today. */
-const SITE_URL = process.env.PUBLIC_URL ?? "https://staging.cue.krevo.io";
+const SITE_URL = process.env.PUBLIC_URL ?? "https://cue.krevo.io";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

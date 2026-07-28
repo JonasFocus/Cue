@@ -4,13 +4,13 @@
 # never have. Read-only — it never mutates a guest row.
 #
 #   SMOKE_EMAIL=op@example.com SMOKE_PASSWORD=... ./scripts/smoke.sh
-#   SMOKE_BASE=https://staging.cue.krevo.io ./scripts/smoke.sh
+#   SMOKE_BASE=https://staging.cue.krevo.io ./scripts/smoke.sh   # the old host
 #
 # Without SMOKE_EMAIL/SMOKE_PASSWORD the signed-in half is skipped and the run
 # is reported as INCOMPLETE (exit 2), never as a pass. Safe to run repeatedly.
 set -uo pipefail
 
-BASE="${SMOKE_BASE:-https://staging.cue.krevo.io}"
+BASE="${SMOKE_BASE:-https://cue.krevo.io}"
 BASE="${BASE%/}"
 HOST="${BASE#https://}"
 HOST="${HOST#http://}"
