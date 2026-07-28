@@ -8,7 +8,9 @@ import {
   canTransition,
   CONTENT_FIELDS,
   CUE_STATUSES,
+  EVENT_KINDS,
   FREE_SENT_ALLOWANCE,
+  isCoalescableEvent,
   isCueStatus,
   isFrozen,
   isSealed,
@@ -20,8 +22,10 @@ import {
   isValidSignerName,
   permittedPatch,
   SIGNATURE_PREFIX,
+  shouldLogView,
   signatureMethod,
   STATUS_LABEL,
+  VIEW_COALESCE_SECONDS,
   type CueStatus,
 } from "./cue.ts";
 
@@ -214,4 +218,127 @@ test("every non-draft status is reachable", () => {
   for (const s of CUE_STATUSES) {
     assert.ok(reachable.has(s), `${s} is unreachable`);
   }
+});
+
+/* ── Coalescing repeat views ──
+
+   Every load of /s/[token] appends an audit event. The only bound is the view
+   rate limiter — 240 per ten minutes per IP — so one client refreshing on bad
+   venue wifi could put ~34,500 rows a day into a table whose trigger refuses
+   both UPDATE and DELETE. There is no cleanup path and there must not be one:
+   this is the record the product promises.
+
+   So the fix is at the write. A run of identical views from one reader inside a
+   short window is one act of reading, and recording it 34,000 times does not
+   make the record more true — it makes it unreadable, and `/app/cues/[id]/record`
+   renders the whole list unpaginated. */
+
+test("only `viewed` may ever be coalesced", () => {
+  // The safety property. Everything else in the vocabulary is evidence that
+  // something happened once: consent, a signature, a seal, a decline. Losing
+  // one of those to a dedupe window would be a record that omits an act.
+  for (const kind of EVENT_KINDS) {
+    assert.equal(
+      isCoalescableEvent(kind),
+      kind === "viewed",
+      `${kind} must ${kind === "viewed" ? "" : "not "}be coalescable`,
+    );
+  }
+});
+
+test("the first view from a reader is always recorded", () => {
+  // No previous view for this key: nothing to coalesce with, and the very first
+  // read of a contract is the most meaningful entry in the trail.
+  assert.equal(shouldLogView(null, 1_000_000), true);
+});
+
+test("a repeat view inside the window is not recorded", () => {
+  const last = 1_000_000;
+  assert.equal(shouldLogView(last, last + 1), false);
+  assert.equal(shouldLogView(last, last + VIEW_COALESCE_SECONDS * 1000 - 1), false);
+});
+
+test("a view after the window is recorded again", () => {
+  // A client coming back hours later to re-read what they signed is exactly
+  // what the trail should show, and is the reason this is a window rather than
+  // a one-shot flag.
+  const last = 1_000_000;
+  assert.equal(shouldLogView(last, last + VIEW_COALESCE_SECONDS * 1000), true);
+  assert.equal(shouldLogView(last, last + VIEW_COALESCE_SECONDS * 1000 + 1), true);
+  assert.equal(shouldLogView(last, last + 86_400_000), true);
+});
+
+test("the window boundary is inclusive, so it cannot suppress forever", () => {
+  // Exactly-at-the-window must record. With `>` instead of `>=` a metronomic
+  // poller landing precisely on the boundary would be silenced indefinitely.
+  const last = 0;
+  assert.equal(shouldLogView(last, VIEW_COALESCE_SECONDS * 1000), true);
+});
+
+test("a timestamp from the future suppresses rather than double-records", () => {
+  // Both stamps come from Postgres's clock so this should not arise, but the
+  // arithmetic must not go negative into "record it": that would turn a clock
+  // problem into an unbounded write, which is the thing being fixed.
+  assert.equal(shouldLogView(2_000_000, 1_000_000), false);
+});
+
+test("the coalescing window is long enough to matter and short enough to be honest", () => {
+  /* Pinned deliberately. Too short and this does nothing about the 34,500 rows;
+     too long and the trail stops showing that a client came back to re-read the
+     contract before signing, which is a fact a dispute might turn on. If this
+     number changes, that trade is being re-made and should be argued in the
+     commit, not slipped in. */
+  assert.equal(VIEW_COALESCE_SECONDS, 15 * 60);
+  // At most 4 rows an hour per reader, against 24 per hour from the limiter
+  // alone today.
+  assert.equal(3600 / VIEW_COALESCE_SECONDS, 4);
+});
+
+/* ── The chokepoint ──
+
+   `shouldLogView` above is pure and fully covered, but it only decides. What
+   makes the decision bind is that every write to cue_event goes through the one
+   function that consults it. That is a property of the source, not of a value,
+   and there is no database in this suite to observe it any other way — so it is
+   asserted the same way the CHECK constraint above is: by reading the file.
+
+   The precedent and the reason are the same. A rule the app can bypass is not a
+   rule, and the bypass is silent. */
+
+const CUE_DB = readFileSync(new URL("./cue-db.ts", import.meta.url), "utf8");
+
+test("cue_event has exactly one writer, so the window cannot be bypassed", () => {
+  // A second INSERT added later would skip logEvent, skip isCoalescableEvent,
+  // and quietly restore unbounded growth on the one table that cannot be
+  // pruned. If this count changes, the new writer needs the guard too.
+  const inserts = CUE_DB.match(/INSERT INTO cue_event/g) ?? [];
+  assert.equal(inserts.length, 1, "expected a single INSERT INTO cue_event in cue-db.ts");
+});
+
+test("the single writer is gated on isCoalescableEvent, the right way round", () => {
+  assert.match(
+    CUE_DB,
+    /if \(isCoalescableEvent\(kind\) &&/,
+    "logEvent must consult the rule rather than hard-coding a kind",
+  );
+  /* Negating it is the dangerous typo, not an obvious one: `!isCoalescableEvent`
+     reads as sensible English and would coalesce every kind EXCEPT `viewed` —
+     silently dropping a repeated `signed` or `sealed` from the record while the
+     one kind meant to be capped grew without limit. Both halves of the mistake
+     are invisible until a dispute. */
+  assert.doesNotMatch(CUE_DB, /!isCoalescableEvent/);
+});
+
+test("the coalescing lookup matches a null ip_hash against itself", () => {
+  /* `= NULL` is never true in SQL, so an `=` here would match no previous row
+     whenever ip_hash is null — and it is null for every reader when IP_SALT is
+     unset (see /s/[token]/page.tsx). Every load would record again, which is
+     the unbounded growth this item exists to stop, reappearing exactly in the
+     configuration where nobody would think to look for it. */
+  assert.match(CUE_DB, /ip_hash IS NOT DISTINCT FROM/);
+  assert.doesNotMatch(
+    CUE_DB,
+    /AND ip_hash = \$/,
+    "an equality comparison on ip_hash cannot match the null case",
+  );
 });

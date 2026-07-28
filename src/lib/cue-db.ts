@@ -12,7 +12,9 @@ import {
 import {
   canSend,
   canTransition,
+  isCoalescableEvent,
   permittedPatch,
+  shouldLogView,
   signatureMethod,
   SHARE_TOKEN_BYTES,
   type CueStatus,
@@ -690,7 +692,8 @@ export async function markOpened(
       [cueId],
     );
     // 'viewed' on every load, 'opened' only on the first — the audit trail
-    // should show that a client came back to read it again.
+    // should show that a client came back to read it again. A run of `viewed`
+    // from one reader inside a window collapses to one; see logEvent.
     await logEvent(client, cueId, rowCount === 1 ? "opened" : "viewed", {}, meta);
   });
 }
@@ -783,6 +786,13 @@ export async function declineCue(
 
 /* ── Plumbing ── */
 
+/* The one place anything is written to cue_event, which is why the coalescing
+   window lives here rather than at the call site that needs it. `isCoalescable`
+   in cue.ts names the kinds a repeat may be dropped from — only `viewed` — and
+   every other kind routes through this same function and is written
+   unconditionally. A guard at the chokepoint cannot be forgotten by a caller;
+   a guard inside markOpened would leave the next writer of a repeated event to
+   remember it on their own. */
 async function logEvent(
   client: PoolClient,
   cueId: number,
@@ -791,11 +801,52 @@ async function logEvent(
   who: { ipHash: string | null; userAgent: string | null } = { ipHash: null, userAgent: null },
   partyId: number | null = null,
 ): Promise<void> {
+  if (isCoalescableEvent(kind) && !(await dueForEvent(client, cueId, kind, who.ipHash))) {
+    return;
+  }
+
   await client.query(
     `INSERT INTO cue_event (cue_id, party_id, kind, ip_hash, user_agent, meta)
           VALUES ($1, $2, $3, $4, $5, $6)`,
     [cueId, partyId, kind, who.ipHash, who.userAgent, JSON.stringify(meta)],
   );
+}
+
+/**
+ * Whether enough time has passed since this reader's last event of this kind.
+ *
+ * Keyed on ip_hash with `IS NOT DISTINCT FROM` rather than `=`, so null matches
+ * null: without IP_SALT the stored hash is null for every reader (see the note
+ * in /s/[token]/page.tsx), and `= NULL` matches no row — which would make every
+ * load record again, reinstating the unbounded growth precisely when the salt
+ * is missing.
+ *
+ * Read-then-write, deliberately, rather than the single-statement guard
+ * `addParty` uses. There the race forged a signature; here two simultaneous
+ * loads each write one extra `viewed`, which is one row instead of none out of
+ * the thousands this removes. Both stamps come from the database clock, so the
+ * comparison never mixes two clocks.
+ */
+async function dueForEvent(
+  client: PoolClient,
+  cueId: number,
+  kind: EventKind,
+  ipHash: string | null,
+): Promise<boolean> {
+  const { rows } = await client.query<{ last: Date | null; at: Date }>(
+    `SELECT max(created_at) AS last, now() AS at
+       FROM cue_event
+      WHERE cue_id = $1 AND kind = $2 AND ip_hash IS NOT DISTINCT FROM $3`,
+    [cueId, kind, ipHash],
+  );
+
+  // An aggregate with no GROUP BY returns exactly one row by definition, even
+  // when nothing matches — `max` is then null and `now()` is not. Asserted the
+  // same way createCue asserts its RETURNING row rather than carrying a branch
+  // no test can ever reach.
+  const row = rows[0]!;
+
+  return shouldLogView(row.last === null ? null : row.last.getTime(), row.at.getTime());
 }
 
 async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {

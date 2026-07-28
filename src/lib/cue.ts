@@ -204,6 +204,51 @@ export const EVENT_LABEL: Record<EventKind, string> = {
   declined: "Declined by recipient",
 };
 
+/* ── Coalescing repeat views ──
+
+   `markOpened` appends an event on every load of /s/[token]. The first one is
+   `opened` and moves the status; every later one is `viewed`. Nothing bounded
+   the total: the view limiter allows 240 loads per ten minutes per address, so
+   one reader refreshing on bad venue wifi is ~34,500 rows a day into a table
+   whose trigger refuses UPDATE and DELETE.
+
+   There is no cleanup path and there must not be one — this is the record the
+   product promises. So the bound goes at the write instead. A run of loads from
+   one reader inside a short window is one act of reading, and recording it
+   thousands of times does not make the trail more true; it makes it unreadable,
+   and /app/cues/[id]/record renders the whole list unpaginated.
+
+   Fifteen minutes: at most four rows an hour per reader, against twenty-four an
+   hour that the limiter alone permits today, while still showing a client who
+   came back later to re-read the contract before signing. That second fact is
+   one a dispute could turn on, which is why this is a window and not a flag. */
+export const VIEW_COALESCE_SECONDS = 15 * 60;
+
+/**
+ * Whether an event kind may be dropped as a repeat.
+ *
+ * Only `viewed`. Every other kind in the vocabulary records that something
+ * happened once — consent given, a signature captured, a record sealed, an
+ * agreement declined — and a record that omits one of those because it looked
+ * like a duplicate is not a record.
+ */
+export function isCoalescableEvent(kind: EventKind): boolean {
+  return kind === "viewed";
+}
+
+/**
+ * Whether to append a `viewed` event, given when this reader last had one.
+ *
+ * @param lastViewedAtMs The reader's most recent `viewed`, or null if none.
+ * @param nowMs          Both stamps come from the database clock.
+ */
+export function shouldLogView(lastViewedAtMs: number | null, nowMs: number): boolean {
+  if (lastViewedAtMs === null) return true;
+  // Inclusive: with `>` a poller landing exactly on the boundary every time
+  // would be silenced forever rather than recorded once per window.
+  return nowMs - lastViewedAtMs >= VIEW_COALESCE_SECONDS * 1000;
+}
+
 /* ── Parties ── */
 
 export const PARTY_ROLES = ["client", "creator", "additional"] as const;
