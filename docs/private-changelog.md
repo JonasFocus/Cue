@@ -12,6 +12,109 @@ Dates are the day work landed, newest first.
 
 ---
 
+## 2026-07-28 — Production, then off the VPS entirely
+
+Three things happened in one day: staging became production, production moved to
+Vercel, and an overnight agent loop found bugs that neither move would have
+caught. Recorded in that order.
+
+### staging.cue.krevo.io → cue.krevo.io
+
+DNS added, Caddy taught to serve both hostnames from one block, `PUBLIC_URL`
+flipped, and the app rebuilt — `PUBLIC_URL` is a build arg because the landing
+page is statically prerendered, so a restart alone would have left the old
+canonical baked in.
+
+**Caddy's reload lied.** `caddy reload` reported "adapted config to JSON" and
+exited 0 while the running config still listed only the staging hostname; the
+admin API at `/config/apps/http/servers` was the thing that revealed it, and
+`docker compose restart caddy` was what actually applied. If you ever bring
+Caddy back: verify a reload against the admin API, not the command's exit code.
+
+### The VPS is gone
+
+Moved to Vercel with Neon Postgres and Upstash Redis, both via the Marketplace.
+Two reasons, neither of them "Vercel is better":
+
+1. **Backups were on-box only**, which `security.md` had rated High and flagged
+   as unacceptable the day a real client signs. Managed Postgres removes the one
+   unrecoverable failure mode a legal-records product has.
+2. **~800 lines of ops shell maintained by one person** — watchdog, backup
+   script, deploy script, systemd units — plus a watchdog that by its own
+   admission "cannot page anyone".
+
+The database held 1 user, 11 sessions, 2 waitlist rows and **zero signed
+agreements**, which made this the cheapest hour the move would ever cost.
+
+**Two platform differences were load-bearing, and both were caught before they
+reached customers:**
+
+- **Neon's pooler rejects `statement_timeout` as a startup parameter**, which is
+  exactly how node-postgres sends it. Left in `db.ts` it would have failed
+  *every* pooled connection — not a degradation, a total outage. It now lives on
+  the role: `ALTER ROLE neondb_owner SET statement_timeout = '8s'`.
+- **Upstash injects `KV_REST_API_URL`/`_TOKEN`**, not the `UPSTASH_REDIS_REST_*`
+  names `Redis.fromEnv()` reads. Because the limiter fails open by design, a
+  misconfiguration is indistinguishable from a working one — rate limiting would
+  simply have been off in production with nothing on screen to say so.
+
+**A real vulnerability was fixed rather than ported.** Four byte-identical copies
+of `clientIp()` read `x-real-ip` first, which was correct behind Caddy because
+Caddy set it from the TCP peer. Vercel documents overwriting `x-forwarded-for`
+to prevent spoofing but says nothing about stripping an inbound `x-real-ip`, so
+a client could have chosen the `ip_hash` stored on their own signature and
+rotated it to bypass the signing rate limit. The four copies are now one tested
+module in `client-ip.ts` that reads `x-forwarded-for` only. They had never had a
+test.
+
+**Accepted, consciously:** backups are Neon PITR alone — no second independent
+copy, owner's decision. There is still **no error monitoring**, which is now the
+one item `security.md` lists as a minimum.
+
+**The trap that cost the most time, twice, in opposite directions.** A stale DNS
+cache pointing at the old box kept *working* — silently serving the previous
+deployment — so "production" was verified against the wrong server for hours.
+The moment the Linode was destroyed, the same stale cache produced a connection
+failure that looked exactly like an outage. **Check `dig` and confirm from a
+phone on cellular before investigating an app that platform logs say is healthy.**
+
+### An overnight agent loop, and what it was worth
+
+Eight hourly iterations against a default-REJECT review gate. **Zero merges** —
+every PR was rejected, and every rejection was correct, including one where the
+proposed fix made the bug easier to hit. The loop's own protocol ("rejected →
+do not retry tonight") plus a default-REJECT reviewer makes merging impossible
+by construction, which is worth knowing before running it again.
+
+It was still the most valuable thing that ran that night, because it found three
+live defects:
+
+- **The `blank` template could send an agreement with no terms.** Reachable
+  through the real UI: `showIf` false *removes* a clause, and a removed clause
+  leaves no marker for `hasBlanks` to find, so the send gate saw a complete
+  document. Both gates went blind on the same dropped clause. Fixed by locking
+  the clause, ungating it, and treating a whitespace-only answer as unfilled in
+  `fillTokens`. The first attempt fixed one of three routes and made a second
+  *easier* to reach by putting a Remove button on the clause.
+- A Cue title containing `{{braces}}` froze a contract titled `Smith ———— 2026`.
+  `hasBlanks` now inspects the title and clause headings, not just paragraphs.
+- The console's watchdog verdict was unreadable without SSH — moot now.
+
+### Smaller
+
+- Guest list shows `Jul 28, 2026, 5:45:07 PM CT`. One test forces
+  `process.env.TZ=Asia/Tokyo`, because on a Central machine the suite passes
+  even with the timezone option deleted — it could not see the bug it exists to
+  catch.
+- **404 rebuilt** around an unsigned signature rule. It had its own violet/pink
+  palette over a photograph inside a glass card, and looked like a different
+  product. ~170 lines of CSS removed.
+- **Console polling: 5s → 30s, suspended when the tab is hidden.** Two
+  invocations per tick meant ~1,400/hour for a tab nobody was looking at.
+- CSP now allows `'unsafe-eval'` in development only. React's dev build needs it,
+  and a console full of violations that are not bugs is how you learn to ignore
+  the console.
+
 ## 2026-07-28 — Nightly backups, and a stale premise
 
 **Staging was already deployed.** The pre-staging plan recorded that nothing was

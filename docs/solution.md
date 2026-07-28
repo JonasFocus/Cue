@@ -104,7 +104,7 @@ The main business risk is customer acquisition and retention, not hosting cost. 
 
 ### Hosting recommendation
 
-Launch on a single VPS with Docker Compose. Start with a 4 GB RAM, 2 vCPU machine. (This recommendation named DigitalOcean; staging in fact runs on a Linode VPS. Nothing in the stack depends on the provider.) It is sufficient for an early application with PostgreSQL, the web service, Redis, and a modest background worker while remaining easy to understand and operate.
+Launch on a single VPS with Docker Compose. Start with a 4 GB RAM, 2 vCPU machine. (**Superseded 2026-07-28.** This was the original recommendation and it named DigitalOcean; it ran on a Linode for three days. Production is now Vercel with Neon Postgres and Upstash Redis — see [`architecture.md`](./architecture.md) for what actually runs and [`private-changelog.md`](./private-changelog.md) for why it moved. The paragraphs below describe the superseded design and are kept because the reasoning still explains the shape of the app.) It is sufficient for an early application with PostgreSQL, the web service, Redis, and a modest background worker while remaining easy to understand and operate.
 
 Run Caddy in front of the app for HTTPS, routing, and basic rate limiting. Keep PostgreSQL private to the server. Store PDFs and uploads in object storage, not on the VPS disk.
 

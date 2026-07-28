@@ -7,10 +7,15 @@ It is a working application: creators sign in at `/app`, build an agreement from
 a template, and send a link; their client signs at `/s/[token]` without an
 account, and the record seals. `/console` is the operator's separate ops surface.
 
+`cue.krevo.io` is **production**, on Vercel since 2026-07-28. There is no
+separate staging environment: a push to `main` is a release.
+
 ## Where things are
 
 - [`AGENTS.md`](./AGENTS.md) — engineering and product rules, and the deployment
   runbook. **Read this before changing anything.**
+- `CLAUDE.local.md` — gitignored, machine-specific: how to reach production and
+  what to check first when the site appears to be down.
 - [`docs/`](./docs/README.md) — reference: the product brief
   ([`solution.md`](./docs/solution.md)), [`architecture.md`](./docs/architecture.md),
   [`security.md`](./docs/security.md), [`ideal-customer.md`](./docs/ideal-customer.md),

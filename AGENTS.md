@@ -9,9 +9,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Scope
 
 - Cue is a client agreement and electronic-signing service for photographers and
-  videographers. Production is **`cue.krevo.io`** (A and AAAA added 2026-07-28).
-  `staging.cue.krevo.io` resolves to the same box and is kept only as the
-  cutover rollback. It is a Krevo product but a separate codebase from the main
+  videographers. Production is **`cue.krevo.io`**, on Vercel since 2026-07-28.
+  There is **no staging environment and no rollback target** — a push to `main`
+  is a release. It is a Krevo product but a separate codebase from the main
   Krevo application.
 - [`docs/solution.md`](./docs/solution.md) is the product spec: positioning, copy, pricing,
   architecture, and non-goals. Read it before changing product surface or copy.
@@ -237,12 +237,30 @@ Neon point-in-time restore. There is no `pg_dump` cron any more — the nightly
 30-day dump died with the VPS. Check the retention your Neon plan actually
 gives you; this is the only copy of every signed agreement.
 
-### The old VPS
+### There is no rollback
 
-The Linode at `172.236.109.208` still exists and still answers on
-`staging.cue.krevo.io`. It is the rollback until it is decommissioned. Its
-`/opt/cue` checkout is on the last VPS-capable commit; `main` no longer contains
-the Dockerfile, compose file, Caddyfile or deploy scripts.
+The Linode was destroyed on 2026-07-28 and `staging.cue.krevo.io` no longer
+resolves. `main` no longer contains the Dockerfile, compose file, Caddyfile or
+deploy scripts, so there is nothing to roll back *to* — recovering means fixing
+forward, or reverting the commit and letting Vercel redeploy.
+
+The pre-migration database survives only as a one-off `pg_dump` on the owner's
+machine, gitignored. Everything since is in Neon.
+
+### When the site looks down
+
+Check DNS resolution **before** investigating the app. A stale cache pointing at
+the decommissioned box produces a connection failure indistinguishable from an
+outage, and while that box was alive it silently served the *previous*
+deployment — which is worse, because everything looks fine.
+
+```bash
+dig +short cue.krevo.io          # want cname.vercel-dns / vercel-dns-017
+```
+
+Confirm from a phone on cellular, then read Vercel's runtime logs
+(`get_runtime_errors`, or `get_runtime_logs` grouped by status code) before
+touching code.
 
 ## Maintaining this file
 
