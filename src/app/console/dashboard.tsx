@@ -16,7 +16,7 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import type { ServiceHealth } from "@/lib/docker";
+import type { ServiceHealth, WatchdogReport } from "@/lib/docker";
 import type { Guest, WaitlistStats } from "@/lib/db";
 import type { Probe } from "@/app/api/health/route";
 import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
@@ -50,6 +50,7 @@ type Snapshot = {
   containers?: ServiceHealth[];
   probes?: { postgres?: Probe; redis?: Probe };
   waitlist?: WaitlistStats;
+  watchdog?: WatchdogReport;
 };
 
 type GuestPageResponse = {
@@ -301,6 +302,8 @@ export function Dashboard({ operator }: { operator: string }) {
             </div>
           )}
 
+          <WatchdogBanner watchdog={snap?.watchdog} />
+
           {newGuestIds.size > 0 && (
             <div className="cx-arrival" role="status">
               <span className="cx-dot" />
@@ -328,6 +331,31 @@ export function Dashboard({ operator }: { operator: string }) {
           {tab === "changelog" && <Changelog />}
         </main>
       </div>
+    </div>
+  );
+}
+
+/* ── The host watchdog ──
+
+   Reports on cue-health.timer, which is a systemd unit on the box rather than a
+   container — so nothing else on this screen can see it. Silent while it is
+   healthy and current; the point is that it is the only surface where "the
+   watchdog gave up on redis" and "the watchdog itself stopped running" are
+   visible without SSH.
+
+   Red only for `gaveUp`, which is the watchdog saying it has exhausted its five
+   restarts and a human is needed. Everything else is amber: real, but not yet
+   somebody's night. Both classes already exist; this adds no CSS. */
+function WatchdogBanner({ watchdog }: { watchdog?: WatchdogReport }) {
+  // Absent until the first poll lands, and on a non-200 that still parses.
+  const alert = watchdog?.alert;
+  if (!alert) return null;
+
+  // Both classes already exist. `critical` borrows the red "lost contact"
+  // treatment because it means the same thing: this is not self-healing.
+  return (
+    <div className={alert.tone === "critical" ? "cx-error" : "cx-degraded"}>
+      {alert.message}
     </div>
   );
 }

@@ -1,8 +1,15 @@
+import { readFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/studio";
 import { pool, waitlistStats, type WaitlistStats } from "@/lib/db";
 import { redis } from "@/lib/redis";
-import { services } from "@/lib/docker";
+import {
+  readWatchdogStatus,
+  services,
+  watchdogAlert,
+  WATCHDOG_STATUS_PATH,
+  type WatchdogReport,
+} from "@/lib/docker";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +39,14 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const [containers, postgres, cache, waitlist] = await Promise.all([
+  const [containers, postgres, cache, waitlist, watchdog] = await Promise.all([
     services(),
     probePostgres(),
     probeRedis(),
     // Annotated so dropping a field from WaitlistStats is a compile error —
     // .catch() widens the union and hid a missing `week` here.
     waitlistStats().catch((): WaitlistStats => NO_STATS),
+    probeWatchdog(),
   ]);
 
   return NextResponse.json(
@@ -47,9 +55,24 @@ export async function GET() {
       containers,
       probes: { postgres, redis: cache },
       waitlist,
+      watchdog,
     },
     { headers: { "cache-control": "no-store" } },
   );
+}
+
+/* The host watchdog reports through a file, not a port — it is a systemd timer
+   on the box, not a service this container can reach. A missing file is the
+   normal state in local dev and on a rebuilt box whose timers are not installed
+   yet, so absence is a value here rather than an error. */
+async function probeWatchdog(): Promise<WatchdogReport> {
+  const raw = await readFile(WATCHDOG_STATUS_PATH, "utf8").catch(() => null);
+  const watchdog = readWatchdogStatus(raw, Date.now());
+  /* The banner copy is decided here, not in the console. `lib/docker` is
+     server-only — boundary.test.ts enforces it — so a client component cannot
+     import the rule, and hand-copying it into the dashboard is how the console
+     drifted from the API once already. Send the verdict, not the inputs. */
+  return { ...watchdog, alert: watchdogAlert(watchdog) };
 }
 
 async function probePostgres(): Promise<Probe> {

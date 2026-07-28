@@ -97,6 +97,174 @@ export async function services(): Promise<ServiceHealth[]> {
   );
 }
 
+/* ── The host watchdog's own report ──
+
+   `scripts/cue-health.sh` runs every 2 minutes off `cue-health.timer`, restarts
+   what it finds broken, and publishes the result to /var/lib/cue/status.json.
+   compose mounts that directory read-only into this container. Until now
+   nothing read it, which left two facts reachable only by SSH:
+
+   - `gaveUp`: services the watchdog has stopped restarting. It gives up after
+     five attempts on purpose, because a sixth restart hides a real fault rather
+     than fixing it — so this list means "a human is needed", and on 2026-07-25
+     redis was on it.
+   - `checkedAt`: when the watchdog last ran. If the timer dies, *nothing* else
+     notices — the watchdog is what notices everything else, and it is itself
+     unwatched. A timestamp older than the stale window is that alarm, and it
+     costs one subtraction.
+
+   Everything here is defensive because the writer is a shell script building
+   JSON with string concatenation: an unset awk result emits a key with no
+   value, and `problems` entries are unescaped `docker compose ps` output. A
+   file that is present, non-empty and not JSON is a real state, and it must be
+   distinguishable from a box where the timer was simply never installed. */
+
+/** Where cue-health.sh publishes, per docker-compose.yml's read-only mount. */
+export const WATCHDOG_STATUS_PATH = "/var/lib/cue/status.json";
+
+/* Two and a half missed runs of a 2-minute timer. Long enough to absorb systemd
+   jitter and a deploy that pauses the watchdog, short enough that a dead timer
+   is visible within one coffee. */
+export const WATCHDOG_STALE_MS = 5 * 60_000;
+
+export type WatchdogState =
+  /** Current and parseable. Says nothing about what it reports. */
+  | "ok"
+  /** Parseable but older than the stale window — the watchdog is not running. */
+  | "stale"
+  /** Present and not parseable. */
+  | "unreadable"
+  /** No file at all: the timer was never installed on this box. */
+  | "missing";
+
+export type Watchdog = {
+  state: WatchdogState;
+  /** The watchdog's own verdict on its last run. False when it saw anything wrong. */
+  ok: boolean;
+  checkedAt: string | null;
+  problems: string[];
+  /** Services it has stopped restarting. Non-empty means a human is needed. */
+  gaveUp: string[];
+  /** Whether to raise a banner. Derived once here so no two surfaces disagree. */
+  needsAttention: boolean;
+};
+
+function stringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string");
+}
+
+/**
+ * Reads the watchdog's published status.
+ *
+ * @param raw  File contents, or null when the file does not exist. Never throws
+ *             — this is rendered by a Server Component, where an exception is a
+ *             500 on the one screen an operator opens to find out what is wrong.
+ * @param now  Epoch ms, injected so staleness is testable without waiting.
+ */
+export function readWatchdogStatus(raw: string | null, now: number): Watchdog {
+  const blank = (state: WatchdogState): Watchdog => ({
+    state,
+    ok: false,
+    checkedAt: null,
+    problems: [],
+    gaveUp: [],
+    needsAttention: true,
+  });
+
+  if (raw === null) return blank("missing");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return blank("unreadable");
+  }
+  // `null`, a bare string and a number all survive JSON.parse and carry no
+  // fields. An array does reach the reads below, and gets the same answer for
+  // the same reason a `{}` does: no checkedAt, so no way to judge freshness.
+  if (!parsed || typeof parsed !== "object") return blank("unreadable");
+
+  const body = parsed as Record<string, unknown>;
+  const checkedAt = typeof body.checkedAt === "string" ? body.checkedAt : null;
+  const at = checkedAt === null ? NaN : Date.parse(checkedAt);
+  // No usable timestamp means there is no way to tell a live watchdog from one
+  // that stopped an hour ago. Treating that as fresh would hide the exact
+  // failure this function exists to catch, so it is unreadable instead.
+  if (Number.isNaN(at)) return blank("unreadable");
+
+  // `now - at` goes negative when the container clock trails the host clock.
+  // That is a skew, not a stale report, and must not underflow into an alarm.
+  const state: WatchdogState = now - at > WATCHDOG_STALE_MS ? "stale" : "ok";
+  const ok = body.ok === true;
+
+  return {
+    state,
+    ok,
+    checkedAt,
+    problems: stringList(body.problems),
+    gaveUp: stringList(body.gaveUp),
+    needsAttention: state !== "ok" || !ok,
+  };
+}
+
+/* What the console says about all of that.
+ *
+ * Here rather than in the component because it is the decision, not the markup:
+ * `critical` is reserved for the watchdog having exhausted its five restarts
+ * and stopped — the one state that is somebody's night rather than tomorrow's
+ * task — and getting that boundary wrong in either direction is how a banner
+ * stops being read. A component cannot be unit-tested in this repo (node:test,
+ * no DOM), so the part worth pinning lives where a test can reach it. */
+export type WatchdogAlert = { tone: "critical" | "warn"; message: string };
+
+/** What /api/health sends: the reading plus the verdict already decided. */
+export type WatchdogReport = Watchdog & { alert: WatchdogAlert | null };
+
+export function watchdogAlert(watchdog: Watchdog): WatchdogAlert | null {
+  if (!watchdog.needsAttention) return null;
+
+  if (watchdog.gaveUp.length > 0) {
+    return {
+      tone: "critical",
+      message: `The host watchdog has given up restarting ${watchdog.gaveUp.join(
+        ", ",
+      )} after five attempts and will not try again. This needs a human.`,
+    };
+  }
+
+  if (watchdog.state === "missing") {
+    return {
+      tone: "warn",
+      message:
+        "The host watchdog has never written a status file. On the live box that means cue-health.timer is not installed — see the deployment runbook — and nothing is restarting failed containers.",
+    };
+  }
+
+  if (watchdog.state === "unreadable") {
+    return {
+      tone: "warn",
+      message:
+        "The host watchdog wrote a status file this console cannot read. Check /var/log/cue-health.log on the box.",
+    };
+  }
+
+  if (watchdog.state === "stale") {
+    return {
+      tone: "warn",
+      message: `The host watchdog last ran at ${watchdog.checkedAt}, more than five minutes ago. It runs every two minutes, so cue-health.timer has probably stopped and nothing is restarting failed containers.`,
+    };
+  }
+
+  // Current, readable, and reporting trouble it is still working through.
+  return {
+    tone: "warn",
+    message: `The host watchdog reports a problem: ${
+      watchdog.problems.join(", ") || "cause not given"
+    }. It is still retrying.`,
+  };
+}
+
 export function readHealth(status: string): ServiceHealth["health"] {
   if (status.includes("(healthy)")) return "healthy";
   if (status.includes("(unhealthy)")) return "unhealthy";
