@@ -1,5 +1,5 @@
 import { CreditCard } from "lucide-react";
-import { FREE_SENT_ALLOWANCE, type Plan } from "@/lib/cue";
+import { FREE_SENT_ALLOWANCE, PLAN_LABEL } from "@/lib/cue";
 import { requireStudio } from "@/lib/studio";
 import { SettingsForm } from "./form";
 import "../workspace.css";
@@ -8,11 +8,10 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Studio settings" };
 
-const PLAN_LABEL: Record<Plan, string> = {
-  free: "Free",
-  creator: "Creator",
-  studio: "Studio",
-};
+/* The labels come from cue.ts, which is where the `Plan` type lives. A local
+   copy of this map is exactly what went stale when Creator was renamed to Pro:
+   it type-checks against the old vocabulary right up until the union changes,
+   and then says the wrong word rather than failing to compile. */
 
 export default async function SettingsPage() {
   const { user, studio } = await requireStudio();

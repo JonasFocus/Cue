@@ -1570,7 +1570,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Three tiers (Free / Creator / Studio) need a tighter track than the
+/* Three tiers (Free / Pro / Studio) need a tighter track than the
    two-card layout this system was originally built for. */
 @media (min-width: 940px) {
   .cue-price-grid {
@@ -1604,7 +1604,7 @@
     linear-gradient(105deg, #ecdcff 0%, #d3e7ff 100%);
 }
 
-.cue-price-media[data-plan="creator"] {
+.cue-price-media[data-plan="pro"] {
   position: relative;
   background:
     radial-gradient(
@@ -1617,8 +1617,8 @@
     linear-gradient(165deg, #a9cdf0 0%, #7fb2e6 100%);
 }
 
-/* Fine dot texture over the Creator art, as in the reference. */
-.cue-price-media[data-plan="creator"]::after {
+/* Fine dot texture over the Pro art, as in the reference. */
+.cue-price-media[data-plan="pro"]::after {
   content: "";
   position: absolute;
   inset: 0;

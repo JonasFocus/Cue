@@ -33,7 +33,7 @@ const FAQS = [
   },
   {
     q: "Can I use my own agreement wording?",
-    a: "Yes — your terms, your studio. You will start from a template and edit it, or paste in what you already use. On Creator, saved templates and custom branding will keep every Cue looking like you.",
+    a: "Yes — your terms, your studio. You will start from a template and edit it, or paste in what you already use. On Pro, saved templates and custom branding will keep every Cue looking like you.",
   },
 ];
 

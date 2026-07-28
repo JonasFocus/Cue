@@ -125,7 +125,7 @@ Written down now, while it is cheap to be wrong:
   the blank template, then the value is the signing and record-keeping, not the
   agreements — and the six templates were largely wasted effort.
 - **Nobody trusts it.** If clients balk at signing on a link from an unknown
-  domain, branding and a custom domain move from Creator-tier nice-to-have to
+  domain, branding and a custom domain move from Pro-tier nice-to-have to
   table stakes.
 
 ---

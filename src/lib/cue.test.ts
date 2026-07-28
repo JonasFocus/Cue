@@ -141,7 +141,7 @@ test("the free allowance is five total sends, and does not reset", () => {
   assert.equal(canSend("free", FREE_SENT_ALLOWANCE - 1), true);
   assert.equal(canSend("free", FREE_SENT_ALLOWANCE), false);
   assert.equal(canSend("free", 900), false);
-  assert.equal(canSend("creator", 900), true);
+  assert.equal(canSend("pro", 900), true);
   assert.equal(canSend("studio", 900), true);
 });
 

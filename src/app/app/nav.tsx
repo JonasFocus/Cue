@@ -16,7 +16,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { CueMark } from "@/components/cue-mark";
-import { FREE_SENT_ALLOWANCE, groupCount, STATUS_GROUPS, type Plan } from "@/lib/cue";
+import {
+  FREE_SENT_ALLOWANCE,
+  groupCount,
+  PLAN_LABEL,
+  STATUS_GROUPS,
+  type Plan,
+} from "@/lib/cue";
 
 /* ponytail: the whole nav is one client module rather than a server shell with
    client leaves. Every item needs `data-active`, which needs the current path
@@ -170,7 +176,7 @@ function PlanMeter({ plan, sentCount }: { plan: Plan; sentCount: number }) {
     return (
       <div style={{ margin: "12px 0 10px" }}>
         <span className="ca-pill" data-tone="ok">
-          {plan === "creator" ? "Creator" : "Studio"} plan
+          {PLAN_LABEL[plan]} plan
         </span>
       </div>
     );

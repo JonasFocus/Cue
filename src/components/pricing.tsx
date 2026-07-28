@@ -20,8 +20,8 @@ const PLANS = [
     tone: "dark",
   },
   {
-    key: "creator",
-    name: "Creator",
+    key: "pro",
+    name: "Pro",
     badge: "$19/month",
     blurb: "For independent photographers and videographers sending regularly.",
     features: [
@@ -40,7 +40,7 @@ const PLANS = [
     badge: "$49/month",
     blurb: "For small creative businesses with more than one person sending.",
     features: [
-      "Everything in Creator",
+      "Everything in Pro",
       "Multiple users",
       "Shared templates",
       "Custom domain",
@@ -157,7 +157,7 @@ export function Pricing() {
                 <tr>
                   <th scope="col">Plan Comparison</th>
                   <th scope="col">Free</th>
-                  <th scope="col">Creator</th>
+                  <th scope="col">Pro</th>
                   <th scope="col">Studio</th>
                 </tr>
               </thead>

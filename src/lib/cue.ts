@@ -256,13 +256,13 @@ export const FREE_SENT_ALLOWANCE = 5;
    admin.ts reaches the database module, so a client component importing a plan
    label from it would pull `pg` into the browser bundle. This file imports
    nothing, which is what makes it safe for both sides. */
-export const PLANS = ["free", "creator", "studio"] as const;
+export const PLANS = ["free", "pro", "studio"] as const;
 
 export type Plan = (typeof PLANS)[number];
 
 export const PLAN_LABEL: Record<Plan, string> = {
   free: "Free",
-  creator: "Creator",
+  pro: "Pro",
   studio: "Studio",
 };
 

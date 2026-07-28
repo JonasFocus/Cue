@@ -68,14 +68,14 @@ Start with wedding photographers and videographers. Build excellent wedding-agre
 | Plan | Price | Intended customer | Included value |
 | --- | ---: | --- | --- |
 | Free | $0 | Creatives evaluating Cue on real client work | Five total sent Cues, standard templates, final PDFs, audit trail |
-| Creator | $19/month | Independent photographers and videographers | Unlimited Cues, custom branding, saved templates, email reminders, searchable agreement library |
-| Studio | $49/month | Small creative businesses | Everything in Creator, multiple users, shared templates, custom domain, priority support |
+| Pro | $19/month | Independent photographers and videographers | Unlimited Cues, custom branding, saved templates, email reminders, searchable agreement library |
+| Studio | $49/month | Small creative businesses | Everything in Pro, multiple users, shared templates, custom domain, priority support |
 
 The free allowance is five total sent Cues, not a monthly reset. That lets users experience genuine value while creating a clean conversion point when Cue becomes part of their workflow.
 
 ### Launch billing decision
 
-Define the Free, Creator, and Studio plans in the product now, including feature gates and upgrade messaging, but **do not wire up Stripe for version one**. Launch the agreement product first, validate that creators repeatedly send Cues, and collect upgrade interest through a simple waitlist or contact flow. Add Stripe only after the core workflow has reliable usage and the pricing hypothesis is validated.
+Define the Free, Pro, and Studio plans in the product now, including feature gates and upgrade messaging, but **do not wire up Stripe for version one**. Launch the agreement product first, validate that creators repeatedly send Cues, and collect upgrade interest through a simple waitlist or contact flow. Add Stripe only after the core workflow has reliable usage and the pricing hypothesis is validated.
 
 ### Planning economics
 
