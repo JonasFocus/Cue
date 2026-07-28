@@ -28,14 +28,21 @@ export type RateLimitClient = {
   expire(key: string, seconds: number, mode: "NX"): Promise<unknown>;
 };
 
-/* Null rather than a client when unconfigured — `next build` imports this
-   module and must not require credentials, and local dev without Upstash
-   should run rather than crash. `rateLimit` treats null exactly as it treated a
-   closed socket: allowed. */
+/* Read the KV_REST_API_* pair explicitly rather than using `Redis.fromEnv()`.
+   fromEnv() looks for UPSTASH_REDIS_REST_URL / _TOKEN, and the Vercel
+   Marketplace integration injects KV_REST_API_URL / KV_REST_API_TOKEN — so
+   fromEnv() would throw, or worse, this module would silently hold a null
+   client and rate limiting would be off in production with nothing to see.
+
+   Null rather than a client when unconfigured: `next build` imports this module
+   and must not require credentials, and local dev without Upstash should run
+   rather than crash. `rateLimit` treats null exactly as it treated a closed
+   socket — allowed. */
+const url = process.env.KV_REST_API_URL;
+const token = process.env.KV_REST_API_TOKEN;
+
 export const redis: RateLimitClient | null =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? (Redis.fromEnv() as unknown as RateLimitClient)
-    : null;
+  url && token ? (new Redis({ url, token }) as unknown as RateLimitClient) : null;
 
 /**
  * Fixed-window limiter. Returns whether the caller is allowed to proceed.
