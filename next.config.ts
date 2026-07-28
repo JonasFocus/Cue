@@ -41,8 +41,27 @@ const SECURITY_HEADERS = [
      signing page is the whole thing being protected. */
   {
     key: "Content-Security-Policy",
-    value:
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+    value: [
+      "default-src 'self'",
+      /* 'unsafe-eval' in development ONLY. React's dev build uses eval() to
+         reconstruct callstacks, and without it the console fills with CSP
+         violations that are not bugs — which trains you to ignore the console
+         on the one product where a real violation would matter. React does not
+         use eval in production, so production keeps the tighter policy. */
+      `script-src 'self' 'unsafe-inline'${
+        process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"
+      }`,
+      "style-src 'self' 'unsafe-inline'",
+      // data: and blob: are load-bearing for the signature pad and for
+      // rendering a captured signature back on the sealed record.
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "form-action 'self'",
+    ].join("; "),
   },
   {
     key: "Permissions-Policy",
