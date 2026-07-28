@@ -115,15 +115,26 @@ export async function requireOperator(): Promise<{ id: string; email: string } |
 /* Created on first authenticated request rather than during signup: Better Auth
    owns the signup transaction, and a studio insert failing inside it would
    leave an account that exists but can never load the app. This way the worst
-   case is one retried page load. */
+   case is one retried page load.
+
+   The starting plan comes from the invite, as a sub-select rather than a second
+   round trip — this runs on effectively every request, and reading the invite
+   separately would double that for a value only the very first call uses. It
+   lands here, in the one function that creates a studio, rather than in
+   requireStudio(): the layout calls ensureStudio() directly too, and a plan
+   applied by only one of the two callers would depend on which won the race.
+
+   Applied once. ON CONFLICT deliberately does not touch `plan`, so changing an
+   invite later never moves an existing studio — see the note on Invite.plan. */
 export async function ensureStudio(user: {
   id: string;
   email: string;
   name: string;
 }): Promise<Studio> {
   const { rows } = await pool.query<StudioRow>(
-    `INSERT INTO studio (owner_user_id, name, email)
-          VALUES ($1, $2, $3)
+    `INSERT INTO studio (owner_user_id, name, email, plan)
+          VALUES ($1, $2, $3,
+                  COALESCE((SELECT i.plan FROM invite i WHERE i.email = lower($3)), 'free'))
      ON CONFLICT (owner_user_id) DO UPDATE SET owner_user_id = EXCLUDED.owner_user_id
        RETURNING ${STUDIO_COLUMNS}`,
     [user.id, user.name?.trim() || user.email.split("@")[0] || "My studio", user.email],

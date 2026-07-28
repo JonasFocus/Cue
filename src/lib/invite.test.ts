@@ -214,3 +214,49 @@ test("the migration lets existing accounts keep the access they already have", (
   assert.match(migration, /ON CONFLICT \(email\) DO NOTHING/);
   assert.match(migration, /WHERE u\.role = 'creator'/);
 });
+
+/* ── The plan an invite provisions ── */
+
+const migration010 = readFileSync(
+  new URL("../../db/migrations/010_plans_and_invite_plan.sql", import.meta.url),
+  "utf8",
+);
+
+test("an accepted invite's plan is frozen by the statement, not by the caller", () => {
+  // Once somebody has signed up, studio.plan is what they are actually on. An
+  // invite that kept editing itself afterwards would display a plan the studio
+  // does not have. The console hides the control; this makes it structural.
+  /* Read from `source`, not the filtered `sql` above: this assignment is built
+     as a fragment and pushed into the SET clause, so it carries no SELECT or
+     UPDATE keyword for that filter to catch. */
+  const update = source.split("\n").find((line) => /plan = CASE/.test(line));
+  assert.ok(update, "expected the plan assignment to be conditional");
+  assert.match(update, /WHEN accepted_user_id IS NULL THEN/);
+  assert.match(update, /ELSE plan END/);
+});
+
+test("the invite plan column carries the same vocabulary as studio.plan", () => {
+  // Two constraints, one list. An invite able to provision a plan the studio
+  // table rejects is a 500 at the instant somebody accepts.
+  const constraints = [...migration010.matchAll(/CHECK \(plan IN \(([^)]+)\)\)/g)].map((m) =>
+    m[1]!.split(",").map((s) => s.trim().replace(/'/g, "")).sort().join(","),
+  );
+  assert.equal(constraints.length, 2);
+  assert.equal(constraints[0], constraints[1]);
+});
+
+test("invite.plan defaults to free, which is what an invite without one promised", () => {
+  assert.match(migration010, /ADD COLUMN plan text NOT NULL DEFAULT 'free'/);
+});
+
+test("the studio inherits the invite's plan on creation, and only then", () => {
+  // Read from studio.ts rather than asserted against a database: the guarantee
+  // is that ON CONFLICT does not name `plan`, so a later invite edit cannot
+  // move a studio that already exists.
+  const studioSource = readFileSync(new URL("./studio.ts", import.meta.url), "utf8");
+  const insert = studioSource.match(/INSERT INTO studio[\s\S]*?RETURNING/)?.[0] ?? "";
+  assert.match(insert, /SELECT i\.plan FROM invite i WHERE i\.email = lower\(\$3\)/);
+  assert.match(insert, /COALESCE\(/, "an account with no invite must still get a plan");
+  const conflict = insert.match(/ON CONFLICT[\s\S]*/)?.[0] ?? "";
+  assert.doesNotMatch(conflict, /plan/, "ON CONFLICT must not re-apply the plan");
+});

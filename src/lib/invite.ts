@@ -1,4 +1,7 @@
 import { randomBytes } from "node:crypto";
+// Type-only, so this stays a pure module: cue.ts holds the plan vocabulary and
+// the runtime isPlan() check lives at the action boundary.
+import type { Plan } from "./cue";
 
 /* Invites: who is allowed into /app at all, and until when.
  *
@@ -162,6 +165,13 @@ export type Invite = {
   email: string;
   name: string;
   token: string;
+  /* The plan the studio starts on, applied once by ensureStudio() when the
+     studio is created. Not a live link to the studio's plan afterwards: once
+     they have signed up, `studio.plan` is the truth and /console/studios/[id]
+     is where it changes. The console only offers this control while the invite
+     is unaccepted, and the UPDATE below refuses it after — so the two cannot
+     drift into disagreeing about what somebody is paying for. */
+  plan: Plan;
   startsAt: string;
   expiresAt: string | null;
   revokedAt: string | null;
@@ -177,6 +187,7 @@ type InviteRow = {
   email: string;
   name: string;
   token: string;
+  plan: Plan;
   starts_at: Date;
   expires_at: Date | null;
   revoked_at: Date | null;
@@ -187,7 +198,7 @@ type InviteRow = {
   created_at: Date;
 };
 
-const INVITE_COLUMNS = `id, email, name, token, starts_at, expires_at, revoked_at,
+const INVITE_COLUMNS = `id, email, name, token, plan, starts_at, expires_at, revoked_at,
                         accepted_user_id, accepted_at, invited_by, note, created_at`;
 
 function toInvite(row: InviteRow): Invite {
@@ -196,6 +207,7 @@ function toInvite(row: InviteRow): Invite {
     email: row.email,
     name: row.name,
     token: row.token,
+    plan: row.plan,
     startsAt: row.starts_at.toISOString(),
     expiresAt: row.expires_at?.toISOString() ?? null,
     revokedAt: row.revoked_at?.toISOString() ?? null,
@@ -243,6 +255,7 @@ export async function inviteByEmail(email: string): Promise<Invite | null> {
 export async function createInvite(input: {
   name: string;
   email: string;
+  plan: Plan;
   startsAt: Date;
   expiresAt: Date | null;
   invitedBy: string;
@@ -250,14 +263,15 @@ export async function createInvite(input: {
 }): Promise<Invite | "duplicate"> {
   const pool = await db();
   const { rows } = await pool.query<InviteRow>(
-    `INSERT INTO invite (email, name, token, starts_at, expires_at, invited_by, note)
-          VALUES (lower($1), $2, $3, $4, $5, $6, $7)
+    `INSERT INTO invite (email, name, token, plan, starts_at, expires_at, invited_by, note)
+          VALUES (lower($1), $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (email) DO NOTHING
        RETURNING ${INVITE_COLUMNS}`,
     [
       input.email,
       input.name,
       newInviteToken(),
+      input.plan,
       input.startsAt,
       input.expiresAt,
       input.invitedBy,
@@ -273,7 +287,7 @@ export async function createInvite(input: {
    it is a different invite. */
 export async function updateInviteAccess(
   id: number,
-  patch: { expiresAt?: Date | null; revoked?: boolean },
+  patch: { expiresAt?: Date | null; revoked?: boolean; plan?: Plan },
 ): Promise<Invite | null> {
   const assignments: string[] = [];
   const values: unknown[] = [id];
@@ -286,6 +300,18 @@ export async function updateInviteAccess(
     // now() rather than a JS timestamp: the database is the clock everything
     // else on this row was stamped by.
     assignments.push(`revoked_at = ${patch.revoked ? "now()" : "NULL"}`);
+  }
+  if (patch.plan !== undefined) {
+    values.push(patch.plan);
+    /* Conditional in SQL rather than checked in the caller: once somebody has
+       accepted, `studio.plan` is what they are actually on, and an invite that
+       kept editing itself afterwards would show a plan the studio does not
+       have. Written this way the row cannot be talked into it by any caller,
+       present or future — it is a no-op, not an error, because the console
+       already hides the control and a race is not worth a failed save. */
+    assignments.push(
+      `plan = CASE WHEN accepted_user_id IS NULL THEN $${values.length} ELSE plan END`,
+    );
   }
   if (!assignments.length) return null;
 

@@ -31,16 +31,36 @@ const migration008 = readFileSync(
   new URL("../../db/migrations/008_admin_events.sql", import.meta.url),
   "utf8",
 );
+const migration010 = readFileSync(
+  new URL("../../db/migrations/010_plans_and_invite_plan.sql", import.meta.url),
+  "utf8",
+);
 
 /* ── Plans ── */
 
-test("PLANS matches the SQL CHECK constraint on studio.plan", () => {
+/* 007 created studio.plan with the original vocabulary; 010 renamed `creator`
+   to `pro` and added the same constraint to invite.plan. The *current* rule is
+   whatever 010 rebuilt, so that is what PLANS has to agree with — reading 007
+   here is how this test would keep passing while the database disagreed. */
+test("PLANS matches the SQL CHECK constraints on plan columns", () => {
   // A plan the console can write but the constraint rejects is a 500 at the
-  // moment an operator is trying to fix somebody's account.
-  const match = migration007.match(/plan\s+text\s+NOT NULL DEFAULT 'free' CHECK \(plan IN \(([^)]+)\)\)/);
-  assert.ok(match, "could not find the plan CHECK constraint in 007");
-  const inSql = match[1]!.split(",").map((s) => s.trim().replace(/'/g, ""));
-  assert.deepEqual([...inSql].sort(), [...PLANS].sort());
+  // moment an operator is trying to fix somebody's account — or worse, at the
+  // moment somebody accepts an invite.
+  const constraints = [...migration010.matchAll(/CHECK \(plan IN \(([^)]+)\)\)/g)];
+  assert.equal(constraints.length, 2, "expected a plan constraint for studio and for invite");
+
+  for (const match of constraints) {
+    const inSql = match[1]!.split(",").map((s) => s.trim().replace(/'/g, ""));
+    assert.deepEqual([...inSql].sort(), [...PLANS].sort());
+  }
+});
+
+test("010 leaves no studio on the old plan name", () => {
+  // The rename is only safe because it also moves the rows. A constraint that
+  // rejects 'creator' with a 'creator' row still in the table is a table that
+  // cannot be updated at all.
+  assert.match(migration010, /UPDATE studio SET plan = 'pro' WHERE plan = 'creator'/);
+  assert.doesNotMatch(PLANS.join(","), /creator/, "PLANS still carries the old name");
 });
 
 test("every plan has a label and answers isPlan", () => {

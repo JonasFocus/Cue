@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Clock, Sparkles } from "lucide-react";
 import { CueMark } from "@/components/cue-mark";
 import { formatDate } from "@/lib/agreement";
-import { FREE_SENT_ALLOWANCE } from "@/lib/cue";
+import { FREE_SENT_ALLOWANCE, PLAN_LABEL } from "@/lib/cue";
 import { inviteByToken, inviteState, type InviteState } from "@/lib/invite";
 import { currentUser } from "@/lib/studio";
 import { InviteSignupForm } from "./form";
@@ -134,14 +134,19 @@ export default async function InvitePage({
             a template, send a link, and your client signs without an account.
           </p>
 
+          {/* The first two facts follow the plan the invite provisions. On Free
+              the honest promise is the five-send allowance; on a paid plan that
+              allowance does not apply, and saying "5 Cues, free" to somebody
+              being handed Pro would be a smaller offer than the one they are
+              actually getting. canSend() in cue.ts is the rule both read. */}
           <div className="ci-facts">
             <span className="ci-fact">
-              <b>{FREE_SENT_ALLOWANCE} Cues</b>
-              <span>to send, free</span>
+              <b>{invite.plan === "free" ? `${FREE_SENT_ALLOWANCE} Cues` : "Unlimited"}</b>
+              <span>{invite.plan === "free" ? "to send, free" : "Cues to send"}</span>
             </span>
             <span className="ci-fact">
-              <b>No card</b>
-              <span>nothing to cancel</span>
+              <b>{invite.plan === "free" ? "No card" : PLAN_LABEL[invite.plan]}</b>
+              <span>{invite.plan === "free" ? "nothing to cancel" : "plan, no card"}</span>
             </span>
             <span className="ci-fact">
               {/* The access period, stated before they sign up rather than

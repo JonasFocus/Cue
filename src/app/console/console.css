@@ -1766,7 +1766,7 @@ a.cx-tab[aria-current="page"]::after {
   white-space: nowrap;
 }
 
-.cs-tag[data-plan="creator"] {
+.cs-tag[data-plan="pro"] {
   border-color: rgb(139 124 246 / 0.35);
   background: rgb(139 124 246 / 0.1);
   color: #b9aefb;
@@ -2292,4 +2292,10 @@ a.cx-tab[aria-current="page"]::after {
     max-width: none;
     flex: 1 1 100%;
   }
+}
+
+/* The plan select in a row's controls. Narrower than the date field beside it —
+   three short words need less room than a date picker. */
+.ci-plan {
+  max-width: 150px;
 }

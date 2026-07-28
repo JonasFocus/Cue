@@ -77,8 +77,11 @@ What exists:
   in `templates.ts`, lifecycle rules in `cue.ts`, I/O in `cue-db.ts`. A template
   is a question spec plus conditional clauses — a shoot type is data, not code.
 - **The operator invite console** at `/console/invites`: create an invite (name,
-  address, access period), copy its link, move the end date, revoke, restore, or
-  delete one nobody has taken up. Nothing is emailed — copying the link is the
+  address, starting plan, access period), copy its link, move the end date or
+  plan, revoke, restore, or delete one nobody has taken up. The plan is applied
+  once, by `ensureStudio()` in the INSERT that creates the studio; afterwards
+  `studio.plan` is the truth and the console stops offering the control, so the
+  two cannot disagree. Nothing is emailed — copying the link is the
   delivery, exactly as it is for a Cue. No action there can change the address or
   token an invite is for, or delete one an account already stands on.
 - **The operator customer console** at `/console/studios` and
@@ -118,8 +121,12 @@ explained at its definition in `src/lib/{cue,cue-db,agreement}.ts` and pinned by
 changing any of them — every one of the five has a non-obvious reason.
 
 - Pricing is static. Per the launch billing decision in `docs/solution.md`, define the
-  Free, Creator, and Studio plans in the product but **do not wire Stripe for
-  version one**.
+  Free, Pro, and Studio plans in the product but **do not wire Stripe for
+  version one**. The `creator` tier was renamed `pro` in `010`, value and label:
+  `creator` also means a user's role and a signing party's role, and one word
+  for three things was worth fixing while no row was on a paid tier. `PLANS` in
+  `cue.ts` is the vocabulary, pinned by `admin.test.ts` to the CHECK constraints
+  on both `studio.plan` and `invite.plan`.
 - Placeholder testimonials were **deleted** on 2026-07-25 rather than shipped.
   If a testimonial section returns, every quote must be sourced and attributable
   to a real named user who agreed to it. Never present invented quotes as real.

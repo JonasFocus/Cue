@@ -5,6 +5,7 @@ import { MailPlus, SearchX } from "lucide-react";
 import { CueMark } from "@/components/cue-mark";
 import { formatStamp } from "@/lib/agreement";
 import { adminOverview } from "@/lib/admin";
+import { PLAN_LABEL } from "@/lib/cue";
 import {
   inviteState,
   INVITE_STATE_LABEL,
@@ -155,7 +156,7 @@ export default async function InvitesPage() {
             Nothing is emailed — there is no mail provider, so copying the link and
             sending it yourself is the delivery, exactly as it is for a Cue. The
             link opens a page with their name on it and creates the account for
-            that address only.
+            that address only, on the plan you pick here.
           </p>
           <div className="cs-panel">
             <InviteComposer />
@@ -187,6 +188,12 @@ export default async function InvitesPage() {
                   <span className="cs-tag" data-tone={INVITE_STATE_TONE[invite.state]}>
                     {INVITE_STATE_LABEL[invite.state]}
                   </span>
+                  {/* The plan they start on. Once accepted it is the studio's
+                      own plan that matters, so the row stops claiming to own
+                      it and points at the customer page instead. */}
+                  <span className="cs-tag" data-plan={invite.plan}>
+                    {PLAN_LABEL[invite.plan]}
+                  </span>
                   <span className="cs-date">
                     {period(invite.startsAt, invite.expiresAt, invite.state)}
                   </span>
@@ -204,6 +211,7 @@ export default async function InvitesPage() {
                 <InviteControls
                   inviteId={invite.id}
                   expiresAt={toDateInput(invite.expiresAt)}
+                  plan={invite.plan}
                   revoked={invite.revokedAt !== null}
                   accepted={invite.acceptedUserId !== null}
                   personLabel={invite.name}

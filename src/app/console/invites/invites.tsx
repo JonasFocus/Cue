@@ -2,6 +2,10 @@
 
 import { useActionState, useState } from "react";
 import { Check, Copy, Trash2, UserPlus } from "lucide-react";
+/* The plan vocabulary comes from cue.ts, which is pure — never from invite.ts,
+   which reaches node:crypto and the Postgres pool. Same boundary admin.ts
+   documents at length; nav.tsx and sign.tsx import it the same way. */
+import { PLAN_LABEL, PLANS, type Plan } from "@/lib/cue";
 import { Feedback } from "../studios/studios";
 import {
   createInviteAction,
@@ -54,6 +58,18 @@ export function InviteComposer() {
         {/* Native date inputs: a calendar, keyboard entry, and the platform's
             own locale formatting, for no dependency and no code. */}
         <label className="cs-field">
+          <span>Plan</span>
+          <select name="plan" defaultValue="free">
+            {PLANS.map((p) => (
+              <option key={p} value={p}>
+                {PLAN_LABEL[p]}
+              </option>
+            ))}
+          </select>
+          <small className="ci-field-note">Applied when they sign up.</small>
+        </label>
+
+        <label className="cs-field">
           <span>Access from</span>
           <input name="startsAt" type="date" defaultValue={todayInput()} />
         </label>
@@ -99,12 +115,14 @@ export function InviteComposer() {
 export function InviteControls({
   inviteId,
   expiresAt,
+  plan,
   revoked,
   accepted,
   personLabel,
 }: {
   inviteId: number;
   expiresAt: string;
+  plan: Plan;
   revoked: boolean;
   accepted: boolean;
   personLabel: string;
@@ -129,11 +147,32 @@ export function InviteControls({
             field they belong to. */}
       </label>
 
+      {/* Only while nobody has taken the invite up. Once they have, the studio
+          they own carries the plan and /console/studios/[id] is where it
+          changes — two controls writing "what plan is this person on" is how
+          the two end up disagreeing. The server refuses it either way. */}
+      {!accepted && (
+        <label className="cs-field ci-plan">
+          <span>Plan</span>
+          <select
+            name="plan"
+            defaultValue={plan}
+            aria-label={`Plan for ${personLabel}`}
+          >
+            {PLANS.map((p) => (
+              <option key={p} value={p}>
+                {PLAN_LABEL[p]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <button
         className="cs-button"
         type="submit"
         name="intent"
-        value="period"
+        value="settings"
         disabled={pending}
       >
         Save

@@ -10,6 +10,7 @@ import {
   updateInviteAccess,
 } from "@/lib/invite";
 import { isValidEmail, normaliseEmail, MAX_EMAIL_LENGTH } from "@/lib/waitlist";
+import { isPlan } from "@/lib/cue";
 
 /* Operator writes against the invite list.
  *
@@ -19,12 +20,15 @@ import { isValidEmail, normaliseEmail, MAX_EMAIL_LENGTH } from "@/lib/waitlist";
  * reaching them would be the whole gate falling over.
  *
  * What an operator may do here, and it is the complete list:
- *   • invite somebody — name, address, and the window they get;
- *   • move the end of that window, or withdraw and restore access;
+ *   • invite somebody — name, address, the plan they start on, and the window
+ *     they get;
+ *   • move the end of that window or change that plan, withdraw and restore
+ *     access;
  *   • delete an invite nobody has taken up.
  *
  * What no action here can do: change the address an invite is for, change its
- * token, or delete an invite an account is already standing on. The first two
+ * token, change the plan of an invite somebody has already accepted, or delete
+ * an invite an account is already standing on. The first two
  * are enforced by the column allowlist in updateInviteAccess(), the third by the
  * WHERE clause in deleteUnacceptedInvite(). Re-pointing a live invite at a new
  * address would be a silent account takeover, and deleting an accepted one
@@ -71,6 +75,13 @@ export async function createInviteAction(
     return fail("That email address doesn't look right.");
   }
 
+  /* Checked here and again by the CHECK constraint migration 010 puts on
+     invite.plan — a plan this form could write but the studio table refuses
+     would be a 500 at the moment somebody accepts their invite, which is the
+     worst possible moment. */
+  const plan = text(formData.get("plan"), 20);
+  if (!isPlan(plan)) return fail("That is not a plan.");
+
   /* Blank start means "now" — the common case is inviting somebody you are
      about to message. Blank end means no expiry, which is a real choice and not
      a mistake, so it is not defaulted to some arbitrary number of days. */
@@ -84,6 +95,7 @@ export async function createInviteAction(
     const invite = await createInvite({
       name,
       email,
+      plan,
       startsAt,
       expiresAt,
       invitedBy: operator.email,
@@ -98,7 +110,11 @@ export async function createInviteAction(
       operator,
       action: "invite.create",
       // The id, never the address — see the note above ADMIN_ACTIONS.
-      meta: { inviteId: invite.id, expires: expiresAt ? "dated" : "open-ended" },
+      meta: {
+        inviteId: invite.id,
+        plan,
+        expires: expiresAt ? "dated" : "open-ended",
+      },
     });
   } catch (err) {
     console.error("[console] invite create failed", (err as Error).message);
@@ -112,7 +128,7 @@ export async function createInviteAction(
 /* The four things that can happen to an invite after it exists.
    A closed vocabulary, checked below, so the `intent` field of a hand-crafted
    POST cannot mean anything this file did not decide it means. */
-const INTENTS = ["revoke", "restore", "period", "delete"] as const;
+const INTENTS = ["revoke", "restore", "settings", "delete"] as const;
 type Intent = (typeof INTENTS)[number];
 
 function isIntent(value: string): value is Intent {
@@ -152,10 +168,23 @@ export async function manageInviteAction(
       return { status: "ok", message: "Invite removed." };
     }
 
-    const patch =
-      intent === "period"
+    const patch: Parameters<typeof updateInviteAccess>[1] =
+      intent === "settings"
         ? { expiresAt: parseAccessDate(text(formData.get("expiresAt"), 10), "end") }
         : { revoked: intent === "revoke" };
+
+    if (intent === "settings") {
+      /* An absent plan is not an invalid one. The console hides the plan
+         control once an invite is accepted — at that point studio.plan is the
+         truth — so a save from such a row carries no plan and must still be
+         allowed to move the date. Assigned inside the `if` so isPlan() narrows
+         the string rather than being cast past the type. */
+      const raw = text(formData.get("plan"), 20);
+      if (raw) {
+        if (!isPlan(raw)) return fail("That is not a plan.");
+        patch.plan = raw;
+      }
+    }
 
     const updated = await updateInviteAccess(inviteId, patch);
     if (!updated) return fail("No invite with that id.");
@@ -186,6 +215,6 @@ export async function manageInviteAction(
         ? "Access withdrawn — it stops at their next request."
         : intent === "restore"
           ? "Access restored."
-          : "Access period updated.",
+          : "Saved.",
   };
 }

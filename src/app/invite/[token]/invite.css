@@ -132,7 +132,13 @@
   background: var(--cue-panel);
 }
 
+/* inline-flex and centred: the open-ended case puts a clock icon beside the
+   word, and as a plain <b> it landed on its own line above it. */
 .ci-fact b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   font-size: 14px;
   font-weight: 500;
   letter-spacing: -0.01em;
