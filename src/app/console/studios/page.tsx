@@ -239,16 +239,24 @@ export default async function StudiosPage({
                   <td className="cs-num" role="cell">
                     {s.cuesCreated.toLocaleString()}
                   </td>
-                  <td className="cs-num" role="cell">
+                  {/* data-label is rendered as a ::before only below 640px,
+                      where the header row is gone and these would otherwise be
+                      three unlabelled integers in a row. */}
+                  <td className="cs-num" role="cell" data-label="Sent">
                     {s.cuesSent.toLocaleString()}
                   </td>
-                  <td className="cs-num" role="cell">
+                  <td className="cs-num" role="cell" data-label="Signed">
                     {s.signed.toLocaleString()}
                   </td>
-                  <td className="cs-num" role="cell">
+                  <td className="cs-num" role="cell" data-label="Clients">
                     {s.clients.toLocaleString()}
                   </td>
-                  <td className="cs-date" role="cell" title={formatStamp(s.lastActivity)}>
+                  <td
+                    className="cs-date"
+                    role="cell"
+                    data-label="Last activity"
+                    title={formatStamp(s.lastActivity)}
+                  >
                     {day(s.lastActivity)}
                   </td>
                   <td className="cs-date" role="cell" title={formatStamp(s.createdAt)}>

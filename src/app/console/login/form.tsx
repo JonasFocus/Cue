@@ -64,7 +64,7 @@ export function LoginForm() {
             required
             autoComplete="email"
             autoFocus
-            placeholder="you@studio.com"
+            placeholder="ops@krevo.io"
             aria-invalid={!!error}
           />
         </label>

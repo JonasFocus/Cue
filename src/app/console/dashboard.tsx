@@ -70,6 +70,7 @@ export function Dashboard({ operator }: { operator: string }) {
   const [nextBefore, setNextBefore] = useState<number | null>(null);
   const [newGuestIds, setNewGuestIds] = useState<Set<number>>(() => new Set());
   const [loadingMore, setLoadingMore] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState<string | null>(null);
   // Refreshed on each poll, not on a clock: it only feeds a relative-time
@@ -194,7 +195,9 @@ export function Dashboard({ operator }: { operator: string }) {
       setGuests(updated);
       setError(null);
     } catch (err) {
-      setError(`${(err as Error).message} — reverting`);
+      setError(
+        `Could not update that guest — ${(err as Error).message}. Their status has been put back; try again.`,
+      );
       void load();
     } finally {
       mutating.current -= 1;
@@ -206,6 +209,7 @@ export function Dashboard({ operator }: { operator: string }) {
   // while the session cookie stayed valid for its full life — on a shared
   // machine, that is a live session handed to the next person.
   const signOut = useCallback(async () => {
+    setSigningOut(true);
     try {
       const res = await fetch("/api/auth/sign-out", {
         method: "POST",
@@ -217,6 +221,7 @@ export function Dashboard({ operator }: { operator: string }) {
       setError(
         `Sign-out failed (${(err as Error).message}) — you are STILL signed in. Try again.`,
       );
+      setSigningOut(false);
       return;
     }
     window.location.href = "/console/login";
@@ -284,6 +289,7 @@ export function Dashboard({ operator }: { operator: string }) {
             className="cx-signout"
             onClick={signOut}
             type="button"
+            disabled={signingOut}
             aria-label="Sign out"
             title="Sign out"
           >
@@ -410,17 +416,24 @@ function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string 
             {degraded
               ? "Health reporting is degraded."
               : !snap
-                ? "Reading the box…"
+                ? "Checking the datastores…"
                 : allUp
                   ? "Everything is running."
                   : "Something needs a look."}
           </h1>
+          {/* Branches on the same three values as the headline. It used to fall
+              through to "Postgres and Redis answering" whenever a snapshot
+              existed at all — including when a probe was down, so the one
+              explanatory sentence on the health surface denied the fault the
+              headline had just reported. */}
           <p className="cx-hero-sub">
             {degraded
               ? `${degraded}. Only partial health data is available — the guest list is still live.`
-              : snap
-                ? "Postgres and Redis answering, and the waitlist is open."
-                : "Fetching datastore probes."}
+              : !snap
+                ? "Fetching datastore probes."
+                : allUp
+                  ? "Postgres and Redis answering, and the waitlist is open."
+                  : "A datastore is not answering — see the rows below."}
           </p>
 
           <div className="cx-figures">
@@ -436,7 +449,7 @@ function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string 
         </div>
       </section>
 
-      <p className="cx-label">Datastores</p>
+      <h2 className="cx-label">Datastores</h2>
       <div className="cx-list">
         <ProbeRow name="postgres" hint="SELECT version()" probe={snap?.probes?.postgres} />
         <ProbeRow name="redis" hint="PING" probe={snap?.probes?.redis} />
@@ -529,7 +542,7 @@ function GuestList({
             {total !== null && (
               <span className="cx-guest-total" aria-label={`${total.toLocaleString()} guests total`}>
                 <span className="cx-dot" />
-                {total.toLocaleString()} live
+                {total.toLocaleString()} total
               </span>
             )}
           </div>
@@ -546,6 +559,7 @@ function GuestList({
           <label className="cx-search">
             <Search size={13} strokeWidth={2} />
             <input
+              type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search name or email"
@@ -592,7 +606,20 @@ function GuestList({
             {filtered?.length === 0 && (
               <tr role="row">
                 <td className="cx-empty" role="cell" colSpan={4}>
-                  {q ? `Nobody matches “${q}”.` : "No one on the list yet."}
+                  {q ? (
+                    <>
+                      Nobody matches “{q}”.{" "}
+                      <button
+                        type="button"
+                        className="cs-quiet-link"
+                        onClick={() => setQ("")}
+                      >
+                        Clear
+                      </button>
+                    </>
+                  ) : (
+                    "No one on the list yet."
+                  )}
                 </td>
               </tr>
             )}
@@ -639,7 +666,12 @@ function GuestList({
 
         {hasMore && (
           <div className="cx-load-more">
-            <button type="button" onClick={onLoadMore} disabled={loadingMore}>
+            <button
+              type="button"
+              className="cs-button"
+              onClick={onLoadMore}
+              disabled={loadingMore}
+            >
               {loadingMore ? "Loading older guests…" : "Load 200 older guests"}
             </button>
           </div>
@@ -691,6 +723,7 @@ function StatusSelect({
       <select
         value={value}
         aria-label={`Status for ${guest.name}`}
+        aria-describedby={pending !== null ? `unsaved-${guest.id}` : undefined}
         onPointerDown={() => apply({ type: "pointerdown" })}
         onKeyDown={(e) => apply({ type: "keydown", key: e.key })}
         onChange={(e) => apply({ type: "change", value: e.target.value as GuestStatus })}
@@ -702,6 +735,14 @@ function StatusSelect({
           </option>
         ))}
       </select>
+      {/* Real text rather than a CSS `content:` string — the select's aria-label
+          overrides its label's text, so a pseudo-element could not reach the
+          accessibility tree by any route. aria-describedby is what carries it. */}
+      {pending !== null && (
+        <span id={`unsaved-${guest.id}`} className="cx-unsaved">
+          unsaved
+        </span>
+      )}
       <ChevronDown size={11} strokeWidth={2.25} />
     </label>
   );
@@ -713,9 +754,9 @@ const KIND_META: Record<
   ChangeKind,
   { label: string; heading: string; Icon: LucideIcon }
 > = {
-  feature: { label: "Feature", heading: "New Features", Icon: Sparkles },
-  fix: { label: "Fix", heading: "Bug Fixes / Improvements", Icon: Bug },
-  breaking: { label: "Breaking", heading: "Breaking Changes", Icon: CircleAlert },
+  feature: { label: "Feature", heading: "New features", Icon: Sparkles },
+  fix: { label: "Fix", heading: "Fixes and improvements", Icon: Bug },
+  breaking: { label: "Breaking", heading: "Breaking changes", Icon: CircleAlert },
 };
 
 /* The first release anyone logs against has to be called something. */
@@ -1203,6 +1244,7 @@ function Composer({
         <button
           type="submit"
           className="cx-compose-add"
+          aria-busy={busy}
           disabled={busy || !title.trim() || !version.trim()}
         >
           {busy ? "Adding…" : "Add entry"}

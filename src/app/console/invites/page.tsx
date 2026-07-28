@@ -53,7 +53,16 @@ function day(iso: string): string {
 }
 
 /** The access period as one readable phrase. */
-function period(startsAt: string, expiresAt: string | null, state: InviteState): string {
+function period(
+  startsAt: string,
+  expiresAt: string | null,
+  state: InviteState,
+  revokedAt: string | null,
+): string {
+  // A revoked invite's end date is when it was withdrawn, not whatever expiry
+  // it was carrying — "Until 30 Sep 2026" beside a Revoked tag reads as an
+  // access window that is still open. Mirrors accessNote() on the customer page.
+  if (state === "revoked") return revokedAt ? `Withdrawn ${day(revokedAt)}` : "Withdrawn";
   if (state === "pending") return `From ${day(startsAt)}`;
   if (!expiresAt) return "No end date";
   return `${state === "expired" ? "Ended" : "Until"} ${day(expiresAt)}`;
@@ -151,7 +160,7 @@ export default async function InvitesPage() {
             </div>
           </section>
 
-          <p className="cx-label">Invite someone</p>
+          <h2 className="cx-label">Invite someone</h2>
           <p className="cs-hint">
             Nothing is emailed — there is no mail provider, so copying the link and
             sending it yourself is the delivery, exactly as it is for a Cue. The
@@ -162,7 +171,7 @@ export default async function InvitesPage() {
             <InviteComposer />
           </div>
 
-          <p className="cx-label">Everyone invited</p>
+          <h2 className="cx-label">Everyone invited</h2>
           <p className="cs-hint">
             Saving an empty date clears the end date and makes the invite
             open-ended. To end somebody&rsquo;s access today, revoke it — an end
@@ -195,7 +204,12 @@ export default async function InvitesPage() {
                     {PLAN_LABEL[invite.plan]}
                   </span>
                   <span className="cs-date">
-                    {period(invite.startsAt, invite.expiresAt, invite.state)}
+                    {period(
+                      invite.startsAt,
+                      invite.expiresAt,
+                      invite.state,
+                      invite.revokedAt,
+                    )}
                   </span>
                   <span
                     className="cs-date"
@@ -205,7 +219,7 @@ export default async function InvitesPage() {
                       ? `Signed up ${day(invite.acceptedAt)}`
                       : "Not signed up"}
                   </span>
-                  <CopyInviteLink url={invite.url} />
+                  <CopyInviteLink url={invite.url} personLabel={invite.name} />
                 </div>
 
                 <InviteControls

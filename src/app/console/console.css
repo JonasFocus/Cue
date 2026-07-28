@@ -77,6 +77,15 @@
   max-width: 880px;
 }
 
+/* Only the changelog's own content takes the extra measure. The masthead and
+   the tab strip stay pinned at 720px, so switching tabs does not slide the
+   thing under the pointer sideways for the length of the transition. */
+.cx-col[data-tab="changelog"] > .cx-top,
+.cx-col[data-tab="changelog"] > .cx-tabs {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
 /* ── Dithered gradient ──
    The reference look: soft blurred colour blobs under a fine halftone dot
    grid. Two layers — colour, then the dot mask that gives it its print-like
@@ -216,16 +225,29 @@
   background: var(--panel);
 }
 
+.cx-signout:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
 /* ── Tabs — text with an underline, not pills ── */
 
+/* Scrolls rather than wraps. `.cx-tab::after` is pinned to the strip's bottom
+   edge, so a wrapped first row would draw its active underline floating
+   mid-strip; scrolling keeps the underline on the nav border and keeps a long
+   label from being squeezed onto two lines at 390px. */
 .cx-tabs {
   display: flex;
   gap: 26px;
+  overflow-x: auto;
+  scrollbar-width: none;
   border-bottom: 1px solid var(--hair);
 }
 
 .cx-tab {
   position: relative;
+  flex: none;
+  white-space: nowrap;
   padding: 0 0 13px;
   font-size: 13.5px;
   color: var(--faint);
@@ -317,7 +339,10 @@
 .cx-figures {
   display: flex;
   flex-wrap: wrap;
-  gap: 34px;
+  /* Two axes, two values: 34px between figures reads as separation, but the
+     same 34px between wrapped rows put 40px of air between a stat and the
+     label of the one below it. */
+  gap: 18px 34px;
   margin-top: 26px;
   padding-top: 22px;
   border-top: 1px solid var(--hair);
@@ -325,7 +350,7 @@
 
 .cx-figure b {
   display: block;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 500;
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
@@ -390,9 +415,9 @@
 
 .cx-row {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) auto auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   padding: 15px 4px;
   border-bottom: 1px solid var(--hair);
   animation: cxIn 400ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -429,7 +454,7 @@
 
 @media (max-width: 560px) {
   .cx-row {
-    grid-template-columns: 14px minmax(0, 1fr) auto;
+    grid-template-columns: 10px minmax(0, 1fr) auto;
   }
 
   .cx-row-note {
@@ -500,8 +525,11 @@
   border-bottom: 1px solid var(--hair);
 }
 
+/* Same rank as .cx-hero-title and .cx-log-head h1: these are all the title of
+   the one focal card on their view, so they are all one size. Not folded into
+   .cx-hero-title itself — that would hand them its margin-top. */
 .cx-guests-head h1 {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 500;
   letter-spacing: -0.03em;
 }
@@ -795,8 +823,11 @@
   background: rgb(139 124 246 / 0.1);
 }
 
-.cx-status[data-unsaved]::after {
-  content: "unsaved";
+/* Real text, not a `content:` string. The select carries an aria-label, which
+   overrides its label's text outright, so a pseudo-element could never reach
+   the accessibility tree by any route — the word has to be an element the
+   select can point at with aria-describedby. */
+.cx-unsaved {
   margin-left: 2px;
   font-size: 10px;
   color: var(--violet);
@@ -857,40 +888,11 @@
   color: var(--faint);
 }
 
+/* The button inside is a plain .cs-button. */
 .cx-load-more {
   display: flex;
   justify-content: center;
   padding: 16px 24px;
-}
-
-.cx-load-more button {
-  min-height: 40px;
-  padding: 9px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--line-strong);
-  background: rgb(255 255 255 / 0.035);
-  color: var(--dim);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-  transition-property: background-color, border-color, color, transform;
-  transition-duration: 160ms;
-  transition-timing-function: ease;
-}
-
-.cx-load-more button:hover:not(:disabled) {
-  border-color: var(--dim);
-  background: rgb(255 255 255 / 0.07);
-  color: var(--ink);
-}
-
-.cx-load-more button:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.cx-load-more button:disabled {
-  cursor: progress;
-  opacity: 0.62;
 }
 
 .cx-arrival {
@@ -952,6 +954,23 @@
     grid-column: 1;
   }
 
+  /* The stamp is one unbreakable string — "Jul 25, 2026, 2:07:59 PM CT" — and
+     the row is no longer a max-content column, so at 390px it was being cut
+     mid-glyph. An ellipsis is not the answer: the cell's title is the relative
+     time, so a truncated timezone would be unrecoverable. Vertical space is
+     free in a stacked card. */
+  .cx-guest-date {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Without a hover state the chevron never appears on touch, which leaves the
+     guest list's only write control looking read-only. Scoped to this
+     breakpoint so a resting row on a pointer device stays a clean list. */
+  .cx-status > svg {
+    opacity: 0.55;
+  }
+
   .cx-status-cell {
     grid-column: 2;
     grid-row: 1;
@@ -998,9 +1017,9 @@
 }
 
 .cx-log-head h1 {
-  font-size: 34px;
-  font-weight: 600;
-  letter-spacing: -0.035em;
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
 }
 
 .cx-log-head p {
@@ -1487,6 +1506,13 @@
   cursor: not-allowed;
 }
 
+/* Must come after :disabled — equal specificity, and while the label says
+   "Adding…" the cursor should not be saying "not allowed". */
+.cx-compose-add[aria-busy="true"] {
+  opacity: 0.62;
+  cursor: progress;
+}
+
 @media (max-width: 640px) {
   .cx-log-head,
   .cx-compose {
@@ -1620,7 +1646,7 @@ a.cx-tab[aria-current="page"]::after {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 40px 0 14px;
+  margin: 44px 0 14px;
 }
 
 .cs-toolbar .cx-search {
@@ -1629,7 +1655,6 @@ a.cx-tab[aria-current="page"]::after {
 }
 
 .cs-count {
-  margin-left: auto;
   font-size: 12px;
   color: var(--faint);
   font-family: var(--mono);
@@ -1933,10 +1958,14 @@ a.cx-tab[aria-current="page"]::after {
   font-size: 13px;
 }
 
-.cs-field input:focus,
-.cs-field select:focus {
+/* The house focus treatment, same as .cx-search and .cx-field above. Keying on
+   :focus-visible is what makes `outline: none` safe: the global
+   `.cx input:focus-visible` ring is replaced here, not silently killed. */
+.cs-field input:focus-visible,
+.cs-field select:focus-visible {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgb(139 124 246 / 0.4);
   outline: none;
-  border-color: var(--dim);
 }
 
 .cs-field-wide {
@@ -2108,6 +2137,20 @@ a.cx-tab[aria-current="page"]::after {
     grid-column: 1;
     grid-row: 1;
   }
+
+  /* The header row is gone at this width, so a bare "12 / 9 / 4" is three
+     unlabelled integers. Un-hiding the thead is not the cheaper fix: the row is
+     a two-column grid here and thead is still display: contents, so six header
+     cells would reflow into ragged rows of their own.
+
+     The gap is a margin rather than a trailing space in the string: the cell is
+     display: flex, so the pseudo-element is a flex item and the space between
+     items collapses to nothing. */
+  .cs-table td[data-label]::before {
+    content: attr(data-label);
+    margin-right: 6px;
+    color: var(--faint);
+  }
 }
 
 /* ── Centring the customer surface ────────────────────────────────────────────
@@ -2125,7 +2168,6 @@ a.cx-tab[aria-current="page"]::after {
 
 .cs-col .cx-hero-body {
   text-align: center;
-  padding: 30px 32px 30px;
 }
 
 /* .cx-hero-sub caps its measure at 46ch, which centres as a block hugging the
@@ -2136,7 +2178,6 @@ a.cx-tab[aria-current="page"]::after {
 
 .cs-col .cx-figures {
   justify-content: center;
-  gap: 40px;
 }
 
 /* The hero status line and the plan tag on the customer page are inline-flex,
@@ -2156,19 +2197,11 @@ a.cx-tab[aria-current="page"]::after {
   text-align: center;
 }
 
-.cs-col .cx-label {
-  text-align: center;
-}
-
 /* The toolbar becomes one centred group. `.cs-count` gave up its margin-left:
    auto — pushed to the far right it was no longer part of the group it
    describes. */
-.cs-toolbar {
+.cs-col .cs-toolbar {
   justify-content: center;
-}
-
-.cs-toolbar .cs-count {
-  margin-left: 0;
 }
 
 .cs-col .cx-note {
@@ -2183,16 +2216,6 @@ a.cx-tab[aria-current="page"]::after {
   display: block;
   margin: 0 auto 7px;
   vertical-align: baseline;
-}
-
-.cs-col .cs-pager {
-  justify-content: space-between;
-}
-
-/* The breadcrumb is navigation, not content: it belongs at the top left corner
-   of the page, where a back link is looked for. */
-.cs-crumb {
-  justify-content: flex-start;
 }
 
 /* ── Invites (/console/invites) ───────────────────────────────────────────────
@@ -2276,10 +2299,11 @@ a.cx-tab[aria-current="page"]::after {
 /* Destructive, but not shouting. Red on hover only — a row of permanently red
    buttons makes the whole list read as a hazard, and revoking somebody's trial
    is a normal Tuesday. */
-.ci-danger:hover:not(:disabled) {
-  border-color: #e5484d;
-  background: rgb(229 72 77 / 0.1);
-  color: #ff9ea1;
+.ci-danger:hover:not(:disabled),
+.ci-danger:focus-visible:not(:disabled) {
+  border-color: rgb(248 113 113 / 0.3);
+  background: rgb(248 113 113 / 0.12);
+  color: #fca5a5;
 }
 
 .ci-copy[data-copied] {

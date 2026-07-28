@@ -174,6 +174,7 @@ export function InviteControls({
         name="intent"
         value="settings"
         disabled={pending}
+        aria-label={`Save changes for ${personLabel}`}
       >
         Save
       </button>
@@ -184,6 +185,7 @@ export function InviteControls({
         name="intent"
         value={revoked ? "restore" : "revoke"}
         disabled={pending}
+        aria-label={`${revoked ? "Restore" : "Revoke"} access for ${personLabel}`}
       >
         {revoked ? "Restore access" : "Revoke access"}
       </button>
@@ -225,7 +227,7 @@ export function InviteControls({
  * as it is for a Cue — so this button is how an invite actually reaches
  * anybody, and it says so on the page.
  */
-export function CopyInviteLink({ url }: { url: string }) {
+export function CopyInviteLink({ url, personLabel }: { url: string; personLabel: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
@@ -234,6 +236,7 @@ export function CopyInviteLink({ url }: { url: string }) {
       type="button"
       data-copied={copied || undefined}
       title={url}
+      aria-label={`Copy the invite link for ${personLabel}`}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(url);

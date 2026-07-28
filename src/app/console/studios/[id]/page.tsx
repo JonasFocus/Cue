@@ -231,7 +231,7 @@ export default async function StudioPage({
             <CueDetail studioName={studio.name} detail={detail} />
           ) : (
             <>
-              <p className="cx-label">Usage by status</p>
+              <h2 className="cx-label">Usage by status</h2>
               <div className="cx-list">
                 {CUE_STATUSES.map((status) => (
                   <div className="cx-row" key={status}>
@@ -247,7 +247,7 @@ export default async function StudioPage({
                 ))}
               </div>
 
-              <p className="cx-label">Their clients</p>
+              <h2 className="cx-label">Their clients</h2>
               <p className="cs-hint">
                 Derived from the Cues themselves — there is no client table. Two Cues
                 are the same client when they share an email address, or a name when
@@ -308,7 +308,7 @@ export default async function StudioPage({
                 </tbody>
               </table>
 
-              <p className="cx-label">Their Cues</p>
+              <h2 className="cx-label">Their Cues</h2>
               <table className="cx-table cs-cues">
                 {cues.length > 0 && (
                   <thead className="cx-thead" role="rowgroup">
@@ -373,7 +373,7 @@ export default async function StudioPage({
                   is granted and withdrawn rather than two that can disagree —
                   and the revalidatePath in the invite actions only has one
                   page to keep honest. */}
-              <p className="cx-label">Access</p>
+              <h2 className="cx-label">Access</h2>
               <div className="cx-list">
                 <div className="cx-row">
                   <span
@@ -410,7 +410,7 @@ export default async function StudioPage({
                 </div>
               </div>
 
-              <p className="cx-label">Account</p>
+              <h2 className="cx-label">Account</h2>
               <p className="cs-hint">
                 The studio&rsquo;s own details, and its plan. Plan changes are manual
                 because Stripe is deliberately not wired for version one. Nothing on
@@ -423,7 +423,7 @@ export default async function StudioPage({
                 <PlanControl studioId={studio.id} plan={studio.plan} />
               </div>
 
-              <p className="cx-label">Operator actions on this account</p>
+              <h2 className="cx-label">Operator actions on this account</h2>
               <div className="cx-list">
                 {trail.length === 0 && (
                   <div className="cx-row">
@@ -479,7 +479,7 @@ function CueDetail({
         audit event.
       </p>
 
-      <p className="cx-label">{cue.title}</p>
+      <h2 className="cx-label">{cue.title}</h2>
       <div className="cx-list">
         <Fact label="Status" value={STATUS_LABEL[cue.status]} note={cue.status} />
         <Fact
@@ -505,7 +505,7 @@ function CueDetail({
         {cue.notes ? <Fact label="Internal note" value={cue.notes} /> : null}
       </div>
 
-      <p className="cx-label">Parties</p>
+      <h2 className="cx-label">Parties</h2>
       <div className="cx-list">
         {parties.length === 0 && (
           <div className="cx-row">
@@ -538,7 +538,7 @@ function CueDetail({
         ))}
       </div>
 
-      <p className="cx-label">Audit trail</p>
+      <h2 className="cx-label">Audit trail</h2>
       <p className="cs-hint">
         Append-only in the database, enforced by a trigger. Signature images, IP
         hashes and user agents are stored but deliberately not read by this console.
@@ -568,7 +568,7 @@ function CueDetail({
 
       {cue.snapshot ? (
         <>
-          <p className="cx-label">Document as the client read it</p>
+          <h2 className="cx-label">Document as the client read it</h2>
           <p className="cs-hint">
             Rendered from <code>cue.snapshot</code>, frozen at send — never
             re-rendered from the template, so a later template edit cannot change
