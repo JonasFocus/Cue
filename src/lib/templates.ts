@@ -1315,7 +1315,17 @@ const BLANK: Template = {
       heading: "The booking",
       body: `{{client.name}} engages {{studio.legal_name}} for the work described below, on {{shoot.date}} at {{shoot.location}}.`,
     },
-    { id: "body", heading: "Terms", showIf: "body", body: `{{body}}` },
+    /* Deliberately NOT gated on `showIf: "body"`, unlike every other optional
+       clause in this file. A `showIf` that is false *removes* the clause, and a
+       removed clause leaves nothing for `hasBlanks` to find — so an unanswered
+       body used to render a document with no terms in it at all, which passed
+       the send gate and went to a client to sign. The booking clause above says
+       "for the work described below", and there was nothing below.
+
+       Ungated, an empty body renders as `————` instead, which is what both
+       gates already know how to refuse. On this template the terms are not an
+       optional section; they are the entire agreement. */
+    { id: "body", heading: "Terms", body: `{{body}}` },
     {
       id: "fee",
       heading: "Fee",

@@ -445,3 +445,69 @@ test("question keys are unique within a template", () => {
     assert.equal(new Set(keys).size, keys.length, `${template.slug} has duplicate question keys`);
   }
 });
+
+/* ── The freeform template must carry terms ──
+
+   `blank` is the escape hatch: the creator brings their own wording and Cue
+   wraps a signature block and an audit record around it. Its only content
+   clause is the one the creator writes, so an empty one is not an agreement.
+
+   The trap is that an unanswered question and an unfilled token fail
+   differently. A token with no value renders `————` and `hasBlanks` stops the
+   send. A clause gated on `showIf` with no value is *removed*, leaving nothing
+   for `hasBlanks` to find — so the gate that both the Send button and sendCue
+   treat as authoritative sees a complete document. */
+
+test("a freeform Cue with no terms cannot be sent", () => {
+  const blank = templateBySlug("blank")!;
+  // Everything answered except the terms themselves.
+  const vars = { ...defaultVars(blank), total_fee: 250000 };
+  const doc = renderAgreement(blank, STUDIO, CUE, vars);
+
+  assert.equal(
+    hasBlanks(doc),
+    true,
+    "an empty freeform agreement must not pass the send gate",
+  );
+});
+
+test("the freeform booking clause never promises terms that are absent", () => {
+  /* The engagement clause reads "for the work described below". If the terms
+     clause can vanish while that sentence stays, the document forward-references
+     an agreement it does not contain — and a sent Cue cannot be edited, so the
+     only remedy is voiding and rebuilding. */
+  const blank = templateBySlug("blank")!;
+  const doc = renderAgreement(blank, STUDIO, CUE, {
+    ...defaultVars(blank),
+    total_fee: 250000,
+  });
+
+  /* The premise is asserted rather than guarded on, so rewording the booking
+     clause fails this test instead of silently making it vacuous. If that
+     sentence goes away the coupling really is gone — but that should be
+     somebody's decision, not a test quietly stopping to check anything. */
+  assert.ok(
+    doc.clauses.some((c) => c.paragraphs.some((p) => p.includes("described below"))),
+    "the booking clause is expected to forward-reference the terms",
+  );
+  assert.ok(
+    doc.clauses.some((c) => c.id === "body"),
+    "the booking clause points at terms, so the terms clause must be present",
+  );
+});
+
+test("a freeform Cue renders the creator's own terms when they wrote some", () => {
+  const blank = templateBySlug("blank")!;
+  const doc = renderAgreement(blank, STUDIO, CUE, {
+    ...defaultVars(blank),
+    total_fee: 250000,
+    body: "Coverage runs eight hours. Travel is billed at cost.",
+  });
+
+  const terms = doc.clauses.find((c) => c.id === "body");
+  assert.ok(terms, "the terms clause must render when the creator wrote terms");
+  assert.deepEqual(terms.paragraphs, [
+    "Coverage runs eight hours. Travel is billed at cost.",
+  ]);
+  assert.equal(hasBlanks(doc), false, "a complete freeform Cue is sendable");
+});
