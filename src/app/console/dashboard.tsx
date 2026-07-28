@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { Guest, WaitlistStats } from "@/lib/db";
 import type { Probe } from "@/app/api/health/route";
-import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
+import { GUEST_STATUSES, joinedStamp, type GuestStatus } from "@/lib/waitlist";
 import {
   STATUS_SELECT_INITIAL,
   statusSelectStep,
@@ -563,12 +563,16 @@ function GuestList({
                 <td className="cx-guest-mail" role="cell" title={g.email}>
                   {g.email}
                 </td>
+                {/* Central time with seconds, not the viewer's local time: a
+                    burst of signups arrives inside the same minute, and the
+                    list is ordered by arrival. The relative form stays as the
+                    tooltip — it is the quicker read, just not the precise one. */}
                 <td
                   className="cx-guest-date"
                   role="cell"
                   title={relative(g.createdAt, now)}
                 >
-                  {formatDate(g.createdAt)}
+                  {joinedStamp(g.createdAt)}
                 </td>
                 <td className="cx-status-cell" role="cell">
                   <StatusSelect guest={g} onStatus={onStatus} />
@@ -1193,15 +1197,6 @@ function initials(name: string) {
   if (!parts.length) return "?";
   return (parts[0]![0]! + (parts[1]?.[0] ?? "")).toUpperCase();
 }
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 
 function relative(iso: string, now: number) {
   if (!now) return "";

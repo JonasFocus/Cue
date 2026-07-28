@@ -12,6 +12,7 @@ import {
   WAITLIST_HOURLY_SIGNUP_CEILING,
   WAITLIST_IP_ATTEMPT_LIMIT,
   WAITLIST_RATE_WINDOW_SECONDS,
+  joinedStamp,
 } from "./waitlist.ts";
 
 test("launch limits allow a real traffic spike without dropping abuse protection", () => {
@@ -203,5 +204,55 @@ test("parseStatusPatch survives a body that is not an object", () => {
   // JSON and must not throw on property access.
   for (const body of [null, undefined, 42, "pending", []]) {
     assert.equal(parseStatusPatch(body).ok, false, JSON.stringify(body));
+  }
+});
+
+/* ── Arrival times ── */
+
+test("joinedStamp renders Central time with seconds", () => {
+  // 22:45:07 UTC is 5:45:07 PM in Chicago during daylight saving.
+  const out = joinedStamp("2026-07-28T22:45:07.000Z");
+  assert.match(out, /Jul 28, 2026/);
+  assert.match(out, /5:45:07\s*PM/);
+  assert.match(out, /CT$/);
+});
+
+test("joinedStamp holds the zone across the DST boundary", () => {
+  // Central is UTC-5 in July and UTC-6 in January. Both must render as CT
+  // rather than drifting an hour, which is what a hardcoded offset would do.
+  assert.match(joinedStamp("2026-07-28T17:00:00.000Z"), /12:00:00\s*PM/);
+  assert.match(joinedStamp("2026-01-28T17:00:00.000Z"), /11:00:00\s*AM/);
+});
+
+test("joinedStamp keeps seconds distinct for a burst of signups", () => {
+  // The reason seconds exist: a launch puts people on the list in the same
+  // minute, and the list is ordered by arrival.
+  const a = joinedStamp("2026-07-28T22:45:07.000Z");
+  const b = joinedStamp("2026-07-28T22:45:41.000Z");
+  assert.notEqual(a, b);
+});
+
+test("joinedStamp returns empty rather than 'Invalid Date'", () => {
+  assert.equal(joinedStamp("not a date"), "");
+  assert.equal(joinedStamp(""), "");
+});
+
+test("joinedStamp is Central regardless of the machine's own timezone", () => {
+  /* The assertions above pass on a Central machine even if the timeZone option
+     were dropped entirely — viewer-local and America/Chicago are the same thing
+     here, so they cannot see the bug they exist to catch. Forcing an ambient
+     zone makes the difference observable: without the option this renders
+     Tokyo's clock while still appending "CT", which is a wrong timestamp
+     wearing a correct-looking label.
+
+     Restored in a finally so the rest of the suite is unaffected. */
+  const original = process.env.TZ;
+  try {
+    process.env.TZ = "Asia/Tokyo";
+    const out = joinedStamp("2026-07-28T22:45:07.000Z");
+    assert.match(out, /5:45:07\s*PM/, `rendered ${out} — that is the ambient zone, not Central`);
+    assert.doesNotMatch(out, /7:45:07\s*AM/, "fell back to the machine's own timezone");
+  } finally {
+    process.env.TZ = original;
   }
 });

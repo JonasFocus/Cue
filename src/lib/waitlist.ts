@@ -86,3 +86,32 @@ export function parseStatusPatch(body: unknown): StatusPatch {
   }
   return { ok: true, id, status };
 }
+
+/* ── When someone joined ──
+
+   Rendered in one named zone rather than the viewer's local time, for the same
+   reason the audit stamps are: a list of arrival times that reads differently
+   depending on who is looking is not much of a record. Central because the one
+   operator is US Central.
+
+   Seconds are included on purpose. A launch or a shared link puts people on the
+   list in bursts, and "5:45 PM" three times over tells you nothing about the
+   order they arrived in.
+
+   Components are spelled out individually rather than using `timeStyle`:
+   ECMA-402 forbids combining the style shorthands with `timeZoneName`, and the
+   combination throws at runtime while type-checking cleanly. See the same note
+   on formatStamp in agreement.ts — do not "simplify" this. */
+export function joinedStamp(iso: string): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "";
+  return `${at.toLocaleString("en-US", {
+    timeZone: "America/Chicago",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  })} CT`;
+}
