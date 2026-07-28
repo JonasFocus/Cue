@@ -247,21 +247,6 @@ forward, or reverting the commit and letting Vercel redeploy.
 The pre-migration database survives only as a one-off `pg_dump` on the owner's
 machine, gitignored. Everything since is in Neon.
 
-### When the site looks down
-
-Check DNS resolution **before** investigating the app. A stale cache pointing at
-the decommissioned box produces a connection failure indistinguishable from an
-outage, and while that box was alive it silently served the *previous*
-deployment — which is worse, because everything looks fine.
-
-```bash
-dig +short cue.krevo.io          # want cname.vercel-dns / vercel-dns-017
-```
-
-Confirm from a phone on cellular, then read Vercel's runtime logs
-(`get_runtime_errors`, or `get_runtime_logs` grouped by status code) before
-touching code.
-
 ## Maintaining this file
 
 - Add a rule only for durable architecture, exact commands, or repeated
