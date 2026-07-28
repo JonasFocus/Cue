@@ -1558,8 +1558,17 @@
    not fit in the 720px ops column, so this surface breaks out the way the
    changelog already does. */
 
+/* The same 720px measure as Overview and the guest list.
+
+   This was 1180px so that eight columns of counts would fit. That made the two
+   customer surfaces read as a different, larger product than the tabs beside
+   them — the hero is the same focal object on every console view and it should
+   be the same size on every console view. The table was retuned to fit instead:
+   the count columns were 66–78px holding three-digit numbers, which is where
+   the width was going. Content decides the measure, and the content did not
+   actually need 1180px. */
 .cs-col {
-  max-width: 1180px;
+  max-width: 720px;
   /* Native <select> and <input> render light-on-light without this. */
   color-scheme: dark;
 }
@@ -1702,9 +1711,14 @@ a.cx-tab[aria-current="page"]::after {
   overflow: hidden;
 }
 
+/* Eight columns in 720px. The counts are two or three digits, so they need far
+   less than the 66–78px they had; the two date columns carry "28 Jul 2026" and
+   are sized for it plus the 24px outer padding on the last cell. What is left
+   goes to the studio name and owner email, which is the column anyone is
+   actually reading. */
 .cs-table {
   grid-template-columns:
-    minmax(0, 1.6fr) 96px 66px 66px 74px 78px 118px 108px;
+    minmax(0, 1fr) 76px 50px 50px 54px 58px 92px 102px;
 }
 
 .cs-clients {
@@ -2022,28 +2036,20 @@ a.cx-tab[aria-current="page"]::after {
    phone-first layout: drop the columns that are context before the ones that
    are the answer, and let the forms stack. */
 
-@media (max-width: 1080px) {
+/* One tier, not two. The column is capped at 720px, so it only starts shrinking
+   when the viewport falls below 768 — the old 1080px breakpoint was dropping
+   columns on windows where everything still fitted. Cues and Joined go first:
+   both are context, and the count and the signup date are recoverable from the
+   customer's own page. */
+@media (max-width: 767px) {
   .cs-table {
-    grid-template-columns: minmax(0, 1.6fr) 92px 66px 74px 78px 118px;
+    grid-template-columns: minmax(0, 1fr) 76px 50px 54px 58px 92px;
   }
 
   .cs-table th:nth-child(3),
   .cs-table td:nth-child(3),
   .cs-table th:nth-child(8),
   .cs-table td:nth-child(8) {
-    display: none;
-  }
-}
-
-@media (max-width: 780px) {
-  .cs-table {
-    grid-template-columns: minmax(0, 1.4fr) 84px 74px 110px;
-  }
-
-  .cs-table th:nth-child(4),
-  .cs-table td:nth-child(4),
-  .cs-table th:nth-child(6),
-  .cs-table td:nth-child(6) {
     display: none;
   }
 
