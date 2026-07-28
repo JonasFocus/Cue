@@ -34,6 +34,21 @@ fi
 
 step() { printf '\033[1m%s\033[0m\n' "$1"; }
 
+# Copy a timer-driven script into /usr/local/bin. Written to a temp name and
+# renamed, so a timer firing mid-install runs either the old script or the new
+# one, never half of one. Never fatal: a failure here leaves the previously
+# installed copy in place and still running.
+install_timer_script() {
+  local label="$1" src="$2" dest="$3"
+  printf '  %-22s' "$label"
+  if install -m 755 "$src" "/usr/local/bin/.$dest.new" \
+    && mv -f "/usr/local/bin/.$dest.new" "/usr/local/bin/$dest"; then
+    printf '\033[32mok\033[0m\n'
+  else
+    printf '\033[31mfailed (keeping the installed copy)\033[0m\n'
+  fi
+}
+
 # Quiet on success, full log on failure. A successful docker build has nothing
 # in it you need; a failed one has everything.
 run() {
@@ -154,18 +169,11 @@ main() {
   git reset --hard --quiet origin/main
   after="$(git rev-parse --short HEAD)"
 
-  # The watchdog runs from /usr/local/bin so a `git reset --hard` cannot delete
-  # the copy that is executing; this keeps that copy in step with the tracked
-  # source. Written to a temp name and renamed, so a timer firing mid-install
-  # runs either the old script or the new one, never half of one.
-  printf '  %-22s' "watchdog"
-  if install -m 755 scripts/cue-health.sh /usr/local/bin/.cue-health.new \
-    && mv -f /usr/local/bin/.cue-health.new /usr/local/bin/cue-health; then
-    printf '\033[32mok\033[0m\n'
-  else
-    # Not fatal: the previously installed watchdog is still there and running.
-    printf '\033[31mfailed (keeping the installed copy)\033[0m\n'
-  fi
+  # Timer-driven scripts run from /usr/local/bin so a `git reset --hard` cannot
+  # delete the copy that is executing; this keeps those copies in step with the
+  # tracked source.
+  install_timer_script watchdog scripts/cue-health.sh cue-health
+  install_timer_script backup   scripts/cue-backup.sh cue-backup
 
   if [ "$before" = "$after" ]; then
     echo "  $after (unchanged, rebuilding)"

@@ -1,0 +1,13 @@
+[Unit]
+Description=Back up the Cue staging database daily at midnight UTC
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+# Run a missed backup on the next boot. Without this a reboot spanning midnight
+# silently skips a night.
+Persistent=true
+# Spread load off the exact minute every other daily timer also fires.
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

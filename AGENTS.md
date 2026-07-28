@@ -207,8 +207,28 @@ does not become healthy.
 - Postgres and Redis are on an `internal: true` network with no published ports
   and no egress. The app reads container health through a read-only
   docker-socket-proxy, never `/var/run/docker.sock` directly.
-- **There are no database backups.** This is a deliberate, owner-accepted risk
-  on staging. Do not assume the waitlist is recoverable.
+- **Backups** run nightly at 00:00 UTC via `cue-backup.timer` →
+  `scripts/cue-backup.sh`, keeping 30 days of `pg_dump` output in
+  `/var/backups/cue/` (mode 600 — dumps carry email addresses and password
+  hashes). They live outside `/opt/cue` because that is a git checkout
+  `deploy.sh` runs `git reset --hard` against. The script skips a run while a
+  deploy holds `/var/lib/cue/deploy.pid`, and refuses to publish a dump that
+  fails gzip, lacks pg_dump's completion marker, or is missing a core table —
+  `pg_dump | gzip` reports *gzip's* exit status, so a dump cut off mid-table
+  is valid gzip and looks like a good backup. Restore with the app stopped:
+
+  ```bash
+  docker compose stop app
+  gunzip -c /var/backups/cue/cue-<stamp>.sql.gz \
+    | docker compose exec -T postgres psql -U cue -d cue
+  docker compose start app
+  ```
+
+  The dump carries `--clean --if-exists`, so it drops what it replaces. Verify
+  a dump without touching the live database by restoring into a scratch
+  database (`CREATE DATABASE cue_restore_test`) and comparing row counts.
+  **Copies are on-box only** — they survive a bad migration or a dropped
+  table, not the loss of the Linode.
 
 ### Rebuilding from nothing
 
@@ -226,6 +246,23 @@ ssh root@172.236.109.208 'cd /opt/cue && set -a && . ./.env && set +a && \
 ```
 
 It is idempotent — it exits without changes if the account already exists.
+
+Migrations and `deploy.sh` do not schedule anything, so a rebuilt box has no
+watchdog and no backups until the units are installed. `deploy.sh` puts the
+scripts in `/usr/local/bin`; the units in `scripts/systemd/` only schedule
+them, and are deliberately left out of `deploy.sh` so it cannot silently
+re-enable a timer somebody stopped on purpose:
+
+```bash
+ssh root@172.236.109.208 'install -m 644 /opt/cue/scripts/systemd/*.{service,timer} \
+  /etc/systemd/system/ && systemctl daemon-reload && \
+  systemctl enable --now cue-health.timer cue-backup.timer && \
+  systemctl list-timers "cue-*"'
+```
+
+`cue-health.timer` runs every 2 minutes; `cue-backup.timer` daily at 00:00 UTC
+with `Persistent=true`, so a reboot spanning midnight runs the missed backup
+rather than skipping the night.
 
 ## Maintaining this file
 

@@ -12,6 +12,50 @@ Dates are the day work landed, newest first.
 
 ---
 
+## 2026-07-28 — Nightly backups, and a stale premise
+
+**Staging was already deployed.** The pre-staging plan recorded that nothing was
+live and that migrations `007`/`008` were pending. Both were wrong by the time
+it was executed: the app had been deployed at `3f481b0` and the migrations
+applied at 22:38 UTC on the 27th. The check that mattered came back clean —
+`007`'s role backfill ran against exactly one user row and promoted only the
+operator — but the deploy advice given that night rested on a risk that had
+already been taken. **Verify box state before quoting a plan's assumptions
+back; a plan is a snapshot, not a fact.**
+
+**Backups now exist.** `scripts/cue-backup.sh` on `cue-backup.timer`, nightly at
+00:00 UTC, 30 days retained in `/var/backups/cue/`, mode 600 because dumps carry
+email addresses and password hashes. Deliberately outside `/opt/cue`: that is a
+git checkout `deploy.sh` runs `git reset --hard` against, and surviving somebody's
+bad day with the repo is most of the point.
+
+Three things the script does that a one-line `pg_dump` cron would not:
+
+- **`set -o pipefail`.** `pg_dump | gzip` otherwise reports *gzip's* exit status.
+  A `pg_dump` that dies mid-table still produces a valid gzip file and a
+  zero exit code. Verified by feeding the verifier a dump truncated by 40 lines:
+  `gzip -t` passed it, the completion-marker check rejected it.
+- **`.partial` until verified.** A truncated dump at a real filename is worse
+  than no dump — it reports as a backup and restores as a broken database.
+- **Skips while a deploy holds `/var/lib/cue/deploy.pid`.** Dumping mid-migration
+  captures a schema that never existed as a committed state.
+
+Proved rather than assumed: restored into a scratch database and compared
+against live — 1 user, 2 waitlist, 8 migrations, 12 tables on both sides, and
+the operator role survived the round trip.
+
+The four systemd units (both timers and both services) existed only on the box
+and would have been lost in a rebuild. They are now in `scripts/systemd/`, and
+`deploy.sh` still does not install them — so it cannot silently re-enable a
+timer somebody stopped on purpose.
+
+**Accepted risk, unchanged:** copies are on-box only. They survive a bad
+migration or a dropped table, not the loss of the Linode. Off-box needs an R2
+bucket and credentials; the upgrade is an `rclone copy` at the tail of the
+script, marked with a `ponytail:` comment there.
+
+---
+
 ## 2026-07-27 — Pre-staging rescan
 
 The app was committed and pushed (`3f481b0`) before deploying. A rescan found
