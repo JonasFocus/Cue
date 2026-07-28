@@ -54,7 +54,32 @@ async function dockerGet<T>(path: string, timeoutMs = 6000): Promise<T | null> {
   }
 }
 
-export async function services(): Promise<ServiceHealth[]> {
+/* ── The stats sample cache ──
+
+   The console polls this every 5 seconds, and `services()` used to spend one
+   /stats request per container on every poll — six round trips through the
+   proxy, each carrying a 6s timeout inside the same Promise.all, to read a
+   single number. One tab left open was ~100k requests a day, and a wedged proxy
+   held the dashboard's p95 at the timeout rather than at the list call.
+
+   Only the *sample* is cached. The container list is fetched live every time:
+   a container appearing, dying, or turning unhealthy is the thing the screen
+   exists to show, and stale would be a lie there. Memory is not — it moves on
+   the scale of a leak, which is minutes, not seconds.
+
+   ponytail: a Map keyed by container id, pruned against the live list on every
+   call, so it is bounded by the containers in one compose project — five. Not
+   an LRU, and it does not need to be until something else starts sharing it. */
+export const STATS_TTL_MS = 30_000;
+
+const samples = new Map<string, { memoryUsedMb: number; at: number }>();
+
+/**
+ * @param now Injectable clock. Only tests pass it; a 30-second TTL is not
+ *            something a test can wait out, and sleeping for it would put 30
+ *            seconds into every run.
+ */
+export async function services(now: () => number = Date.now): Promise<ServiceHealth[]> {
   const list = await dockerGet<ContainerSummary[]>("/containers/json?all=true");
   if (!list) return [];
 
@@ -62,19 +87,37 @@ export async function services(): Promise<ServiceHealth[]> {
     (c) => c.Labels?.["com.docker.compose.project"] === "cue",
   );
 
+  const at = now();
+
   const withStats = await Promise.all(
     mine.map(async (c) => {
       const service = c.Labels["com.docker.compose.service"] ?? c.Names[0] ?? "?";
+
       // Stats only exist for running containers; asking for a dead one hangs.
-      // one-shot=true is what keeps this cheap: without it Docker sleeps ~1s
-      // per container to produce a CPU delta, so a 5s poll spent ~5s of wall
-      // time here. We only read memory, so the delta is dead weight.
-      const stats =
-        c.State === "running"
-          ? await dockerGet<StatsSample>(
-              `/containers/${c.Id}/stats?stream=false&one-shot=true`,
-            )
-          : null;
+      // one-shot=true is what keeps the miss cheap: without it Docker sleeps
+      // ~1s per container to produce a CPU delta we never read.
+      let memoryUsedMb = 0;
+      if (c.State === "running") {
+        const cached = samples.get(c.Id);
+        if (cached && at - cached.at < STATS_TTL_MS) {
+          memoryUsedMb = cached.memoryUsedMb;
+        } else {
+          const stats = await dockerGet<StatsSample>(
+            `/containers/${c.Id}/stats?stream=false&one-shot=true`,
+          );
+          // A failed request is deliberately not cached. Storing the 0 would
+          // pin the container at "uses no memory" for the whole TTL, which
+          // reads as a fact rather than as "we could not ask".
+          if (stats) {
+            memoryUsedMb = Math.round((stats.memory_stats?.usage ?? 0) / 1048576);
+            samples.set(c.Id, { memoryUsedMb, at });
+          }
+        }
+      } else {
+        // A stopped container holds no memory, and a sample from before it
+        // stopped would say otherwise.
+        samples.delete(c.Id);
+      }
 
       return {
         key: c.Id.slice(0, 12),
@@ -84,11 +127,16 @@ export async function services(): Promise<ServiceHealth[]> {
         status: c.Status,
         health: readHealth(c.Status),
         uptimeSeconds: c.State === "running" ? uptimeFrom(c.Status) : 0,
-        memoryUsedMb: Math.round((stats?.memory_stats?.usage ?? 0) / 1048576),
+        memoryUsedMb,
         image: c.Image,
       };
     }),
   );
+
+  // Forget containers that no longer exist, so a long-lived process does not
+  // accumulate one entry per container it has ever seen across deploys.
+  const live = new Set(mine.map((c) => c.Id));
+  for (const id of samples.keys()) if (!live.has(id)) samples.delete(id);
 
   const order = Object.keys(ROLES);
   return withStats.sort(
