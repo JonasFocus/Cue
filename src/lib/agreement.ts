@@ -303,9 +303,41 @@ export function fillTokens(body: string, ctx: Record<string, string>): string {
   });
 }
 
-/** True when the rendered document still has unfilled slots. */
+/**
+ * True when the rendered document is missing something a reader needs.
+ *
+ * `sendCue` calls this the authority on whether a Cue is ready to send, and the
+ * builder's Send button reads the same function — so what it has to support is
+ * not "no blank paragraphs" but "nothing is missing". A document it passes gets
+ * frozen, and a sent Cue cannot be edited; the only remedy is voiding and
+ * rebuilding.
+ *
+ * `renderAgreement` runs `fillTokens` over three strings — the title, each
+ * clause heading, and each body — and this used to inspect one of them. It now
+ * inspects all three, plus the one way a clause comes out empty without any
+ * marker to find:
+ *
+ * A whitespace-only answer is not the empty string, so `fillTokens` leaves it
+ * alone rather than emitting a marker, and the paragraph filter then drops it
+ * for being blank — leaving a heading over nothing. That is reachable today on
+ * the `blank` template, where the creator's terms are the whole agreement, by
+ * pasting a stray newline.
+ *
+ * A creator who literally types the marker into their own text will trip this.
+ * That was already true of the paragraph check and is the right trade: the cost
+ * is one confusing block on a draft they can still edit, against sending a
+ * contract with a hole in it.
+ */
 export function hasBlanks(doc: RenderedDocument): boolean {
-  return doc.clauses.some((c) => c.paragraphs.some((p) => p.includes(BLANK)));
+  if (doc.title.includes(BLANK)) return true;
+
+  return doc.clauses.some(
+    (c) =>
+      c.heading.includes(BLANK) ||
+      // A clause with no paragraphs rendered to nothing at all.
+      c.paragraphs.length === 0 ||
+      c.paragraphs.some((p) => p.includes(BLANK)),
+  );
 }
 
 export function renderAgreement(

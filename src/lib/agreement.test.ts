@@ -445,3 +445,91 @@ test("question keys are unique within a template", () => {
     assert.equal(new Set(keys).size, keys.length, `${template.slug} has duplicate question keys`);
   }
 });
+
+/* ── The send gate must inspect everything it renders ──
+
+   `hasBlanks` is what `sendCue` calls "the authority on is this ready to send",
+   and the builder's Send button reads the same function. A document it passes
+   is frozen: a sent Cue cannot be edited, and the only remedy is voiding and
+   rebuilding. So the claim it has to support is not "no blank paragraphs" but
+   "nothing is missing from this document".
+
+   `RenderedDocument` is exactly `{ title, clauses: [{ id, heading, paragraphs }] }`,
+   and `renderAgreement` runs `fillTokens` over three of those — the title, each
+   heading, and each body. It checked one. The four tests below are one per way a
+   document can come out incomplete, written as an enumeration rather than as
+   examples, because the previous attempt at this area fixed one route to a
+   defect and left two others open. */
+
+/** A document with exactly one thing wrong with it, for each thing. */
+function incomplete(): Record<string, ReturnType<typeof renderAgreement>> {
+  const base: Pick<Template, "clauses" | "questions"> = {
+    questions: [],
+    clauses: [{ id: "c", heading: "Coverage", body: "Eight hours of coverage." }],
+  };
+  const facts = { ...CUE, location: null };
+
+  return {
+    "an unfilled token in a paragraph": renderAgreement(
+      { ...base, clauses: [{ id: "c", heading: "Coverage", body: "At {{shoot.location}}." }] },
+      STUDIO,
+      facts,
+      {},
+    ),
+    "an unfilled token in a clause heading": renderAgreement(
+      { ...base, clauses: [{ id: "c", heading: "Coverage at {{shoot.location}}", body: "Eight hours." }] },
+      STUDIO,
+      facts,
+      {},
+    ),
+    "an unfilled token in the document title": renderAgreement(
+      base,
+      STUDIO,
+      { ...facts, title: "Shoot at {{shoot.location}}" },
+      {},
+    ),
+    "a clause that rendered no paragraphs at all": renderAgreement(
+      { ...base, clauses: [{ id: "c", heading: "Terms", body: "{{terms}}" }] },
+      STUDIO,
+      CUE,
+      // Whitespace is not the empty string, so fillTokens emits no marker and
+      // the paragraph filter then drops it — leaving a heading over nothing.
+      { terms: "   " },
+    ),
+  };
+}
+
+test("hasBlanks catches every way a document can be incomplete", () => {
+  for (const [what, doc] of Object.entries(incomplete())) {
+    assert.equal(hasBlanks(doc), true, `hasBlanks missed ${what}`);
+  }
+});
+
+test("hasBlanks passes a document with nothing missing", () => {
+  const doc = renderAgreement(
+    {
+      questions: [],
+      clauses: [{ id: "c", heading: "Coverage at {{shoot.location}}", body: "At {{shoot.location}}." }],
+    },
+    STUDIO,
+    CUE,
+    {},
+  );
+  assert.equal(hasBlanks(doc), false);
+  assert.equal(doc.clauses[0]!.heading, "Coverage at The Old Mill");
+});
+
+test("a whitespace-only answer is a blank, not content", () => {
+  /* The reachable one, and the reason this is not a theoretical tidy-up. On the
+     `blank` template the creator's terms are the whole agreement; pasting
+     whitespace produced a "Terms" heading with nothing under it, which the gate
+     read as a complete document. */
+  const doc = renderAgreement(
+    { questions: [], clauses: [{ id: "body", heading: "Terms", body: "{{body}}" }] },
+    STUDIO,
+    CUE,
+    { body: "\n  \n" },
+  );
+  assert.deepEqual(doc.clauses[0]!.paragraphs, [], "the paragraph filter drops it");
+  assert.equal(hasBlanks(doc), true, "a heading over nothing is not a clause");
+});
