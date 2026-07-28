@@ -54,14 +54,33 @@ What exists:
   redirects a creator to `/app`. Nothing in `auth.ts` can grant `operator`; only
   a direct database write or `scripts/seed-operator.mjs` can. It is **not** a
   customer account system.
+- **Invite-only access** (added 2026-07-28), in `src/lib/invite.ts` and migration
+  `009`. An account can only exist for an address holding a live invite, and
+  access is re-derived on every request, so revoking lands at the invitee's next
+  request rather than at their next sign-in. Two gates, deliberately different:
+  the `user.create.before` hook in `auth.ts` closes account creation (it sits
+  inside the create, so a POST straight at `/api/auth/sign-up/email` is refused
+  too), and `requireStudio()` gates every `/app` page **and server action**
+  afterwards, redirecting to `/app/locked`. Operators bypass both — they are
+  seeded by script and hold no invite. `/app/signup` is now a closed door; the
+  form lives at `/invite/[token]`, reached by a link copied from
+  `/console/invites`. Migration 009 backfills an open-ended accepted invite for
+  every creator that predates it, so closing signup evicted nobody.
 - **The customer application** at `/app` (added 2026-07-26): auth, workspace,
-  template picker, builder, share screen, sealed record. Scoped to `.ca`.
+  template picker, builder, share screen, sealed record. Scoped to `.ca`. Every
+  page and action enters through `requireStudio()`, which is also the invite
+  gate — see above.
 - **The client signing flow** at `/s/[token]`, public and account-free — a
   read-to-the-end consent gate, a hand-written `<canvas>` pad, and a server
   action that re-derives every fact from the token.
 - **The agreement engine**: `src/lib/agreement.ts` (pure), six templates as data
   in `templates.ts`, lifecycle rules in `cue.ts`, I/O in `cue-db.ts`. A template
   is a question spec plus conditional clauses — a shoot type is data, not code.
+- **The operator invite console** at `/console/invites`: create an invite (name,
+  address, access period), copy its link, move the end date, revoke, restore, or
+  delete one nobody has taken up. Nothing is emailed — copying the link is the
+  delivery, exactly as it is for a Cue. No action there can change the address or
+  token an invite is for, or delete one an account already stands on.
 - **The operator customer console** at `/console/studios` and
   `/console/studios/[id]`, backed by `src/lib/admin.ts`. Cue is B2B: customers
   are studios and they have clients of their own, so this surface shows
@@ -161,10 +180,16 @@ changing any of them — every one of the five has a non-obvious reason.
 - Prefer Server Components. Add `"use client"` only for browser APIs, local
   interaction, or client hooks. On the marketing site that is `nav.tsx`,
   `flow.tsx` (`Flow` and `Steps`), `reveal.tsx`, `anim-host.tsx`, `waitlist.tsx`,
-  `console/dashboard.tsx`, and `console/login/form.tsx`. In `/app` and `/s` it is
-  the auth forms, the app nav, the builder and its fields, and the signing
-  controls — everything else there is server-rendered, and the signing page in
-  particular must stay that way.
+  `console/dashboard.tsx`, and `console/login/form.tsx`. In `/console/studios`
+  and `/console/invites` it is only the forms. In `/app`, `/invite` and `/s` it
+  is the auth and invite forms, the app nav, the builder and its fields, and the
+  signing controls — everything else there is server-rendered, and the signing
+  page in particular must stay that way.
+- Client components on an operator surface must not import from `admin.ts` or
+  `invite.ts`. Both reach `pg`, and the bundler follows a client import graph
+  through a dynamic `import()` too, so one value pulled across sends the build
+  looking for `dns`/`fs`/`net`. Pure vocabulary lives in `cue.ts`; render labels
+  on the server and pass primitives down.
 - Reach for native platform features before dependencies. The FAQ uses native
   `<details>` rather than an accordion library; keep that instinct.
 - Do not add dependencies without asking first. Suggest, then wait.
