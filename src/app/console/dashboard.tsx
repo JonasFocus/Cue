@@ -56,7 +56,11 @@ type GuestPageResponse = {
   nextBefore?: number | null;
 };
 
-const POLL_MS = 5000;
+/* 30s, not 5s. This is an ops dashboard for one operator, and nothing on it
+   changes on a five-second cadence — a waitlist signup is not a stock tick.
+   Combined with suspending while the tab is hidden (see the poll effect), a tab
+   left open all day costs nothing rather than ~1,400 invocations an hour. */
+const POLL_MS = 30_000;
 
 export function Dashboard({ operator }: { operator: string }) {
   const [tab, setTab] = useState<"overview" | "guests" | "changelog">("overview");
@@ -218,12 +222,50 @@ export function Dashboard({ operator }: { operator: string }) {
     window.location.href = "/console/login";
   }, []);
 
+  /* Poll only while somebody is actually looking.
+   *
+   * This used to fire every 5 seconds forever, which is two function
+   * invocations per tick — around 1,400 an hour for a console tab left open in
+   * a background window all day, watched by nobody. On a Hobby plan that is the
+   * single most expensive thing the product does, and the data it fetches is an
+   * operator dashboard for one person, not a trading screen.
+   *
+   * So: a slower tick, suspended entirely when the tab is hidden, and an
+   * immediate refresh when it comes back. Returning to the tab still shows
+   * current data — arguably fresher than before, since the old loop could leave
+   * you looking at whatever it fetched up to 5 seconds before you looked away. */
   useEffect(() => {
+    let poll: ReturnType<typeof setInterval> | undefined;
+
+    const stop = () => {
+      if (poll) clearInterval(poll);
+      poll = undefined;
+    };
+
+    const start = () => {
+      if (poll) return;
+      poll = setInterval(load, POLL_MS);
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop();
+        return;
+      }
+      // Refresh first, then resume: waiting a full interval to correct a stale
+      // screen is the thing that makes slow polling feel broken.
+      void load();
+      start();
+    };
+
     const first = setTimeout(load, 0);
-    const poll = setInterval(load, POLL_MS);
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       clearTimeout(first);
-      clearInterval(poll);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [load]);
 
@@ -397,7 +439,12 @@ function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string 
         <ProbeRow name="redis" hint="PING" probe={snap?.probes?.redis} />
       </div>
 
-      <p className="cx-note">Polling every {POLL_MS / 1000} seconds.</p>
+      {/* Says the second half too. An operator who knows the screen pauses when
+          they look away will not mistake stale figures for a broken probe. */}
+      <p className="cx-note">
+        Refreshing every {POLL_MS / 1000} seconds, and paused while this tab is
+        in the background.
+      </p>
     </div>
   );
 }
