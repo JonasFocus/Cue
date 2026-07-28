@@ -589,9 +589,30 @@
 /* A real <table>. `display: contents` on thead/tbody/tr hands the cells
    straight to the table's own 4-column grid, so the semantics cost nothing
    in layout. Cells carry the padding and rules the rows used to. */
+/* The guest list. `.cs-table`, `.cs-clients` and `.cs-cues` each replace these
+   columns outright, so this definition is the waitlist's alone.
+
+   The Joined column is `max-content`, not a pixel width. It holds a full
+   `joinedStamp` — "Jul 25, 2026, 2:07:59 PM CT", 183px at this size — and the
+   100px it used to have clipped that to "Jul 25, 2026, 2:" with no ellipsis in
+   sight, which reads as a rendering bug rather than as truncation. Seconds are
+   load-bearing here (a burst of signups shares a minute, and the list is
+   ordered by arrival), so the column follows the content instead of the content
+   being cut to fit a number someone guessed. It also re-measures itself if the
+   format ever changes.
+
+   Status is `max-content` for the same reason and one more: the pill is wider
+   than the 88px it used to be given, so it overflowed its own cell and sat 3px
+   from the card's edge — and the card is `overflow: hidden`, so a focused
+   select had its 2px ring with 2px offset visibly sliced off. A control whose
+   focus indicator is clipped by an ancestor is an SC 2.4.11 failure, not a
+   cosmetic one.
+
+   Name and email keep `minmax(0, …fr)` and their ellipsis, so they are what
+   gives way when the window is narrow. */
 .cx-table {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.6fr) 100px 88px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.6fr) max-content max-content;
   width: 100%;
 }
 
@@ -703,6 +724,16 @@
   font-size: 12.5px;
   color: var(--faint);
   white-space: nowrap;
+  overflow: hidden;
+}
+
+/* The truncation lives on the span inside the cell, not on the cell. Every
+   `.cx-table td` is display:flex, and text-overflow does not apply to a flex
+   container — set there it silently did nothing and a long address was cut
+   mid-word with no ellipsis. `.cx-guest-date` needs none of this: its column is
+   max-content, so it never truncates. */
+.cx-guest-mail > span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }

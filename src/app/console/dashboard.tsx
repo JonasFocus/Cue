@@ -610,8 +610,13 @@ function GuestList({
                   </i>
                   <b>{g.name}</b>
                 </td>
+                {/* The span is load-bearing: `.cx-table td` is display:flex, and
+                    text-overflow cannot apply to a flex container — a bare text
+                    node here was being cut mid-address with no ellipsis at all.
+                    The name column only escaped it because <b> gave it a block
+                    child. The title attribute carries the full address. */}
                 <td className="cx-guest-mail" role="cell" title={g.email}>
-                  {g.email}
+                  <span>{g.email}</span>
                 </td>
                 {/* Central time with seconds, not the viewer's local time: a
                     burst of signups arrives inside the same minute, and the
