@@ -1,9 +1,9 @@
 "use server";
 
 import { createHash } from "node:crypto";
-import { headers } from "next/headers";
 import { pool, signupCeilingReached } from "@/lib/db";
 import { rateLimit } from "@/lib/redis";
+import { clientIp, userAgent } from "@/lib/client-ip";
 import {
   isValidEmail,
   normaliseEmail,
@@ -97,7 +97,7 @@ export async function joinWaitlist(
         email,
         name,
         ipHash,
-        (await headers()).get("user-agent")?.slice(0, 255) ?? null,
+        await userAgent(),
       ],
     );
   } catch (err) {
@@ -113,24 +113,3 @@ export async function joinWaitlist(
   return { status: "ok", message: "You're on the list." };
 }
 
-/* The header order here is the whole rate limit. Do not "simplify" it to the
-   conventional X-Forwarded-For-first.
-
-   Caddy sets `X-Real-IP` from {remote_host} — the TCP peer — which a client
-   cannot influence. X-Forwarded-For carries no such guarantee: whether a proxy
-   replaces it or appends to it is that proxy's choice, so its left-most entry
-   is only trustworthy when every hop in front is known and configured. Trusting
-   it blindly lets anyone rotate the header for unlimited waitlist writes and
-   poisons the ip_hash the privacy page calls an audit value. Today Caddy 2.11
-   happens to replace it, so this was defence in depth rather than a live hole —
-   but that is a property of the deployment, not of the code, and it changes the
-   day a CDN or a second proxy goes in front. XFF is consulted only when
-   X-Real-IP is absent (no proxy at all, e.g. local dev). */
-async function clientIp() {
-  const h = await headers();
-  const real = h.get("x-real-ip")?.trim();
-  if (real) return real;
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return "unknown";
-}

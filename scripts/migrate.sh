@@ -17,9 +17,29 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-[ -f .env ] && { set -a; . ./.env; set +a; }
+[ -f .env.local ] && { set -a; . ./.env.local; set +a; }
 
-: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set (expected in .env)}"
+# Falls back to DATABASE_URL_UNPOOLED, which is what the Neon integration calls
+# the direct endpoint — so `vercel env pull` alone is usually enough setup.
+MIGRATE_DATABASE_URL="${MIGRATE_DATABASE_URL:-${DATABASE_URL_UNPOOLED:-}}"
+: "${MIGRATE_DATABASE_URL:?set MIGRATE_DATABASE_URL (or DATABASE_URL_UNPOOLED) to the DIRECT, non-pooled endpoint}"
+
+# Refuse a pooled endpoint outright rather than discovering it later.
+#
+# The advisory lock below is SESSION-scoped, and a transaction-mode pooler
+# (PgBouncer, which is what Neon's -pooler host is) hands the server connection
+# back between statements — so the lock is silently dropped and this script's
+# only protection against two concurrent runs becomes a no-op. Nothing would
+# fail; it would just stop being safe, which is the worst way for a guard to
+# break. The `-- no-transaction` migration path has no other protection at all.
+case "$MIGRATE_DATABASE_URL" in
+  *-pooler.*|*pgbouncer=true*)
+    echo "✗ refusing to migrate through a pooled endpoint." >&2
+    echo "  pg_advisory_lock is session-scoped and a transaction-mode pooler drops it." >&2
+    echo "  Use the direct host (Neon: DATABASE_URL_UNPOOLED, no '-pooler' in the host)." >&2
+    exit 1
+    ;;
+esac
 
 # Arbitrary constant, only has to be the same in every copy of this script.
 # Session-scoped: psql holds it for its whole run and Postgres drops it when the
@@ -29,10 +49,8 @@ ADVISORY_LOCK=4919001
 psql_run() {
   # client-min-messages=warning drops the "already exists, skipping" NOTICEs
   # that idempotent migrations emit on every run.
-  docker compose exec -T \
-    -e PGPASSWORD="$POSTGRES_PASSWORD" \
-    -e PGOPTIONS="--client-min-messages=warning" \
-    postgres psql -U cue -d cue -v ON_ERROR_STOP=1 "$@"
+  PGOPTIONS="--client-min-messages=warning" \
+    psql "$MIGRATE_DATABASE_URL" -v ON_ERROR_STOP=1 "$@"
 }
 
 # sha256sum on the box, shasum on a developer's macOS.

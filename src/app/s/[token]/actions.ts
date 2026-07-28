@@ -1,10 +1,10 @@
 "use server";
 
 import { createHash } from "node:crypto";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { declineCue, getCueByToken, signParty } from "@/lib/cue-db";
 import { rateLimit } from "@/lib/redis";
+import { clientIp, userAgent } from "@/lib/client-ip";
 import {
   isPubliclySignable,
   isShareToken,
@@ -110,13 +110,13 @@ export async function signAgreement(
   // confirmation the first tap did.
   if (party.signedAt) redirect(`/s/${token}/sealed`);
 
-  const userAgent = await userAgentHeader();
+  const ua = await userAgent();
 
   const result = await signParty(found.cue.id, party.id, {
     typedName,
     signaturePng,
     ipHash,
-    userAgent,
+    userAgent: ua,
   });
 
   if (!result.ok) {
@@ -171,7 +171,7 @@ export async function declineAgreement(
 
   const ok = await declineCue(found.cue.id, party.id, reason, {
     ipHash,
-    userAgent: await userAgentHeader(),
+    userAgent: await userAgent(),
   });
   if (!ok) return fail(GONE);
 
@@ -179,26 +179,4 @@ export async function declineAgreement(
   redirect(`/s/${token}`);
 }
 
-/* The header order here is the whole rate limit, and it is copied deliberately
-   from src/app/actions.ts rather than shared — read the long comment there for
-   the reasoning, which applies with more force on this endpoint than on the
-   waitlist.
 
-   In short: Caddy sets X-Real-IP from the TCP peer, which a client cannot
-   influence. X-Forwarded-For carries no such guarantee — whether a proxy
-   replaces or appends to it is that proxy's choice — so trusting it first would
-   let anyone rotate the header for unlimited signing attempts and would poison
-   the ip_hash stored on the signature itself. XFF is consulted only when
-   X-Real-IP is absent, i.e. when there is no proxy at all. */
-async function clientIp(): Promise<string> {
-  const h = await headers();
-  const real = h.get("x-real-ip")?.trim();
-  if (real) return real;
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return "unknown";
-}
-
-async function userAgentHeader(): Promise<string | null> {
-  return (await headers()).get("user-agent")?.slice(0, 255) ?? null;
-}

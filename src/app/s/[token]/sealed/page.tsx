@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Check, ShieldCheck } from "lucide-react";
 import { AgreementView, type SignatureView } from "@/components/agreement-view";
@@ -15,6 +14,7 @@ import {
 } from "@/lib/cue";
 import { PrintButton } from "../sign";
 import { formatStamp } from "@/lib/agreement";
+import { clientIp } from "@/lib/client-ip";
 
 /* The page a client lands on the instant after they sign.
  *
@@ -200,13 +200,3 @@ function initials(name: string): string {
   );
 }
 
-/* See the note in ../page.tsx — copied rather than shared because the canonical
-   version lives in a "use server" module that may only export async actions. */
-async function clientIp(): Promise<string> {
-  const h = await headers();
-  const real = h.get("x-real-ip")?.trim();
-  if (real) return real;
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return "unknown";
-}

@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 import { cache } from "react";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Ban, CircleSlash, Clock, ShieldCheck } from "lucide-react";
 import { AgreementView, type SignatureView } from "@/components/agreement-view";
 import { getCueByToken, markOpened } from "@/lib/cue-db";
 import { rateLimit } from "@/lib/redis";
+import { clientIp, userAgent } from "@/lib/client-ip";
 import {
   isSealed,
   isShareToken,
@@ -82,7 +82,7 @@ const load = cache(async (token: string): Promise<Loaded> => {
     state: "ok",
     found,
     ipHash,
-    userAgent: (await headers()).get("user-agent")?.slice(0, 255) ?? null,
+    userAgent: await userAgent(),
   };
 });
 
@@ -366,18 +366,3 @@ function initials(name: string): string {
   );
 }
 
-/* Copied from src/app/actions.ts rather than shared, because the canonical
-   version lives in a "use server" module whose only legal exports are async
-   actions — exporting this helper from there would publish it as a callable
-   endpoint. The long explanation of the header order lives there; the short
-   version is that Caddy's X-Real-IP is the TCP peer and cannot be forged by a
-   client, while X-Forwarded-For can be, so XFF is consulted only when X-Real-IP
-   is absent (no proxy at all, e.g. local dev). */
-async function clientIp(): Promise<string> {
-  const h = await headers();
-  const real = h.get("x-real-ip")?.trim();
-  if (real) return real;
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return "unknown";
-}

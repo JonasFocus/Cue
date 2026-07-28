@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -16,6 +15,7 @@ import { formatDate } from "@/lib/agreement";
 import { ROLE_LABEL, STATUS_LABEL, STATUS_TONE } from "@/lib/cue";
 import { getCue, getParties } from "@/lib/cue-db";
 import { requireStudio } from "@/lib/studio";
+import { SITE_URL } from "@/lib/site-url";
 import { CopyButton, ShareButton } from "../fields";
 import "../builder.css";
 
@@ -27,19 +27,6 @@ import "../builder.css";
  * never hears about the agreement and a creator who thinks they did. */
 
 export const metadata: Metadata = { title: "Cue sent" };
-
-/** PUBLIC_URL first, `Host` only as a fallback. This URL gets copied into a text
-    message to a client, so a spoofed Host header must not be able to decide
-    where that link points. */
-async function origin(): Promise<string> {
-  const configured = process.env.PUBLIC_URL?.trim().replace(/\/+$/, "");
-  if (configured) return configured;
-
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
 
 function firstName(full: string): string {
   return full.trim().split(/\s+/)[0] || "there";
@@ -80,7 +67,7 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const url = `${await origin()}/s/${cue.shareToken}`;
+  const url = `${SITE_URL}/s/${cue.shareToken}`;
   const when = cue.shootDate ? ` on ${formatDate(cue.shootDate)}` : "";
   const message =
     `Hi ${firstName(cue.clientName)} — here is the agreement for ${cue.title}${when}. ` +

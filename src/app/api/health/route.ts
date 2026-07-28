@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/studio";
 import { pool, waitlistStats, type WaitlistStats } from "@/lib/db";
-import { redis } from "@/lib/redis";
-import { services } from "@/lib/docker";
+import { ping } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +31,7 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const [containers, postgres, cache, waitlist] = await Promise.all([
-    services(),
+  const [postgres, cache, waitlist] = await Promise.all([
     probePostgres(),
     probeRedis(),
     // Annotated so dropping a field from WaitlistStats is a compile error —
@@ -44,7 +42,6 @@ export async function GET() {
   return NextResponse.json(
     {
       generatedAt: new Date().toISOString(),
-      containers,
       probes: { postgres, redis: cache },
       waitlist,
     },
@@ -69,8 +66,7 @@ async function probePostgres(): Promise<Probe> {
 async function probeRedis(): Promise<Probe> {
   const started = performance.now();
   try {
-    if (!redis.isOpen) throw new Error("connection closed");
-    const pong = await redis.ping();
+    const pong = await ping();
     return {
       ok: pong === "PONG",
       latencyMs: Math.round(performance.now() - started),

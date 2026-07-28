@@ -52,10 +52,10 @@ The landing page renders without services. The waitlist and private console need
 ```text
 Next.js 16 + React 19 + TypeScript
 PostgreSQL 17 + Redis 7 + Better Auth
-Docker Compose + Caddy + a single VPS
+Vercel
 ```
 
-The app is intentionally self-hosted. PostgreSQL and Redis stay on the internal Docker network; Caddy terminates HTTPS and proxies only the web application.
+Deployed on Vercel. Postgres is Neon and the rate limiter is Upstash, both provisioned through the Vercel Marketplace and both in `us-east-1` alongside the functions.
 
 ## Quality gate
 
@@ -69,7 +69,6 @@ npm run build
 ## Ship to production
 
 ```bash
-npm run ship "feat: describe the change"
 ```
 
 That command verifies, commits, pushes, and deploys `main` to production. There is no separate staging environment — one box serves the live site. Run it only with a clean working tree and a focused commit scope.

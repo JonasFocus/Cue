@@ -17,12 +17,7 @@ const SHARE_TITLE = "Send the Cue. Get the yes.";
 const SHARE_DESCRIPTION =
   "Client agreements for photographers and videographers. Send the Cue, get the yes, keep the record.";
 
-/* Must reflect where this instance is actually served. Hardcoding the
-   production domain made staging advertise a hostname with no DNS record, so
-   every shared staging link previewed as an address that resolves nowhere.
-   `cue.krevo.io` still has no A record, so it cannot be the fallback either —
-   staging is the only host that resolves today. */
-const SITE_URL = process.env.PUBLIC_URL ?? "https://cue.krevo.io";
+import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

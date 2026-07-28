@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { attachDatabasePool } from "@vercel/functions";
 import {
   type GuestStatus,
   nameFromEmail,
@@ -36,11 +37,27 @@ function createPool() {
     // slowness is pool-acquire failures from perfectly healthy requests rather
     // than the timeout of the query actually causing it, which sends you
     // debugging the wrong thing.
+    // Also the Neon cold-start budget now: a scaled-to-zero compute has to wake
+    // before it can answer, and that wait lands here.
     connectionTimeoutMillis: 10_000,
-    // With max:10 and no cap, one stuck query holds a connection forever and
-    // ten of them starve every request in the process, including Better Auth's
-    // session lookup. Better to fail the one query loudly.
-    statement_timeout: 8_000,
+    /* `statement_timeout` is deliberately NOT set here.
+     *
+     * node-postgres sends it as a startup parameter, and Neon's pooled endpoint
+     * rejects unknown startup parameters outright — every connection through
+     * the pooler fails with "unsupported startup parameter in options:
+     * statement_timeout". Not a degradation: a total outage.
+     *
+     * The cap still exists and still matters for the reason it always did —
+     * with max:10 and no cap, one stuck query holds a connection forever and
+     * ten of them starve every request in the process, including Better Auth's
+     * session lookup. It is now enforced one layer down, on the role:
+     *
+     *   ALTER ROLE neondb_owner SET statement_timeout = '8s';
+     *
+     * which the pooler applies per session without a startup parameter. The
+     * invariant the comment above describes — statement_timeout <
+     * connectionTimeoutMillis — is unchanged at 8s < 10s. If the database is
+     * ever moved, that ALTER ROLE moves with it. */
   });
 
   // pg-pool emits 'error' when an *idle* client dies — which happens on every
@@ -50,6 +67,14 @@ function createPool() {
   created.on("error", (err) => {
     console.error("[db] idle client error", err.message);
   });
+
+  /* Fluid Compute suspends an instance between requests. Without this the pool
+     keeps idle clients checked out across the suspension and the database runs
+     out of connections long before the app runs out of traffic. Called here
+     rather than at module scope so the `globalThis` guard below means it
+     attaches exactly once per pool; the helper no-ops off-platform, so there is
+     nothing to branch on. */
+  attachDatabasePool(created);
 
   return created;
 }
