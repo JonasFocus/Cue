@@ -6,18 +6,14 @@ import {
   WAITLIST_RATE_WINDOW_SECONDS,
 } from "./waitlist.ts";
 
-/* Importing this module constructs the singleton client, but `createRedis`
-   only dials when REDIS_URL is set — which it is not under `npm test`. Every
-   test below injects its own fake, so nothing here touches a socket. */
+/* Importing this module builds no client unless UPSTASH_REDIS_REST_URL is set —
+   which it is not under `npm test`. Every test below injects its own fake, so
+   nothing here makes a request. */
 
-function fake(
-  hits: number,
-  isOpen = true,
-): RateLimitClient & { calls: unknown[][] } {
+function fake(hits: number): RateLimitClient & { calls: unknown[][] } {
   const calls: unknown[][] = [];
   return {
     calls,
-    isOpen,
     async incr(key) {
       calls.push(["incr", key]);
       return hits;
@@ -79,19 +75,16 @@ test("the launch quota permits a large shared-network burst", async () => {
   );
 });
 
-test("a closed client fails open", async () => {
-  const client = fake(1, false);
-  assert.deepEqual(await rateLimit("k", 5, 60, client), {
-    ok: true,
-    remaining: 5,
-  });
-  // It must not even try to talk to a client it knows is closed.
-  assert.deepEqual(client.calls, []);
+test("an unconfigured limiter fails open", async () => {
+  /* No Upstash credentials, so `redis` is null. Previously this was a closed
+     socket; the outcome must be identical — a missing limiter allows the
+     request rather than blocking a signup or a signature. The abuse ceiling
+     that must NOT fail open lives in Postgres (signupCeilingReached). */
+  assert.deepEqual(await rateLimit("k", 5, 60, null), { ok: true, remaining: 5 });
 });
 
 test("a throwing client fails open rather than blocking signups", async () => {
   const client: RateLimitClient = {
-    isOpen: true,
     async incr() {
       throw new Error("boom");
     },

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/studio";
 import { pool, waitlistStats, type WaitlistStats } from "@/lib/db";
-import { redis } from "@/lib/redis";
+import { ping } from "@/lib/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +66,7 @@ async function probePostgres(): Promise<Probe> {
 async function probeRedis(): Promise<Probe> {
   const started = performance.now();
   try {
-    if (!redis.isOpen) throw new Error("connection closed");
-    const pong = await redis.ping();
+    const pong = await ping();
     return {
       ok: pong === "PONG",
       latencyMs: Math.round(performance.now() - started),

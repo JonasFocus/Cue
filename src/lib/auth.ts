@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { pool, pruneExpiredSessions } from "./db";
+import { SITE_URL } from "./site-url";
 
 /* Sessions for both surfaces: the customer app at /app and the operator console
    at /console. One instance, one cookie, one session table.
@@ -13,7 +14,9 @@ import { pool, pruneExpiredSessions } from "./db";
 
 export const auth = betterAuth({
   database: pool,
-  baseURL: process.env.BETTER_AUTH_URL,
+  // Derived rather than configured: a preview deployment must authenticate
+  // against its own origin, or Better Auth's origin check rejects the sign-in.
+  baseURL: SITE_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   emailAndPassword: {
     enabled: true,

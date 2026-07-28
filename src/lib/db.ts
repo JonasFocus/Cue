@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { attachDatabasePool } from "@vercel/functions";
 import {
   type GuestStatus,
   nameFromEmail,
@@ -50,6 +51,14 @@ function createPool() {
   created.on("error", (err) => {
     console.error("[db] idle client error", err.message);
   });
+
+  /* Fluid Compute suspends an instance between requests. Without this the pool
+     keeps idle clients checked out across the suspension and the database runs
+     out of connections long before the app runs out of traffic. Called here
+     rather than at module scope so the `globalThis` guard below means it
+     attaches exactly once per pool; the helper no-ops off-platform, so there is
+     nothing to branch on. */
+  attachDatabasePool(created);
 
   return created;
 }
