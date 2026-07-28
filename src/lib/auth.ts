@@ -1,5 +1,7 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { pool, pruneExpiredSessions } from "./db";
+import { emailMayCreateAccount } from "./invite";
 import { SITE_URL } from "./site-url";
 
 /* Sessions for both surfaces: the customer app at /app and the operator console
@@ -10,7 +12,12 @@ import { SITE_URL } from "./site-url";
    `role` column added in 007: /console checks it explicitly (see
    `isOperator` in src/lib/studio.ts) and every new account is a `creator`.
    Nothing in this file can grant `operator` — only a direct database write or
-   scripts/seed-operator.mjs can. */
+   scripts/seed-operator.mjs can.
+
+   Signup is open to *invited* addresses only — see the `user.create.before`
+   hook below and src/lib/invite.ts. scripts/seed-operator.mjs constructs its
+   own betterAuth() instance without these hooks, so the one account that
+   cannot hold an invite is still creatable. */
 
 export const auth = betterAuth({
   database: pool,
@@ -38,6 +45,28 @@ export const auth = betterAuth({
      login and keeps auth dependent on exactly one datastore. */
   databaseHooks: {
     session: { create: { after: pruneExpiredSessions } },
+    /* The door. Not the signup form — that is markup, and markup is skippable:
+       a POST straight at /api/auth/sign-up/email would sail past any check made
+       in a React component. This runs inside the create, so every path that
+       could make an account goes through it.
+
+       Throws rather than returning false. `false` makes createWithHooks return
+       null and the endpoint then fails somewhere further down with a shape
+       nobody chose; an APIError is the refusal the client actually renders.
+
+       A database failure here propagates and signup fails, which is the correct
+       direction: an unreadable invite list is not an invitation. */
+    user: {
+      create: {
+        before: async (user: { email: string }) => {
+          if (await emailMayCreateAccount(user.email)) return;
+          throw new APIError("FORBIDDEN", {
+            message:
+              "Cue is invite-only right now. Use the link you were sent, or ask for one.",
+          });
+        },
+      },
+    },
   },
   advanced: {
     // Behind Caddy the app speaks plain HTTP, so Better Auth cannot infer that

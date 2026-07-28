@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { countByStatus } from "@/lib/cue-db";
+import { accessForUser } from "@/lib/invite";
 import { currentUser, ensureStudio } from "@/lib/studio";
 import { Sidebar, TabBar } from "./nav";
 import "./app.css";
@@ -30,6 +31,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
      visits to /app/login redirect from the page itself, so the auth card is
      never framed by the sidebar. */
   if (!user) return children;
+
+  /* /app/locked is the same case as the auth pages: signed in, but with nothing
+     to put a sidebar around. A shell built from Cue counts somebody is no
+     longer allowed to open would be a cruel way to say "your access ended".
+
+     ponytail: this repeats the lookup requireStudio() makes on the page beneath
+     it, exactly as the currentUser() and ensureStudio() calls above already do.
+     One indexed lookup on a request that is making three anyway. Wrap all three
+     in React's cache() together the day this shows up in a trace — doing it for
+     this one alone would only make the duplication harder to see. */
+  if (!(await accessForUser(user)).allowed) return children;
 
   const studio = await ensureStudio(user);
   const counts = await countByStatus(studio.id);

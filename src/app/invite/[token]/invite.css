@@ -1,0 +1,240 @@
+/* ── The invite landing page ──
+   Where a link from /console/invites lands.
+
+   Built on the landing page's primitives — .cue-auth centres it, .cue-auth-card
+   is the panel, .cue-input and .cue-btn are the form — so an invited friend's
+   first screen is recognisably the same product as the marketing site they
+   probably just came from. What is added here is the part that is not a sign-in
+   box: a gradient band, an invitation, and the three facts somebody needs
+   before typing a password.
+
+   The gradient is the console's, deliberately. `.cx-dither` lives in
+   console.css, which is imported only by /console and has no business being
+   shipped to a page a friend opens on their phone — 2,000 lines of dark ops
+   theme for one rectangle. So the recipe is restated here, at the ~20 lines it
+   actually is, rather than dragged in whole.
+   TRIGGER: if a third surface wants it, lift the recipe into design.css and
+   have all three read it from there. */
+
+.ci-card {
+  max-width: 470px;
+  padding: 0 0 30px;
+  overflow: hidden;
+  text-align: center;
+}
+
+/* The band. Short, because it is a signature rather than a hero — the content
+   below it is what the page is for. */
+.ci-band {
+  position: relative;
+  height: 128px;
+  overflow: hidden;
+}
+
+.ci-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(46% 78% at 22% 24%, #ff8a3d 0%, transparent 58%),
+    radial-gradient(44% 74% at 60% 8%, #ff5c8a 0%, transparent 56%),
+    radial-gradient(50% 86% at 86% 66%, #4b7bff 0%, transparent 58%),
+    radial-gradient(52% 88% at 28% 98%, #ffd36e 0%, transparent 60%),
+    linear-gradient(146deg, #7fd6f7 0%, #9b7ef0 100%);
+  /* Drawn hard-edged then blurred, not soft to begin with — that is what gives
+     the console its melted, printed look rather than a CSS-gradient look. */
+  filter: blur(16px) saturate(1.12);
+  transform: scale(1.16);
+}
+
+/* Halftone dots above the blur, so they stay crisp. */
+.ci-band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgb(0 0 0 / 0.19) 1px, transparent 0);
+  background-size: 3px 3px;
+}
+
+/* The mark straddles the band's lower edge — the one thing that makes this read
+   as a card with a header rather than two stacked blocks.
+
+   A sibling of the band, not a child of it: the band clips its own blurred
+   gradient with overflow:hidden, and anything inside gets clipped with it. So
+   this is positioned against the card and offset to the band's height instead. */
+.ci-mark {
+  position: absolute;
+  left: 50%;
+  top: 102px; /* .ci-band height (128) minus half this element (26) */
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  transform: translateX(-50%);
+  border-radius: 16px;
+  border: 1px solid var(--cue-line);
+  background: var(--cue-panel);
+  color: var(--cue-ink);
+  box-shadow: 0 10px 24px -12px rgb(4 46 92 / 0.35);
+}
+
+.ci-body {
+  padding: 46px 32px 0;
+}
+
+.ci-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: var(--cue-r-pill);
+  background: var(--cue-tint);
+  color: var(--cue-accent-deep);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ci-title {
+  margin-top: 16px;
+  font-size: 27px;
+  letter-spacing: -0.028em;
+  line-height: 1.12;
+}
+
+.ci-sub {
+  margin: 10px auto 0;
+  max-width: 34ch;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--cue-muted);
+}
+
+/* ── The three facts ──
+   What they get, how long for, and what it costs. Everything somebody wants to
+   know before typing a password, and nothing else. */
+.ci-facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 26px 0 4px;
+  border-radius: var(--cue-r-sm);
+  border: 1px solid var(--cue-line);
+  background: var(--cue-line);
+  overflow: hidden;
+}
+
+.ci-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 8px;
+  background: var(--cue-panel);
+}
+
+.ci-fact b {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.ci-fact span {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--cue-muted);
+}
+
+/* ── The form ──
+   Labels go back to left-aligned. Centred field labels over left-aligned input
+   text is the kind of symmetry that stops being symmetry the moment anybody
+   types. */
+.ci-form {
+  margin-top: 8px;
+  text-align: left;
+}
+
+.ci-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cue-muted);
+}
+
+.ci-rule::before,
+.ci-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--cue-line);
+}
+
+/* The invited address is a fact, not a field — see the note in form.tsx. */
+.ci-locked {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border-radius: var(--cue-r-sm);
+  border: 1px solid var(--cue-line);
+  background: var(--cue-bg);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.ci-locked svg {
+  flex: none;
+  color: var(--cue-muted);
+}
+
+/* A <small> rather than a <span>, because `.cue-auth-field > span` is the field
+   label and outranks a bare class. Block, so it sits under the input. */
+.ci-hint {
+  display: block;
+  margin-top: 7px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--cue-muted);
+}
+
+.ci-foot {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--cue-muted);
+}
+
+.ci-foot a {
+  color: var(--cue-ink);
+}
+
+/* ── Closed door ──
+   An expired, revoked or unknown link. Same card, no form. */
+.ci-closed .ci-body {
+  padding-bottom: 8px;
+}
+
+@media (max-width: 420px) {
+  .ci-body {
+    padding-inline: 22px;
+  }
+
+  .ci-title {
+    font-size: 24px;
+  }
+
+  /* Three columns of 11.5px text do not survive a 375px screen. */
+  .ci-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The band's blur and the card's entrance are decoration. design.css already
+   disables cueRise and friends under this query; these are the two this file
+   adds. */
+@media (prefers-reduced-motion: reduce) {
+  .ci-band::before {
+    transform: none;
+  }
+}

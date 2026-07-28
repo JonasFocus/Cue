@@ -2164,6 +2164,11 @@
 }
 
 .cue-auth-chip {
+  /* inline-flex since these chips gained leading icons ("Locked", "Invite
+     only"): inline-block drops the icon onto its own line above the label. */
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   margin-left: auto;
   padding: 4px 10px;
   border-radius: var(--cue-r-pill);

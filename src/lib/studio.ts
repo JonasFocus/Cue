@@ -4,6 +4,7 @@ import { auth } from "./auth";
 import { pool } from "./db";
 import type { Plan } from "./cue";
 import { isResolvedSession } from "./console";
+import { accessForUser } from "./invite";
 
 export type Studio = {
   id: number;
@@ -132,10 +133,23 @@ export async function ensureStudio(user: {
 
 export type Session = { user: { id: string; email: string; name: string }; studio: Studio };
 
-/** Every /app page starts here. Redirects to sign-in when there is no session. */
+/**
+ * Every /app page and every /app server action starts here.
+ *
+ * Two refusals, and the second one is the point. No session → sign in. Session
+ * but no live invite → the locked screen. The invite check lives *here*, at the
+ * one function both pages and actions route through, rather than in the layout:
+ * a layout guards what is rendered, and a revoked tester with a stale tab open
+ * can still fire a server action at a screen the layout already stopped
+ * painting. Same instinct as putting the operator gate in requireOperator().
+ *
+ * Re-derived per request, so revoking access at 11:00 takes effect at 11:00
+ * instead of whenever the session cookie happens to lapse.
+ */
 export async function requireStudio(): Promise<Session> {
   const user = await currentUser();
   if (!user) redirect("/app/login");
+  if (!(await accessForUser(user)).allowed) redirect("/app/locked");
   return { user, studio: await ensureStudio(user) };
 }
 
