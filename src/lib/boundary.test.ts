@@ -24,7 +24,7 @@ import { join, dirname, resolve } from "node:path";
 const SRC = resolve(import.meta.dirname, "..");
 
 /** Modules that open sockets or read secrets. Never reachable from the client. */
-const SERVER_ONLY = new Set(["lib/db", "lib/redis", "lib/docker", "lib/auth"]);
+const SERVER_ONLY = new Set(["lib/db", "lib/redis", "lib/auth"]);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

@@ -16,7 +16,6 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import type { ServiceHealth } from "@/lib/docker";
 import type { Guest, WaitlistStats } from "@/lib/db";
 import type { Probe } from "@/app/api/health/route";
 import { GUEST_STATUSES, type GuestStatus } from "@/lib/waitlist";
@@ -47,7 +46,6 @@ import { CueMark } from "@/components/cue-mark";
    deploy window, say) still parses into this shape. */
 type Snapshot = {
   generatedAt: string;
-  containers?: ServiceHealth[];
   probes?: { postgres?: Probe; redis?: Probe };
   waitlist?: WaitlistStats;
 };
@@ -129,7 +127,7 @@ export function Dashboard({ operator }: { operator: string }) {
         setSnap(body);
         setDegraded(null);
       } else {
-        setSnap(body?.containers || body?.probes ? body : null);
+        setSnap(body?.probes ? body : null);
         setDegraded(`health check returned ${health.status}`);
       }
 
@@ -335,12 +333,13 @@ export function Dashboard({ operator }: { operator: string }) {
 /* ── Overview ── */
 
 function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string | null }) {
-  const containers = snap?.containers ?? [];
-  const running = containers.filter((c) => c.state === "running").length;
-  const total = containers.length;
+  /* Container health used to be the headline here, read from a Docker socket
+     proxy on the VPS. On Vercel there are no containers to enumerate, so the
+     datastore probes below are the whole of what this screen can truthfully
+     report — and `allUp` now turns on exactly that. Reporting "0 of 0 services"
+     would have been worse than reporting nothing. */
   const storesOk = (snap?.probes?.postgres?.ok ?? false) && (snap?.probes?.redis?.ok ?? false);
-  const allUp = !degraded && total > 0 && running === total && storesOk;
-  const memory = containers.reduce((a, c) => a + c.memoryUsedMb, 0);
+  const allUp = !degraded && storesOk;
 
   return (
     <div className="cx-pane">
@@ -375,15 +374,11 @@ function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string 
             {degraded
               ? `${degraded}. Only partial health data is available — the guest list is still live.`
               : snap
-                ? `${running} of ${total} services up, Postgres and Redis answering, and the waitlist is open.`
-                : "Fetching container health and datastore probes."}
+                ? "Postgres and Redis answering, and the waitlist is open."
+                : "Fetching datastore probes."}
           </p>
 
           <div className="cx-figures">
-            <span className="cx-figure">
-              <b>{snap ? `${running}/${total}` : "—"}</b>
-              <span>services</span>
-            </span>
             <span className="cx-figure">
               <b>{snap?.waitlist ? snap.waitlist.total.toLocaleString() : "—"}</b>
               <span>on the waitlist</span>
@@ -392,30 +387,9 @@ function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string 
               <b>{snap?.waitlist ? `+${snap.waitlist.week}` : "—"}</b>
               <span>this week</span>
             </span>
-            <span className="cx-figure">
-              <b>{snap ? memory : "—"}</b>
-              <span>MB in use</span>
-            </span>
           </div>
         </div>
       </section>
-
-      <p className="cx-label">Services</p>
-      <div className="cx-list">
-        {!containers.length &&
-          Array.from({ length: 5 }, (_, i) => <div className="cx-skeleton" key={i} />)}
-
-        {containers.map((c, i) => (
-          <div className="cx-row" key={c.key} style={{ animationDelay: `${i * 45}ms` }}>
-            <span className={c.state === "running" ? "cx-ok" : "cx-bad"}>
-              <span className="cx-dot" />
-            </span>
-            <span className="cx-row-name">{c.name}</span>
-            <span className="cx-row-note">{c.role}</span>
-            <span className="cx-row-num">{formatUptime(c.uptimeSeconds)}</span>
-          </div>
-        ))}
-      </div>
 
       <p className="cx-label">Datastores</p>
       <div className="cx-list">
@@ -423,10 +397,7 @@ function Overview({ snap, degraded }: { snap: Snapshot | null; degraded: string 
         <ProbeRow name="redis" hint="PING" probe={snap?.probes?.redis} />
       </div>
 
-      <p className="cx-note">
-        Polling every {POLL_MS / 1000} seconds. Container stats come through a read-only
-        Docker socket proxy, never the socket itself.
-      </p>
+      <p className="cx-note">Polling every {POLL_MS / 1000} seconds.</p>
     </div>
   );
 }
@@ -1231,13 +1202,6 @@ function formatDate(iso: string) {
   });
 }
 
-function formatUptime(s: number) {
-  if (!s) return "—";
-  if (s < 60) return `${s}s`;
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return `${Math.floor(s / 86400)}d`;
-}
 
 function relative(iso: string, now: number) {
   if (!now) return "";

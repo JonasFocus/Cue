@@ -1,8 +1,0 @@
-[Unit]
-Description=Cue staging health check and container watchdog
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/cue-health

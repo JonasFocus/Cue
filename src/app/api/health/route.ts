@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/studio";
 import { pool, waitlistStats, type WaitlistStats } from "@/lib/db";
 import { redis } from "@/lib/redis";
-import { services } from "@/lib/docker";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +31,7 @@ export async function GET() {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const [containers, postgres, cache, waitlist] = await Promise.all([
-    services(),
+  const [postgres, cache, waitlist] = await Promise.all([
     probePostgres(),
     probeRedis(),
     // Annotated so dropping a field from WaitlistStats is a compile error —
@@ -44,7 +42,6 @@ export async function GET() {
   return NextResponse.json(
     {
       generatedAt: new Date().toISOString(),
-      containers,
       probes: { postgres, redis: cache },
       waitlist,
     },

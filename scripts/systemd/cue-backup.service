@@ -1,8 +1,0 @@
-[Unit]
-Description=Cue staging database backup
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/cue-backup

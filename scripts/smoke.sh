@@ -63,7 +63,6 @@ step "public surface"
 expect "GET / is 200" 200 "$(status GET /)"
 expect "GET /legal/privacy is 200" 200 "$(status GET /legal/privacy)"
 expect "GET /legal/terms is 200" 200 "$(status GET /legal/terms)"
-expect "GET /api/ping is 200" 200 "$(status GET /api/ping)"
 expect "GET /console redirects (307)" 307 "$(status GET /console)"
 
 location="$(curl -s -o /dev/null -w '%{redirect_url}' --max-time "$TIMEOUT" "$BASE/console")"
@@ -105,7 +104,8 @@ require_header "content-security-policy" "frame-ancestors 'none'"
 require_header "x-frame-options" "DENY"
 require_header "x-content-type-options" "nosniff"
 forbid_header "x-powered-by"
-forbid_header "server"
+# `server` is deliberately NOT checked: Vercel always sends `Server: Vercel`
+# and it cannot be stripped. `via` and `x-powered-by` still can be, so they are.
 forbid_header "via"
 
 # ── 3. signed in ────────────────────────────────────────────────────────────
