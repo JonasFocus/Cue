@@ -64,7 +64,7 @@ export function Flow() {
   };
 
   return (
-    <section className="cue-section">
+    <section className="cue-section cue-flow-section">
       <div className="cue-shell">
         <div className="cue-eyebrow-block">
           <h2 className="cue-h2">{"Three steps.\nOne Cue."}</h2>
@@ -224,7 +224,7 @@ export function Steps() {
   }, []);
 
   return (
-    <section id="steps" className="cue-section">
+    <section id="steps" className="cue-section cue-steps-section">
       <div className="cue-shell">
         <div className="cue-eyebrow-block">
           <h2 className="cue-h2">{"Your first Cue\nin three steps"}</h2>
