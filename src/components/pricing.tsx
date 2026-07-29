@@ -17,7 +17,7 @@ const PLANS = [
       "Browser-saveable sealed record",
       "Document hash and audit trail",
     ],
-    cta: "Request access",
+    cta: "Join the waitlist",
     tone: "dark",
   },
   {
@@ -31,7 +31,7 @@ const PLANS = [
       "Saved templates (planned)",
       "Email reminders (planned)",
     ],
-    cta: "Request access",
+    cta: "Join the waitlist",
     tone: "accent",
   },
   {
@@ -46,7 +46,7 @@ const PLANS = [
       "Custom domain (planned)",
       "Priority support (planned)",
     ],
-    cta: "Request access",
+    cta: "Join the waitlist",
     tone: "dark",
   },
 ] as const;
@@ -54,9 +54,9 @@ const PLANS = [
 const COMPARISON = [
   ["Sent Cues", "5 total", "Unlimited", "Unlimited"],
   ["Templates and audit record", "yes", "yes", "yes"],
-  ["Saved templates", "—", "Planned", "Planned"],
+  ["Saved templates", "No", "Planned", "Planned"],
   ["Users", "1", "1", "Planned"],
-  ["Custom domain", "—", "—", "Planned"],
+  ["Custom domain", "No", "No", "Planned"],
 ];
 
 function Cell({ value }: { value: string }) {
@@ -89,9 +89,9 @@ export function Pricing() {
           <div className="cue-eyebrow-block">
             <h2 className="cue-h2">{"Start free,\npay when it sticks"}</h2>
             <p className="cue-lede">
-              Five Cues free, no card required — the allowance is a total, not a
-              monthly reset. Billing is not connected yet; paid prices describe
-              the planned launch offer.
+              Five Cues free. No card required. The allowance is total, not
+              monthly. Billing is not connected yet. Paid prices show the
+              planned launch offer.
             </p>
           </div>
         </Reveal>

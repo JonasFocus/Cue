@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Check } from "lucide-react";
 import { AnimHost } from "./anim-host";
 
@@ -94,8 +93,8 @@ export function Hero() {
       <div className="cue-shell cue-hero-copy" style={{ position: "relative" }}>
         <div style={rise(40)}>
           <span className="cue-badge">
-            <span>Invite only</span>
-            <span>New studios join a few at a time</span>
+            <span>Waitlist open</span>
+            <span>For photographers and videographers</span>
           </span>
         </div>
 
@@ -111,11 +110,10 @@ export function Hero() {
 
         <div className="cue-hero-cta" style={rise(280)}>
           <a href="#waitlist" className="cue-btn cue-btn-dark">
-            Request access
+            Join the waitlist
           </a>
           <p className="cue-hero-note">
-            Your first five Cues are free — no card, ever, until you want more.
-            Already have a studio? <Link href="/app/login">Sign in</Link>.
+            Five Cues free. No card required.
           </p>
         </div>
 

@@ -61,7 +61,7 @@ const CUES: CueRow[] = [
   },
   {
     icon: "doc",
-    name: "Okafor Elopement — Film",
+    name: "Okafor Elopement Film",
     template: "Elopement · 5 pages",
     date: "Jul 02",
     updated: "3 days ago",
@@ -70,7 +70,7 @@ const CUES: CueRow[] = [
   },
   {
     icon: "draft",
-    name: "Brand Session — Fenn Co.",
+    name: "Fenn Co. Brand Session",
     template: "Commercial · 6 pages",
     date: "Jul 09",
     updated: "10 min ago",

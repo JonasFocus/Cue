@@ -13,12 +13,12 @@ import { CueMark } from "@/components/cue-mark";
 
 const FAQS = [
   {
-    q: "Can I use Cue today?",
-    a: "Yes — Cue is live. Accounts are invite-only, because we let new studios in a few at a time so every one gets looked after. Leave your email and we will send you a link, with five free Cues waiting and no card required.",
+    q: "How do I get started?",
+    a: "Join the waitlist. We will let you know when Cue is ready for your studio. Your first five Cues will be free. No card required.",
   },
   {
     q: "Is a Cue legally binding?",
-    a: "Cue records the name a signer enters, explicit consent to sign electronically, timestamps, browser views, and a hash of the sealed document. Whether an agreement is legally enforceable depends on its terms, the parties, and the law that applies. Cue is not a law firm and does not give legal advice — bring your own terms, or have a lawyer review them.",
+    a: "Cue records the name a signer enters, explicit consent to sign electronically, timestamps, browser views, and a hash of the sealed document. Whether an agreement is legally enforceable depends on its terms, the parties, and the law that applies. Cue is not a law firm and does not give legal advice. Bring your own terms, or have a lawyer review them.",
   },
   {
     q: "Does my client need an account?",
@@ -26,7 +26,7 @@ const FAQS = [
   },
   {
     q: "What is included for free?",
-    a: "Five sent Cues on real client work — every current template, the signing experience, a browser-saveable sealed record, and the audit trail on each one. No card is required.",
+    a: "Five sent Cues for real client work. Every current template, the signing experience, a browser-saveable sealed record, and the audit trail on each one. No card required.",
   },
   {
     q: "What happens after my client signs?",
@@ -34,7 +34,7 @@ const FAQS = [
   },
   {
     q: "Can I use my own agreement wording?",
-    a: "Yes — your terms, your studio. Start from a template and edit it, or open the blank one and paste in what you already use. Saved reusable templates are planned, not available yet.",
+    a: "Yes. Your terms, your studio. Start from a template and edit it, or open the blank one and paste in what you already use. Saved reusable templates are planned, not available yet.",
   },
 ];
 
@@ -49,8 +49,8 @@ export function Faq() {
                 FAQ
               </h2>
               <p className="cue-lede" style={{ textAlign: "left" }}>
-                How the send, the yes, and the record work — and what you get on
-                day one.
+                How the send, the yes, and the record work. Everything you get
+                on day one.
               </p>
               <a
                 className="cue-btn cue-btn-light cue-faq-contact"
@@ -120,9 +120,8 @@ export function Cta() {
                 className="cue-lede"
                 style={{ marginInline: "auto", maxWidth: "52ch" }}
               >
-                Cue is live, and access is by invite. Leave your email and we
-                will send you a link — five free Cues waiting, no card, no
-                commitment.
+                Join the waitlist. We&rsquo;ll let you know when Cue is ready for
+                your studio.
               </p>
               <div style={{ marginTop: 28 }}>
                 <Waitlist />

@@ -69,7 +69,7 @@ export function Flow() {
         <div className="cue-eyebrow-block">
           <h2 className="cue-h2">{"Three steps.\nOne Cue."}</h2>
           <p className="cue-lede">
-            From a template to a sealed record — built for the moments before a
+            From a template to a sealed record. Built for the moments before a
             shoot.
           </p>
         </div>
@@ -164,7 +164,7 @@ const STEPS = [
   {
     label: "Step 03",
     title: "Get the yes on file",
-    body: "Your client signs and Cue seals the record — the frozen document, its hash, and its audit events stay in your library.",
+    body: "Your client signs. Cue seals the record. The frozen document, its hash, and its audit events stay in your library.",
     visual: <MockSeal />,
   },
 ];

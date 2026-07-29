@@ -72,9 +72,9 @@ export function Nav() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* Two doors, deliberately unequal: existing creators sign in above,
-                everyone else asks for an invite. */}
+                everyone else joins the waitlist. */}
             <a href="#waitlist" className="cue-btn cue-btn-dark cue-nav-cta">
-              Request access
+              Join the waitlist
             </a>
             <button
               type="button"
@@ -100,7 +100,7 @@ export function Nav() {
               </a>
             ))}
             <a href="#waitlist" onClick={() => setOpen(false)}>
-              Request access
+              Join the waitlist
             </a>
             <Link href="/app/login" onClick={() => setOpen(false)}>
               Sign in

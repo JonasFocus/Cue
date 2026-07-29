@@ -19,7 +19,7 @@ function Submit() {
         <Loader2 size={15} strokeWidth={2.25} className="cue-spin" />
       ) : (
         <>
-          Request access
+          Join the waitlist
           <ArrowRight size={15} strokeWidth={2.25} />
         </>
       )}
@@ -97,10 +97,9 @@ export function Waitlist() {
               <Check size={14} strokeWidth={3} />
             </span>
             <div>
-              <strong>Request received.</strong>
+              <strong>You&rsquo;re on the waitlist.</strong>
               <p>
-                We&apos;ll email your invite link as soon as there&apos;s room.
-                No spam, no newsletter.
+                We&rsquo;ll be in touch when Cue is ready for you.
               </p>
             </div>
           </div>
