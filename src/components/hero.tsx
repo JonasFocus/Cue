@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Check } from "lucide-react";
 import { AnimHost } from "./anim-host";
 
@@ -93,10 +94,8 @@ export function Hero() {
       <div className="cue-shell cue-hero-copy" style={{ position: "relative" }}>
         <div style={rise(40)}>
           <span className="cue-badge">
-            {/* Not "Beta": there is no build anyone can join. The only thing
-                this page does today is take a waitlist address. */}
-            <span>In development</span>
-            <span>Being built for photographers and videographers</span>
+            <span>Invite only</span>
+            <span>New studios join a few at a time</span>
           </span>
         </div>
 
@@ -105,19 +104,18 @@ export function Hero() {
         </h1>
 
         <p className="cue-hero-sub" style={rise(200)}>
-          Cue will create a polished client agreement, send a secure signing
-          link, and keep the signed Cue in one place. We are building it now.
+          Cue turns a template into a polished client agreement, gives you a
+          secure signing link, and keeps the signed record in one place. Your
+          client signs on the phone already in their hand.
         </p>
 
         <div className="cue-hero-cta" style={rise(280)}>
-          {/* "Create your first Cue" stays the CTA for launch. Until there is
-              something to create, the only honest action is interest. */}
           <a href="#waitlist" className="cue-btn cue-btn-dark">
-            Join the waitlist
+            Request access
           </a>
           <p className="cue-hero-note">
-            Nothing to sign in to yet. Your first five Cues will be free when it
-            opens — no card.
+            Your first five Cues are free — no card, ever, until you want more.
+            Already have a studio? <Link href="/app/login">Sign in</Link>.
           </p>
         </div>
 

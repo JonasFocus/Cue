@@ -33,7 +33,7 @@ export async function joinWaitlist(
   // trap is now observable in the logs.
   if (String(formData.get("cue_ref") ?? "")) {
     console.warn("[waitlist] honeypot tripped", { email: email || "(none)" });
-    return { status: "ok", message: "You're on the list." };
+    return { status: "ok", message: "Request received." };
   }
 
   if (!email) {
@@ -110,6 +110,6 @@ export async function joinWaitlist(
 
   // A duplicate returns the same success state as a new signup: telling a
   // stranger whether an address is already registered leaks the list.
-  return { status: "ok", message: "You're on the list." };
+  return { status: "ok", message: "Request received." };
 }
 

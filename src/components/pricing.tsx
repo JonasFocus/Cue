@@ -2,7 +2,8 @@ import { Check, CircleCheck } from "lucide-react";
 import { Reveal } from "./reveal";
 
 /* Stripe is deliberately not wired for v1 (see docs/solution.md, "Launch billing
-   decision"). Every CTA collects interest instead of taking a payment. */
+   decision"). Plans are provisioned on the invite, so every CTA routes to the
+   access form rather than a checkout. */
 
 const PLANS = [
   {
@@ -16,7 +17,7 @@ const PLANS = [
       "Final PDF on every signature",
       "Full audit trail",
     ],
-    cta: "Join the waitlist",
+    cta: "Request access",
     tone: "dark",
   },
   {
@@ -28,10 +29,10 @@ const PLANS = [
       "Unlimited Cues",
       "Custom branding",
       "Saved templates",
-      "Email reminders",
+      "Every template, including commercial and video",
       "Searchable agreement library",
     ],
-    cta: "Join the waitlist",
+    cta: "Request access",
     tone: "accent",
   },
   {
@@ -46,7 +47,7 @@ const PLANS = [
       "Custom domain",
       "Priority support",
     ],
-    cta: "Join the waitlist",
+    cta: "Request access",
     tone: "dark",
   },
 ] as const;
@@ -90,8 +91,8 @@ export function Pricing() {
           <div className="cue-eyebrow-block">
             <h2 className="cue-h2">{"Start free,\npay when it sticks"}</h2>
             <p className="cue-lede">
-              Planned pricing, not live yet. Five Cues free, no card required —
-              the allowance is a total, not a monthly reset.
+              Five Cues free, no card required — the allowance is a total, not a
+              monthly reset. Upgrade when Cue has become the way you send.
             </p>
           </div>
         </Reveal>
@@ -155,7 +156,7 @@ export function Pricing() {
             <table className="cue-table">
               <thead>
                 <tr>
-                  <th scope="col">Plan Comparison</th>
+                  <th scope="col">Plan comparison</th>
                   <th scope="col">Free</th>
                   <th scope="col">Pro</th>
                   <th scope="col">Studio</th>

@@ -70,8 +70,8 @@ const CUES: CueRow[] = [
   },
   {
     icon: "draft",
-    name: "Brand Session — Retainer",
-    template: "Retainer · 6 pages",
+    name: "Brand Session — Fenn Co.",
+    template: "Commercial · 6 pages",
     date: "Jul 09",
     updated: "10 min ago",
     initials: "TB",
@@ -265,7 +265,7 @@ export function MockTemplates() {
 }
 
 const SETUP = [
-  "Studio name and logo",
+  "Studio name and colour",
   "Standard terms",
   "Payment schedule",
   "Signature block",
@@ -390,7 +390,7 @@ export function MockBrand() {
         <i className="cue-mock-brand-mark" />
         <span>
           <b>Harper Studio</b>
-          <span>Your logo on every Cue</span>
+          <span>Your studio on every Cue</span>
         </span>
       </div>
       <div className="cue-mock-brand-doc">

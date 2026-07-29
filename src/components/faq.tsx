@@ -6,34 +6,35 @@ import { CueMark } from "@/components/cue-mark";
 /* ponytail: native <details> — no accordion state, no library, keyboard and
    find-in-page work for free. */
 
-/* Every answer about the product itself is in the future tense on purpose: none
-   of the signing, PDF, email, or audit features are built yet. The only thing
-   this site does today is take a waitlist address. */
+/* Present tense throughout: the signing flow, the seal, the audit trail and the
+   library all ship. The one thing that is gated is account creation — see the
+   `user.create.before` hook in src/lib/auth.ts — so that is what the access
+   question answers, and nothing here promises an open signup. */
 
 const FAQS = [
   {
     q: "Can I use Cue today?",
-    a: "Cue is opening soon. Join the waitlist and you will be first through the door — with five free Cues waiting, no card required. One email when it launches. That is it.",
+    a: "Yes — Cue is live. Accounts are invite-only, because we let new studios in a few at a time so every one gets looked after. Leave your email and we will send you a link, with five free Cues waiting and no card required.",
   },
   {
-    q: "Will a Cue be legally binding?",
-    a: "That is the design. Each Cue will capture signer identity, consent, timestamps, delivery events, and a sealed document hash — a defensible audit trail without enterprise software. Cue is not a law firm and does not give legal advice — bring your own terms, or have a lawyer review your template.",
+    q: "Is a Cue legally binding?",
+    a: "That is the design. Every Cue captures signer identity, explicit consent to sign electronically, timestamps, open and view events, and a sealed document hash — a defensible audit trail without enterprise software. Cue is not a law firm and does not give legal advice — bring your own terms, or have a lawyer review your template.",
   },
   {
-    q: "Will my client need an account?",
-    a: "No account, no app, no friction. They will open a secure link on the phone already in their hand, review a clean mobile layout, consent, and sign. You get the yes without chasing logins.",
+    q: "Does my client need an account?",
+    a: "No account, no app, no friction. They open a secure link on the phone already in their hand, read a clean mobile layout, consent, and sign. You get the yes without chasing logins.",
   },
   {
     q: "What is included for free?",
-    a: "Five sent Cues for real client work — standard templates, a polished signing experience, a final PDF, and the full audit trail on every one. No card at signup. Enough to feel the workflow before you ever pay.",
+    a: "Five sent Cues on real client work — every template, the full signing experience, a final PDF, and the complete audit trail on each one. No card, ever, unless you choose to upgrade. Enough to feel the workflow before you pay for it.",
   },
   {
     q: "What happens after my client signs?",
-    a: "The yes becomes the record. Cue will seal the agreement, render a final PDF, store the audit trail, and email a copy to both of you — searchable in your library, untouchable once sealed.",
+    a: "The yes becomes the record. Cue seals the agreement, hashes the document, closes the audit trail, and files it in your library — searchable, downloadable as a final PDF, and untouchable once sealed.",
   },
   {
     q: "Can I use my own agreement wording?",
-    a: "Yes — your terms, your studio. You will start from a template and edit it, or paste in what you already use. On Pro, saved templates and custom branding will keep every Cue looking like you.",
+    a: "Yes — your terms, your studio. Start from a template and edit it, or open the blank one and paste in what you already use. On Pro, saved templates and your studio branding keep every Cue looking like you.",
   },
 ];
 
@@ -48,8 +49,8 @@ export function Faq() {
                 FAQ
               </h2>
               <p className="cue-lede" style={{ textAlign: "left" }}>
-                What you get when Cue opens — and how the send, the yes, and the
-                record will work.
+                How the send, the yes, and the record work — and what you get on
+                day one.
               </p>
               <a
                 className="cue-btn cue-btn-light cue-faq-contact"
@@ -119,8 +120,8 @@ export function Cta() {
                 className="cue-lede"
                 style={{ marginInline: "auto", maxWidth: "52ch" }}
               >
-                Cue is still being built. Leave your email and you will be first
-                through the door, with five free Cues waiting. No card, no
+                Cue is live, and access is by invite. Leave your email and we
+                will send you a link — five free Cues waiting, no card, no
                 commitment.
               </p>
               <div style={{ marginTop: 28 }}>

@@ -482,6 +482,19 @@
   color: var(--cue-muted);
 }
 
+/* The sign-in sits inside muted prose, so it needs the underline to read as
+   the second door rather than as more of the sentence. */
+.cue-hero-note a {
+  color: var(--cue-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 160ms var(--cue-ease);
+}
+
+.cue-hero-note a:hover {
+  color: var(--cue-muted);
+}
+
 /* Short landscape phones: wide viewports bump the h1 clamp to 56px, so even
    the compact mobile padding still leaves the CTA below a 390px fold. */
 @media (max-height: 500px) and (orientation: landscape) {

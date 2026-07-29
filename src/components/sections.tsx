@@ -8,7 +8,7 @@ import { MockApp, MockBrand, MockLibrary, MockRecord } from "./mock";
 const WELLS = [
   {
     title: "Distinctly yours",
-    body: "Your name. Your mark. Every Cue feels like your studio.",
+    body: "Your name. Your colour. Every Cue feels like your studio.",
     visual: <MockBrand />,
   },
   {
@@ -18,7 +18,7 @@ const WELLS = [
   },
   {
     title: "Always at hand",
-    body: "Find any Cue by client, date, or shoot. Instantly.",
+    body: "Find any Cue by client or title. Filter by status. Instantly.",
     visual: <MockLibrary />,
   },
 ] as const;
@@ -62,22 +62,22 @@ const CELLS = [
   {
     icon: FileSignature,
     title: "Create",
-    body: "Start from a wedding, elopement, or portrait template and personalise the details.",
+    body: "Start from a wedding, elopement, portrait, commercial, video, or blank template and personalise the details.",
   },
   {
     icon: Send,
     title: "Send",
-    body: "Cue will generate a secure signing link with an unguessable token you can share anywhere.",
+    body: "Cue generates a secure signing link with an unguessable token. Text it, email it, send it however you already talk to your client.",
   },
   {
     icon: Check,
     title: "Sign",
-    body: "Your client will review, consent, and sign on whatever device is already in their hand.",
+    body: "Your client reviews, consents, and signs on whatever device is already in their hand. No account, no app, no download.",
   },
   {
     icon: Archive,
     title: "Keep",
-    body: "The final PDF, signer details, and audit trail will be stored and emailed to both parties.",
+    body: "The sealed document, signer details, and full audit trail stay in your library — with the final PDF one click away.",
   },
 ];
 
@@ -97,12 +97,6 @@ export function Capability() {
         <Reveal>
           <div style={{ marginTop: 56 }}>
             <MockApp />
-            {/* The mock is convincing enough to read as a screenshot of a
-                shipping app. Say what it is. */}
-            <p className="cue-hero-note" style={{ textAlign: "center" }}>
-              A design preview of the interface we are building. Nothing in it
-              is live yet.
-            </p>
           </div>
         </Reveal>
 

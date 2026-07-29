@@ -19,7 +19,7 @@ function Submit() {
         <Loader2 size={15} strokeWidth={2.25} className="cue-spin" />
       ) : (
         <>
-          Join the waitlist
+          Request access
           <ArrowRight size={15} strokeWidth={2.25} />
         </>
       )}
@@ -97,8 +97,11 @@ export function Waitlist() {
               <Check size={14} strokeWidth={3} />
             </span>
             <div>
-              <strong>You&apos;re on the list.</strong>
-              <p>We&apos;ll email you when Cue opens up. No spam, no newsletter.</p>
+              <strong>Request received.</strong>
+              <p>
+                We&apos;ll email your invite link as soon as there&apos;s room.
+                No spam, no newsletter.
+              </p>
             </div>
           </div>
         ) : state.status === "error" ? (

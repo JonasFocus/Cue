@@ -47,15 +47,15 @@ export default async function AppSignupPage() {
         </div>
 
         <div>
-          <h1 className="cue-auth-title">Cue is invite-only right now.</h1>
+          <h1 className="cue-auth-title">Cue is invite-only.</h1>
           <p className="cue-auth-sub">
-            New studios are being let in a few at a time. Join the waitlist and
+            New studios are let in a few at a time. Request access and
             we&rsquo;ll send you a link when there&rsquo;s room.
           </p>
         </div>
 
         <p className="cue-auth-foot">
-          <Link href="/">Join the waitlist</Link>
+          <Link href="/#waitlist">Request access</Link>
           {" · "}
           <Link href="/app/login">Already have a studio? Sign in</Link>
         </p>

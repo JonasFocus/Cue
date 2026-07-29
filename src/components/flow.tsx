@@ -12,7 +12,7 @@ const TABS = [
     icon: FileSignature,
     title: "Send the Cue",
     lede: "From template to signing link in a minute.",
-    body: "Start from a wedding, elopement, portrait, or retainer template. Personalise the details, then Cue creates a secure link you can share anywhere.",
+    body: "Start from a wedding, elopement, portrait, commercial, video, or blank template. Personalise the details, then Cue creates a secure link you can share anywhere.",
     statValue: "Under a minute",
     statLabel: "From template to ready-to-send",
     visual: <MockTemplates />,
@@ -32,7 +32,7 @@ const TABS = [
     icon: Archive,
     title: "Keep the record",
     lede: "Signed means settled.",
-    body: "The moment it is signed, Cue will freeze the agreement, render a final PDF, store the audit trail, and email a copy to both parties.",
+    body: "The moment it is signed, Cue freezes the agreement, hashes the document, and closes the audit trail. The sealed record and its final PDF sit in your library from then on.",
     statValue: "Immutable",
     statLabel: "Snapshot, hash, and audit trail",
     visual: <MockRecord />,
@@ -152,13 +152,13 @@ const STEPS = [
   {
     label: "Step 01",
     title: "Set up your studio once",
-    body: "Add your business name, branding, and standard terms. Cue will reuse them on every Cue from then on.",
+    body: "Add your business name, brand colour, and standard terms. Cue reuses them on every Cue from then on.",
     visual: <MockSetup />,
   },
   {
     label: "Step 02",
     title: "Send your first Cue",
-    body: "You will pick a template, fill in the client and shoot details, and send the signing link straight from your phone or laptop.",
+    body: "Pick a template, fill in the client and shoot details, and send the signing link straight from your phone or laptop.",
     visual: <MockSend />,
   },
   {

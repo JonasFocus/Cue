@@ -62,15 +62,19 @@ export function Nav() {
                 {l.label}
               </a>
             ))}
+            {/* Sign-in lives in the desktop link group rather than beside the
+                CTA: the brand, the CTA and the toggle already fill the shell at
+                320px. Below 900px the sheet carries it instead. */}
+            <Link href="/app/login" className="cue-nav-link">
+              Sign in
+            </Link>
           </nav>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* There is no customer sign-in yet — /console is the operator's ops
-                surface with signup disabled, so linking it here promised an
-                account nobody can have. Interest is the only real action on this
-                page. Light styling keeps it from competing with the hero CTA. */}
-            <a href="#waitlist" className="cue-btn cue-btn-light cue-nav-cta">
-              Join the waitlist
+            {/* Two doors, deliberately unequal: existing creators sign in above,
+                everyone else asks for an invite. */}
+            <a href="#waitlist" className="cue-btn cue-btn-dark cue-nav-cta">
+              Request access
             </a>
             <button
               type="button"
@@ -96,8 +100,11 @@ export function Nav() {
               </a>
             ))}
             <a href="#waitlist" onClick={() => setOpen(false)}>
-              Join the waitlist
+              Request access
             </a>
+            <Link href="/app/login" onClick={() => setOpen(false)}>
+              Sign in
+            </Link>
           </nav>
         )}
       </div>

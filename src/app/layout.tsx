@@ -11,11 +11,11 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
    the value proposition has to land before the category does. */
 const TITLE = "Cue — client agreements for photographers and videographers";
 const DESCRIPTION =
-  "Send the Cue. Get the yes. Keep the record. Client agreements for photographers and videographers.";
+  "Send the Cue. Get the yes. Keep the record. Build a client agreement from a template, send a secure signing link, and keep the sealed record — for photographers and videographers.";
 
 const SHARE_TITLE = "Send the Cue. Get the yes.";
 const SHARE_DESCRIPTION =
-  "Client agreements for photographers and videographers. Send the Cue, get the yes, keep the record.";
+  "Client agreements for photographers and videographers. Your client signs on their phone — no account, no app — and the record seals itself.";
 
 import { SITE_URL } from "@/lib/site-url";
 
