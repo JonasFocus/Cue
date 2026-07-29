@@ -9,19 +9,24 @@ export const metadata: Metadata = {
   },
   title: "Privacy — Cue",
   description:
-    "Exactly what Cue stores when you join the waitlist, run a studio account, or sign an agreement — where it lives, and how to have it deleted.",
+    "Exactly what Cue stores when you ask for access, run a studio account, or sign an agreement — where it lives, who processes it, and how to have it deleted.",
 };
 
-/* Every claim here must stay true of the code. The three sources are:
-     - the waitlist: src/app/actions.ts
+/* Every claim here must stay true of the code AND of the infrastructure. The
+   sources are:
+     - the access list: src/app/actions.ts
      - studio accounts and Cues: src/lib/studio.ts, src/lib/cue-db.ts, and the
        Better Auth tables from db/migrations/005_auth_schema.sql
      - signing evidence: src/app/s/[token]/actions.ts and cue_party in 007
-   If any of those start collecting or sending something else, this page changes
-   in the SAME commit. It was already wrong once: it described only the waitlist
-   after the application shipped, which is the exact failure this rule prevents. */
+     - who processes it: vercel.json (region), DATABASE_URL (Neon), and
+       src/lib/redis.ts (Upstash)
+   If any of those start collecting, sending, or moving something else, this
+   page changes in the SAME commit. It has been wrong twice: it described only
+   the waitlist after the application shipped, and it went on describing "a
+   single rented virtual server" for a day after the move to Vercel and Neon.
+   Both are the exact failure this rule exists to prevent. */
 
-const UPDATED = "26 July 2026";
+const UPDATED = "29 July 2026";
 
 const body: React.CSSProperties = {
   marginTop: 14,
@@ -56,7 +61,7 @@ export default function PrivacyPage() {
           met it. Find yourself below — only that section applies to you.
         </p>
 
-        <h2 style={heading}>If you joined the waitlist</h2>
+        <h2 style={heading}>If you asked for access</h2>
         <ul style={list}>
           <li>Your email address.</li>
           <li>Your name, if you typed one — that field is optional.</li>
@@ -70,9 +75,16 @@ export default function PrivacyPage() {
           <li>The date and time you submitted the form.</li>
         </ul>
         <p style={body}>
-          That is the entire waitlist record. The marketing pages set no cookies
-          and run no analytics, tracking pixels, or third-party scripts. Fonts
-          are served from this site, not from a third party.
+          That is the entire record. If we invite you, the same row also holds
+          the invitation: the address it was issued to, the plan it starts you
+          on, when it opens and ends, whether it has been used, and whether it
+          was withdrawn.
+        </p>
+        <p style={body}>
+          The marketing and legal pages set no cookies and run no analytics,
+          tracking pixels, or third-party scripts. Fonts are served from this
+          site, not from a third party. Signing in to a studio account sets one
+          cookie — the session — and that is the only cookie Cue ever sets.
         </p>
 
         <h2 style={heading}>If you created a studio account</h2>
@@ -168,10 +180,20 @@ export default function PrivacyPage() {
         </p>
         <p style={body}>
           Being straight about the current state:{" "}
-          <strong>no email provider is connected to Cue at all.</strong> As of{" "}
-          {UPDATED} nothing has ever been emailed to anyone and nothing can be
-          sent automatically. When you send an agreement, you share the link
-          yourself. We intend to email waitlist members once, when Cue opens.
+          <strong>no email provider is connected to Cue at all.</strong> The
+          application cannot send anything automatically — not a signing link,
+          not a copy of a sealed agreement, not a reminder. When you send an
+          agreement, you share the link yourself.
+        </p>
+        <p style={body}>
+          That includes your invitation. When we have room, one person writes to
+          you by hand from{" "}
+          <a className="cue-link" href="mailto:hello@krevo.io">
+            hello@krevo.io
+          </a>{" "}
+          with your link. Your address is used for that and nothing else — no
+          newsletter, no sequence, no third-party mailing tool holding a copy of
+          it.
         </p>
 
         <h2 style={heading}>Who at Cue can see it</h2>
@@ -192,17 +214,47 @@ export default function PrivacyPage() {
           behalf.
         </p>
 
-        <h2 style={heading}>Where it lives</h2>
+        <h2 style={heading}>Where it lives, and who else touches it</h2>
         <p style={body}>
-          In one PostgreSQL database on a single rented virtual server, reachable
-          only from the application over a private network, behind HTTPS. Nothing
-          is copied to a third-party marketing or analytics tool. Signature
-          images sit in that same database, not with an outside provider.
+          Everything is in one PostgreSQL database, behind HTTPS. Signature
+          images sit in that same database as data, not with a file-storage
+          provider. Nothing is copied to a marketing or analytics tool, because
+          there is not one.
         </p>
         <p style={body}>
-          There are currently no off-site backups. That is a deliberate choice
-          while Cue is pre-launch, and it means data loss is possible. This page
-          changes when that does.
+          Cue runs on rented infrastructure rather than machines Krevo owns, so
+          three companies necessarily hold or pass your data. They are all of
+          them:
+        </p>
+        <ul style={list}>
+          <li>
+            <strong>Vercel</strong> — runs the application and serves every
+            page, from its northern Virginia region.
+          </li>
+          <li>
+            <strong>Neon</strong> — hosts the PostgreSQL database, in AWS
+            us-east-1, also in northern Virginia. This is where every account,
+            agreement, signature and audit record actually sits.
+          </li>
+          <li>
+            <strong>Upstash</strong> — holds rate-limiting counters only, keyed
+            by the salted IP hash described above. It never sees an email
+            address, an agreement, or a signature, and Cue keeps working if it
+            is unavailable.
+          </li>
+        </ul>
+        <p style={body}>
+          All three are in the United States. If you are in the UK or EU, that
+          means your data is processed outside it. Each is used as a supplier
+          running infrastructure, under its own terms — none of them is given
+          your data for their own purposes, and none is paid for it.
+        </p>
+        <p style={body}>
+          Krevo does not run a separate off-site backup. What exists is
+          whatever point-in-time history Neon keeps for the plan Cue is on,
+          which is a supplier feature rather than a promise we are making to
+          you. Cue is run by one person: treat a sealed agreement you rely on as
+          something to download and keep your own copy of.
         </p>
 
         <h2 style={heading}>Getting your data removed</h2>
@@ -215,7 +267,8 @@ export default function PrivacyPage() {
         </p>
         <ul style={list}>
           <li>
-            <strong>Waitlist:</strong> we delete the row. Nothing is retained.
+            <strong>Access list:</strong> we delete the row, and any invitation
+            issued to that address. Nothing is retained.
           </li>
           <li>
             <strong>Studio account:</strong> we delete the account, the studio
@@ -233,11 +286,12 @@ export default function PrivacyPage() {
 
         <h2 style={heading}>What we are not claiming</h2>
         <p style={body}>
-          Cue is a pre-launch product built by one person. It has not been
-          audited or certified against any privacy or security standard, it has
-          had no penetration test, and there is no data protection officer. Cue
-          is not a law firm and gives no legal advice; the agreements it produces
-          are templates you are expected to have reviewed.
+          Cue is in production, but it is built and run by one person. It has
+          not been audited or certified against any privacy or security
+          standard, it has had no penetration test, and there is no data
+          protection officer. Cue is not a law firm and gives no legal advice;
+          the agreements it produces are templates you are expected to have
+          reviewed.
         </p>
         <p style={body}>
           We are telling you exactly what is collected and where it sits so you
