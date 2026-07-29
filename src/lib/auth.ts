@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { pool, pruneExpiredSessions } from "./db";
-import { emailMayCreateAccount } from "./invite";
+import { inviteMayCreateAccount } from "./invite";
 import { SITE_URL } from "./site-url";
 
 /* Sessions for both surfaces: the customer app at /app and the operator console
@@ -58,8 +58,13 @@ export const auth = betterAuth({
        direction: an unreadable invite list is not an invitation. */
     user: {
       create: {
-        before: async (user: { email: string }) => {
-          if (await emailMayCreateAccount(user.email)) return;
+        before: async (user: { email: string }, context) => {
+          const body = context?.body;
+          const inviteToken =
+            body && typeof body === "object" && "inviteToken" in body
+              ? String(body.inviteToken ?? "")
+              : "";
+          if (await inviteMayCreateAccount(user.email, inviteToken)) return;
           throw new APIError("FORBIDDEN", {
             message:
               "Cue is invite-only right now. Use the link you were sent, or ask for one.",
@@ -69,8 +74,8 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    // Behind Caddy the app speaks plain HTTP, so Better Auth cannot infer that
-    // the public origin is HTTPS. Force secure cookies in production.
+    // Keep cookies secure on Vercel production deployments even when URL
+    // inference changes between build and runtime contexts.
     useSecureCookies: process.env.NODE_ENV === "production",
   },
 });

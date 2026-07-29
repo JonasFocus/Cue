@@ -195,8 +195,8 @@ export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENT_LABEL: Record<EventKind, string> = {
   created: "Cue created",
   sent: "Signing link issued",
-  opened: "Opened by recipient",
-  viewed: "Document viewed",
+  opened: "Signing link opened",
+  viewed: "Document viewed in browser",
   consented: "Consent to electronic signing recorded",
   signed: "Signature captured",
   sealed: "Record sealed",

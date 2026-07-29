@@ -9,6 +9,7 @@ import {
   type Plan,
 } from "./cue.ts";
 import type { Snapshot } from "./agreement";
+import type { PoolClient } from "pg";
 
 /* The connection pool is imported on first query rather than at module load.
  *
@@ -758,12 +759,16 @@ export const ADMIN_ACTIONS = [
 export type AdminAction = (typeof ADMIN_ACTIONS)[number];
 
 /** Returns the new plan, or null when no studio has that id. */
-export async function setStudioPlan(studioId: number, plan: Plan): Promise<Plan | null> {
+export async function setStudioPlan(
+  studioId: number,
+  plan: Plan,
+  client?: PoolClient,
+): Promise<Plan | null> {
   // isPlan() has already run at the action boundary; this is the second gate,
   // so a future caller that forgets cannot widen the column's vocabulary.
   if (!isPlan(plan)) return null;
-  const pool = await db();
-  const { rows } = await pool.query<{ plan: Plan }>(
+  const connection = client ?? (await db());
+  const { rows } = await connection.query<{ plan: Plan }>(
     `UPDATE studio SET plan = $2 WHERE id = $1 RETURNING plan`,
     [studioId, plan],
   );
@@ -781,9 +786,9 @@ export async function setStudioPlan(studioId: number, plan: Plan): Promise<Plan 
  * operational gain. Nothing belonging to a studio's own *clients* is ever
  * written here at all.
  *
- * Never throws. A failed audit write must not roll back the support fix the
- * operator was making — but it must be loud, because an audit trail with a
- * silent hole is worse than none.
+ * Throws when the append fails. Operator actions call this inside the same
+ * transaction as the mutation, so a support change and its audit record either
+ * both commit or neither does.
  */
 export async function recordAdminEvent(entry: {
   operator: { id: string; email: string };
@@ -791,28 +796,21 @@ export async function recordAdminEvent(entry: {
   studioId?: number | null;
   cueId?: number | null;
   meta?: Record<string, unknown> | null;
-}): Promise<void> {
-  try {
-    const pool = await db();
-    await pool.query(
-      `INSERT INTO admin_event
-         (operator_user_id, operator_email, action, target_studio_id, target_cue_id, meta)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        entry.operator.id,
-        entry.operator.email,
-        entry.action,
-        entry.studioId ?? null,
-        entry.cueId ?? null,
-        entry.meta ? JSON.stringify(entry.meta) : null,
-      ],
-    );
-  } catch (err) {
-    console.error(
-      `[admin] audit write failed for ${entry.action} on studio ${entry.studioId ?? "-"}`,
-      (err as Error).message,
-    );
-  }
+}, client?: PoolClient): Promise<void> {
+  const connection = client ?? (await db());
+  await connection.query(
+    `INSERT INTO admin_event
+       (operator_user_id, operator_email, action, target_studio_id, target_cue_id, meta)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      entry.operator.id,
+      entry.operator.email,
+      entry.action,
+      entry.studioId ?? null,
+      entry.cueId ?? null,
+      entry.meta ? JSON.stringify(entry.meta) : null,
+    ],
+  );
 }
 
 export type AdminTrailEntry = {

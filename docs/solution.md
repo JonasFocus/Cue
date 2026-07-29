@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-Cue is a client agreement and electronic-signing service built specifically for photographers and videographers. It helps a creator prepare a polished agreement, send a secure signing link, receive the completed record, and retain an auditable PDF.
+Cue is a client agreement and electronic-signing service built specifically for photographers and videographers. It helps a creator prepare a polished agreement, share a secure signing link, receive signatures, and retain a sealed, browser-printable record with audit events.
 
 Cue is intentionally not a generic form builder, all-in-one studio-management platform, payment product, or invoicing tool. The focused promise is simple: **send the Cue, get the yes, keep the record.**
 
@@ -18,7 +18,7 @@ Independent photographers and videographers, beginning with wedding professional
 2. Cue creates a secure, shareable signing link.
 3. The client reviews the agreement, provides consent, and signs.
 4. Cue freezes the completed agreement as an immutable snapshot.
-5. Cue generates a final PDF, retains the audit trail, and emails copies to both parties.
+5. Cue retains the sealed record and audit events. Today each party saves or prints a copy in the browser; server-generated PDFs and email delivery are planned.
 
 ### Product language
 
@@ -43,7 +43,7 @@ For photographers and videographers who want professional agreements without hea
 
 **Primary CTA:** Create your first Cue
 
-**Supporting message:** From a template to a sealed PDF — built for the moments before a shoot.
+**Supporting message:** From a template to a sealed record — built for the moments before a shoot.
 
 **Closing CTA:** Send the Cue. Get the yes. Keep the record.
 
@@ -57,7 +57,7 @@ For photographers and videographers who want professional agreements without hea
 1. **Made for creatives.** Cue is designed around the moments before a shoot, not enterprise document workflows.
 2. **Fast to send.** Templates and saved details reduce repetitive setup.
 3. **Professional for clients.** Every agreement feels branded, clear, and mobile-friendly.
-4. **Reliable after signing.** Each completed Cue has a final PDF and a durable audit record.
+4. **Reliable after signing.** Each completed Cue has a sealed document, a hash, and durable audit events.
 
 ### Initial go-to-market
 
@@ -67,9 +67,9 @@ Start with wedding photographers and videographers. Build excellent wedding-agre
 
 | Plan | Price | Intended customer | Included value |
 | --- | ---: | --- | --- |
-| Free | $0 | Creatives evaluating Cue on real client work | Five total sent Cues, standard templates, final PDFs, audit trail |
-| Pro | $19/month | Independent photographers and videographers | Unlimited Cues, custom branding, saved templates, email reminders, searchable agreement library |
-| Studio | $49/month | Small creative businesses | Everything in Pro, multiple users, shared templates, custom domain, priority support |
+| Free | $0 | Creatives evaluating Cue on real client work | Five total sent Cues, all current templates, browser-printable sealed records, audit events |
+| Pro | $19/month planned | Independent photographers and videographers | Unlimited Cues today; saved templates and email reminders are planned |
+| Studio | $49/month planned | Small creative businesses | Unlimited Cues today; multiple users, shared templates, custom domain, and priority support are planned |
 
 The free allowance is five total sent Cues, not a monthly reset. That lets users experience genuine value while creating a clean conversion point when Cue becomes part of their workflow.
 
@@ -91,54 +91,50 @@ The main business risk is customer acquisition and retention, not hosting cost. 
 
 ## Technical architecture
 
-### Recommended launch stack
+### Current stack and planned services
 
 - Next.js and TypeScript for the application and dashboard
 - Better Auth for creator authentication and sessions
 - PostgreSQL for users, templates, Cues, submissions, and audit events
-- Redis for background-job queues and rate limiting
-- A background worker for PDF rendering and email reminders
-- S3-compatible object storage for PDFs and uploads
-- A transactional email provider for invitations, receipts, and reminders
-- Error monitoring and uptime checks
+- Upstash Redis for rate limiting only
+- Planned: a background worker for PDF rendering and email reminders
+- Planned: S3-compatible object storage for PDFs and uploads
+- Planned: a transactional email provider for invitations, receipts, and reminders
+- Required before broad access: error monitoring, uptime checks, and a tested restore procedure
 
-### Hosting recommendation
+### Hosting
 
-Launch on a single VPS with Docker Compose. Start with a 4 GB RAM, 2 vCPU machine. (**Superseded 2026-07-28.** This was the original recommendation and it named DigitalOcean; it ran on a Linode for three days. Production is now Vercel with Neon Postgres and Upstash Redis — see [`architecture.md`](./architecture.md) for what actually runs and [`private-changelog.md`](./private-changelog.md) for why it moved. The paragraphs below describe the superseded design and are kept because the reasoning still explains the shape of the app.) It is sufficient for an early application with PostgreSQL, the web service, Redis, and a modest background worker while remaining easy to understand and operate.
+Production runs on Vercel with Neon Postgres and Upstash Redis in `us-east-1`.
+Functions are pinned to `iad1`. The application does not depend on proprietary
+provider APIs, but there is no current staging or rollback environment.
 
-Run Caddy in front of the app for HTTPS, routing, and basic rate limiting. Keep PostgreSQL private to the server. Store PDFs and uploads in object storage, not on the VPS disk.
-
-### Production topology
+### Current production topology
 
 ```mermaid
 flowchart TB
-  User[Creator or client] --> Proxy[Caddy: HTTPS and routing]
-  subgraph VPS[Single production VPS]
-    Proxy --> App[Next.js app]
-    App --> Auth[Better Auth]
-    App --> DB[(PostgreSQL)]
-    App --> Redis[(Redis)]
-    Worker[PDF and reminder worker] --> Redis
-    Worker --> DB
-  end
-  App --> Email[Email provider]
-  Worker --> Storage[Object storage]
-  DB --> Backup[Encrypted off-site backups]
-  App --> Monitoring[Error and uptime monitoring]
+  User[Creator or client] --> Edge[Vercel edge]
+  Edge --> App[Next.js function in iad1]
+  App --> Auth[Better Auth]
+  App --> DB[(Neon Postgres)]
+  App --> Redis[(Upstash Redis)]
+  DB --> PITR[Neon point-in-time restore]
 ```
 
 ### Security and reliability requirements
 
 - Enforce HTTPS and secure session cookies.
-- Put the database behind the application network; do not expose it publicly.
-- Maintain nightly encrypted off-site database backups and test restoration regularly.
-- Store the final rendered agreement, signer information, consent, timestamps, delivery events, and a document hash as an immutable audit record.
+- Restrict database credentials to the minimum runtime privileges practical for Neon.
+- Confirm Neon PITR retention and test restoration; add an independent encrypted copy before the risk justifies it.
+- Store the frozen agreement, signer information, consent, timestamps, view events, and document hash as an immutable audit record.
 - Rate-limit public signing endpoints and protect invite links with unguessable tokens.
 - Use least-privilege credentials and keep operational secrets outside source control.
 
 ### Scaling path
 
-Do not begin with Kubernetes or multiple application servers. Once customer usage proves the need, move PostgreSQL to a managed service or dedicated database host first. Then add a second application instance and separate worker capacity. Object storage, email, and monitoring remain external from the beginning, so they do not need a disruptive migration.
+Do not introduce Kubernetes or split services without measured pressure. Vercel
+already scales the stateless application; the first likely additions are object
+storage, transactional email, a worker, and observability. Keep agreement
+integrity in Postgres transactions as those services arrive.
 
 ## Non-goals for version one
 

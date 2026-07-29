@@ -253,22 +253,33 @@ export function Builder({
   const [saveState, setSaveState] = useState<"clean" | "dirty" | "saving" | "saved" | "error">(
     "clean",
   );
+  /* Server Actions are sequential within one React dispatcher, but pagehide,
+     unmount and button handlers can still originate separate requests. Keep one
+     explicit queue so an older draft can never finish after a newer one. */
+  const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
 
   const flush = useCallback(
-    async (body: Payload) => {
+    (body: Payload): Promise<boolean> => {
       const sent = wire(body);
       setSaveState("saving");
-      try {
-        const result = await saveCue(cue.id, body);
-        if (result.ok) {
+      const run = async () => {
+        try {
+          const result = await saveCue(cue.id, body);
+          if (!result.ok) {
+            setSaveState("error");
+            return false;
+          }
           savedRef.current = sent;
           setSaveState("saved");
-        } else {
+          return true;
+        } catch {
           setSaveState("error");
+          return false;
         }
-      } catch {
-        setSaveState("error");
-      }
+      };
+      const queued = saveQueueRef.current.then(run, run);
+      saveQueueRef.current = queued;
+      return queued;
     },
     [cue.id],
   );
@@ -415,10 +426,14 @@ export function Builder({
     setSendError(null);
     setAllowance(false);
     try {
-      // Whatever is on screen is what gets snapshotted, so land the pending
-      // edit before the server renders the frozen copy.
-      if (wire(payloadRef.current) !== savedRef.current) {
-        await flush(payloadRef.current);
+      // Drain every earlier request, then persist the newest screen state. A
+      // failed save is a hard stop: sending a different agreement is worse than
+      // asking the creator to retry.
+      await saveQueueRef.current;
+      const current = payloadRef.current;
+      if (wire(current) !== savedRef.current && !(await flush(current))) {
+        setSendError("Your latest edits are not saved yet. Check your connection and try again.");
+        return;
       }
       const result = await sendCueAction(cue.id);
       if (result.ok) {

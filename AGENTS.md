@@ -36,16 +36,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
   footer and avoid claiming legal enforceability beyond the audit record.
 - The public site must not advertise `/console` — it is the operator's ops
   surface, reached by bookmark. Customer sign-in lives at `/app/login`.
-- Describe unbuilt behaviour in the future tense on the public site. Present
-  tense on the signing, PDF, email, and audit features reads as a claim that
-  they work today.
+- Describe unbuilt behaviour in the future tense on the public site. Signing,
+  the sealed browser-printable record, and audit events work today; generated
+  PDFs, email delivery, and the other planned plan benefits do not.
 
 ## Current state
 
 What exists:
 
 - **The marketing landing page** (`src/app/page.tsx` from `src/components/*`)
-  and **the waitlist** (`src/app/actions.ts`): validates the email, rate-limits
+  and **the waitlist** (`src/app/actions.ts`): the page describes working
+  features in present tense and labels planned plan benefits; the form validates
+  the email, rate-limits
   on a salted hash of the client IP through Redis, inserts into `waitlist`.
   It sends no mail.
 - **An operator-only console** at `/console`. Signup is no longer disabled —
@@ -94,9 +96,10 @@ What exists:
   `share_token`, `signature_png`, `ip_hash` or `user_agent`. Operator mutations
   are logged to `admin_event` (migration `008`), which refuses UPDATE and DELETE.
   There is deliberately no impersonation.
-- **Four API routes**: `/api/auth/[...all]` (Better Auth), `/api/health`
-  (operator-gated probes), `/api/ping` (container liveness), `/api/waitlist`
-  (operator-gated guest list and status PATCH).
+- **Five API routes**: `/api/auth/[...all]` (Better Auth), `/api/health`
+  (operator-gated probes), `/api/ping` (public process liveness), `/api/waitlist`
+  (operator-gated guest list and status PATCH), and `/api/changelog`
+  (operator-gated changelog CRUD).
 - **SQL migrations** in `db/migrations/`, applied by `scripts/migrate.sh`.
 - **Legal pages** at `/legal/privacy` and `/legal/terms`. They must keep
   describing exactly what `actions.ts` and `db.ts` do, and nothing more. No
@@ -109,9 +112,9 @@ both the share screen and the sealed page say so), **server-side PDF rendering**
 `src/components/agreement.css`), object storage, a background worker, saved or
 custom templates, multiple users per studio, and Stripe.
 
-The landing page still describes the product in the future tense. It has not
-been updated to match the app and must not be, until the app is deployed and
-the claims are actually true of production.
+The application and signing flow are deployed. Public claims must still track
+production exactly: no generated PDF, email delivery, custom templates,
+multiple users, custom domain, priority support, object storage, or billing.
 
 Five invariants carry the product: content freezes when a Cue leaves `draft`;
 the client is served `cue.snapshot`, never a re-render; `cue_event` is

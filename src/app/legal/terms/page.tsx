@@ -101,12 +101,13 @@ export default function TermsPage() {
         <h2 style={heading}>Plans and prices are not an offer</h2>
         <p style={body}>
           The plans and prices shown on the pricing section describe what Cue
-          intends to charge. Nothing is charged today, and some listed features
-          are not built yet — <strong>multiple users, a custom domain, and
-          shared templates on the Studio plan are planned rather than
-          available.</strong> Naming them is not a promise that they will ship
-          or when. Asking for access does not reserve a price or create an
-          obligation on either side.
+          intends to charge. Nothing is charged today. <strong>Saved templates,
+          email reminders, multiple users, shared templates, custom domains,
+          and priority support are planned rather than available.</strong> Cue
+          also does not generate or email PDF files; the current record can be
+          printed or saved with your browser. Naming a planned feature is not a
+          promise that it will ship or when. Asking for access does not reserve
+          a price or create an obligation on either side.
         </p>
 
         <h2 style={heading}>Using the site</h2>

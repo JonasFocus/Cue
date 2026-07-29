@@ -1,6 +1,6 @@
 # Security posture
 
-What Cue actually does, and what it does not. As of 2026-07-26.
+What Cue actually does, and what it does not. As of 2026-07-29.
 
 No compliance claims. Cue has not been through GDPR review, SOC 2, or a
 penetration test, and has no DPO. Do not state otherwise anywhere — the legal
@@ -43,7 +43,7 @@ set only by a direct database write or `scripts/seed-operator.mjs`; nothing in
 `auth.ts` can grant it.
 
 **One gate, deliberately.** `requireOperator()` in `studio.ts` is the only
-operator check, used by `/console` and by `/api/waitlist`, `/api/changelog` and
+operator check, used by `/console` and by `/api/waitlist`, `/api/changelog`, and
 `/api/health`. It resolves the session (failing **closed** on a thrown lookup),
 rejects a non-resolved session — so a dropped `await` cannot hand it a truthy
 Promise — and then reads the `role` column.
@@ -120,18 +120,13 @@ would make `ip_hash` personal data wearing a hash costume.
 If `IP_SALT` is absent the code **refuses to write** rather than storing a
 reversible hash. This applies to the waitlist, to signing, and to declining.
 
-### Header order
+### Trusted header
 
-`X-Real-IP` first; `X-Forwarded-For` only as a fallback. **Do not "simplify"
-this to the conventional XFF-first order.**
-
-Caddy sets `X-Real-IP` from `{remote_host}` — the TCP peer, which a client
-cannot influence. `X-Forwarded-For` carries no such guarantee: whether a proxy
-replaces or appends to it is that proxy's choice, so its left-most entry is only
-trustworthy when every hop in front is known. Trusting it blindly would let
-anyone rotate the header for unlimited attempts and would poison the `ip_hash`
-stored on the signature itself. XFF is consulted only when `X-Real-IP` is absent
-— that is, when there is no proxy at all, i.e. local development.
+`client-ip.ts` reads `X-Forwarded-For` only. Vercel overwrites that header at
+the edge, so the first value is the client address rather than caller-supplied
+input. `X-Real-IP` is deliberately ignored because Vercel does not document the
+same guarantee for it. Revisit this boundary before running behind another
+proxy.
 
 ---
 
@@ -140,18 +135,16 @@ stored on the signature itself. XFF is consulted only when `X-Real-IP` is absent
 The product's central promise, so it is enforced in the database rather than by
 convention:
 
-- **Content freezes** when a Cue leaves `draft`. Two gates: `permittedPatch()`
-  decides what may change, and a `status = 'draft'` predicate in the UPDATE
-  decides whether the row is still what we thought. Without the second, a Cue
-  sent from another tab between read and write would accept an edit to a
-  document a client is already reading.
+- **Content freezes** when a Cue leaves `draft`. `permittedPatch()` and draft
+  predicates enforce the application path; migration `011` adds database
+  triggers so direct SQL cannot rewrite sent content, parties, or signature
+  evidence either.
 - **The client is served `cue.snapshot`**, never a re-render of the template, so
   editing a template next year cannot alter what somebody signed last year.
-- **`cue_event` is append-only**, enforced by a `BEFORE UPDATE` trigger that
-  raises. Not `DELETE` — row triggers fire for cascades, and every Cue logs a
-  `created` event at birth, so covering DELETE would make deleting a draft
-  impossible. An event vanishing with its Cue is a record ending; an event being
-  rewritten is history being edited, and that is what is refused.
+- **`cue_event` is append-only**, enforced against UPDATE and DELETE. Draft
+  deletion explicitly removes its event before deleting the draft; the foreign
+  key uses `RESTRICT`, so deleting a sent record cannot silently cascade away
+  its history.
 - **`doc_hash`** is SHA-256 over canonical JSON of the snapshot. Stable key
   order at every level, so the same content always hashes alike, and a
   whitespace change in a React component cannot invalidate a signed contract's
@@ -174,23 +167,18 @@ Two bounds with deliberately opposite failure directions:
 
 ## Transport and secrets
 
-- HTTPS terminated by Caddy; secure session cookies forced in production
-  (`useSecureCookies`), since the app speaks plain HTTP behind the proxy and
-  cannot infer the public origin.
-- Caddy sets the security headers: HSTS with `includeSubDomains`, a CSP
+- HTTPS terminates at Vercel; secure session cookies are forced in production.
+- `next.config.ts` sets the security headers: HSTS with `includeSubDomains`, a CSP
   (`frame-ancestors 'none'`, `base-uri 'self'`, `object-src 'none'`,
   `form-action 'self'`, `img-src 'self' data: blob:`), `X-Frame-Options DENY`,
   `nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin` — the last
   of which is what stops a share token leaking in a cross-origin Referer.
   `script-src` carries `'unsafe-inline'` because Next.js inlines hydration
-  script, so the CSP is not an XSS defence today; the Caddyfile says so.
-- Postgres and Redis are on an `internal: true` Docker network — no published
-  ports, no egress.
-- Container health is read through a read-only docker-socket-proxy. The app
-  never touches `/var/run/docker.sock`.
-- Secrets live only in `/opt/cue/.env` on the box. Never in the repository,
-  never in a chat window. `.env.example` documents the shape.
-- SSH is key-only; password authentication is disabled.
+  script, so the CSP is not a complete XSS defence today.
+- Postgres is Neon and Redis is Upstash, reached through marketplace-managed
+  credentials. Neither is hosted by this repository.
+- Secrets live in Vercel project settings. Never in the repository or chat.
+  `.env.example` documents the local shape.
 - `/app`, `/console` and `/s/[token]` all set `robots: noindex`. A signing link
   must never be indexed.
 
@@ -203,7 +191,7 @@ Honest list. These are not hypothetical.
 | Gap | Severity |
 | --- | --- |
 | **No backup beyond Neon PITR.** | **Medium, accepted 2026-07-28.** Neon point-in-time restore covers an accidental delete or a bad migration; there is no second, independent copy. Know the retention window your plan gives. |
-| No email verification on signup | Medium. Anyone can register any address. Matters more once studios carry real client data. |
+| No email ownership verification | Medium. Signup requires the exact live invite token and address, but a forwarded invite can still create the account for that address without proving inbox control. |
 | No 2FA, no password reset | Medium. Reset requires an email provider, which is not wired. |
 | Share tokens in request logs | Medium. The token is a path segment, so any full-URI log records every signing link. Caddy's access log is gone with the VPS; the equivalent now is Vercel's runtime logs and any log drain attached to the project. |
 | Signature PNGs in Postgres | Low now, wrong at scale. Object storage is the planned home. |
@@ -214,8 +202,7 @@ Honest list. These are not hypothetical.
 
 ## If something goes wrong
 
-There is no incident process, no on-call, and no monitoring beyond the health
-check. For a pre-launch product with no customers that is a defensible trade —
-it stops being defensible the moment a real agreement is signed on it.
-
-The minimum before that: error monitoring. Backups are Neon PITR by decision.
+There is no documented incident owner, tested restore drill, external uptime
+check, or application error monitor. Before broad access: confirm Neon PITR
+retention, perform and record a restore test, configure an external check for
+`/api/ping`, and route Vercel runtime errors somewhere the operator will see.

@@ -13,7 +13,7 @@ const WELLS = [
   },
   {
     title: "Sealed and settled",
-    body: "A final PDF. An immutable record. Certainty you keep.",
+    body: "A frozen document. A sealed record. Certainty you keep.",
     visual: <MockRecord />,
   },
   {
@@ -77,7 +77,7 @@ const CELLS = [
   {
     icon: Archive,
     title: "Keep",
-    body: "The sealed document, signer details, and full audit trail stay in your library — with the final PDF one click away.",
+    body: "The sealed document, signer details, and audit events stay in your library. Print or save a copy from your browser.",
   },
 ];
 

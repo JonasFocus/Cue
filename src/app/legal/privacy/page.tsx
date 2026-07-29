@@ -156,8 +156,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             A timestamped list of events on that agreement: when the link was
-            issued, when it was first opened, each time it was viewed, and when
-            it was signed and sealed.
+            issued, when it was first opened in a visible browser tab, periodic
+            return views, and when it was signed and sealed. Repeated views
+            within five minutes are combined into one event.
           </li>
         </ul>
         <p style={body}>

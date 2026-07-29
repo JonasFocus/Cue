@@ -1,6 +1,6 @@
 # Architecture
 
-How Cue is actually built, as of 2026-07-26. This describes the code in the
+How Cue is actually built, as of 2026-07-29. This describes the code in the
 repository, not a plan. Where something is unbuilt it says so.
 
 For the rules you must follow when changing it, see [`AGENTS.md`](../AGENTS.md).
@@ -78,7 +78,7 @@ builder's own `isAnswered` still treats a deliberate 0 as answered.
 ### One renderer, three consumers
 
 `AgreementView` renders the creator's live preview, the client's signing page,
-and the printed PDF. One component on purpose: the document a creator approves
+and the browser-printable record. One component on purpose: the document a creator approves
 and the document a client signs have to be the same pixels, and the surest way
 to guarantee that is for there to be only one of it.
 
@@ -86,8 +86,9 @@ to guarantee that is for there to be only one of it.
 
 ## Data model
 
-Migration `007_app_schema.sql`. Earlier migrations cover the waitlist, the
-changelog, and Better Auth's four tables.
+Migration `007_app_schema.sql` introduces the application tables; later
+migrations add operator audit, invites, plan vocabulary, and record-integrity
+guards. Earlier migrations cover the waitlist, changelog, and Better Auth.
 
 ```
 user ──1:1── studio ──1:N── cue ──┬──1:N── cue_party   (who signs, and their evidence)
@@ -117,11 +118,10 @@ there would make `DELETE FROM cue` raise for any draft an operator had ever
 looked at. Toward `"user"`, a cascade would erase the trail along with the
 operator it describes.
 
-`cue_event` has a `BEFORE UPDATE` trigger that raises. Not `DELETE` — row
-triggers fire for cascades, and every Cue logs a `created` event at birth, so
-covering DELETE would make deleting a draft impossible. The distinction that
-matters is preserved: an event vanishing with its Cue is a record ending; an
-event being rewritten is history being edited, and that is refused.
+`cue_event` refuses both UPDATE and DELETE after a Cue leaves draft. Draft
+deletion explicitly removes its event first, while its foreign key uses
+`RESTRICT`. Migration `011` also prevents direct SQL from rewriting sent Cue
+content, its party identities, or signature evidence.
 
 ---
 
@@ -162,12 +162,13 @@ One transaction, because a snapshot written without a status change would let a
 client open a link to a Cue the creator still believes is a draft.
 
 ```
-render snapshot → sha256(canonical JSON) → randomBytes(16).base64url
-  └─ BEGIN
-       SELECT plan, sent_count FROM studio WHERE id=? FOR UPDATE   ← allowance
-       UPDATE cue SET status='sent', share_token, snapshot, doc_hash, sent_at
-              WHERE studio_id=? AND id=? AND status='draft'        ← freeze
-                AND updated_at = ?                                 ← content
+BEGIN
+  SELECT plan, sent_count FROM studio WHERE id=? FOR UPDATE       ← allowance
+  SELECT cue FROM cue WHERE studio_id=? AND id=? FOR UPDATE       ← stable content
+  SELECT parties WHERE cue_id=?                                   ← stable roster
+  render snapshot → sha256(canonical JSON) → random token
+  UPDATE cue SET status='sent', share_token, snapshot, doc_hash, sent_at
+         WHERE studio_id=? AND id=? AND status='draft'            ← freeze
        UPDATE studio SET sent_count = sent_count + 1
        INSERT cue_event 'sent'
      COMMIT
@@ -175,13 +176,9 @@ render snapshot → sha256(canonical JSON) → randomBytes(16).base64url
 
 Three guards, each for a different failure. The **studio lock** serialises the
 allowance check: two free-plan sends at `sent_count = 4` would otherwise both
-read 4 and both increment. The **status predicate** stops a Cue being sent
-twice. The **`updated_at` predicate** is the subtle one — everything the
-snapshot is built from is read *before* BEGIN, so without it a concurrent
-autosave from a second tab could commit a new client name or fee in between and
-this would freeze a document that no longer matched the row, leaving the client
-signing a page that named them one way in the prose and another in the
-signature block.
+read 4 and both increment. The **Cue lock** ensures its content and party roster
+cannot change while the snapshot is assembled. The **status predicate** is the
+final guard against a second send.
 
 Counted on send, never on create: a draft costs nothing, and a creator
 exploring the builder must not burn their five free Cues doing it.
@@ -198,7 +195,7 @@ isShareToken(token)         shape-check before touching the database
   → rateLimit(ip)           10 attempts / 10 min, keyed on a salted IP hash
   → consent === 'agreed'    re-checked; a disabled checkbox is a courtesy, not enforcement
   → isValidSignerName()
-  → isSignatureImage()      PNG data-URL prefix + size cap + strict base64 charset
+  → isOptionalSignature()   optional PNG data URL; typed legal name is required
   → getCueByToken()         the cue, the status and the party list all come from here
   → BEGIN … SELECT status FOR UPDATE … COMMIT
 ```
@@ -256,7 +253,7 @@ Not oversights — decisions. See [`solution.md`](./solution.md) for the reasoni
 | Background worker | Nothing is queued, so nothing needs one yet. |
 | Saved/custom templates | The six system templates are code. Per-Cue clause removal covers most of the need. |
 | Multiple users per studio | `studio.owner_user_id` is 1:1 and `UNIQUE`. |
-| Database backups | Neon point-in-time restore. The nightly `pg_dump` died with the VPS; no separate copy is kept, by decision. |
+| Independent backup copy | Neon PITR is the only recovery source. Its retention and restore procedure must be verified operationally. |
 
 ---
 

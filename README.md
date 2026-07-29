@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/status-pre--launch-8B7CF6?style=flat-square&labelColor=11131D" alt="Pre-launch" />
   <img src="https://img.shields.io/badge/Next.js-16-11131D?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="Strict TypeScript" />
-  <img src="https://img.shields.io/badge/self--hosted-Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Self-hosted with Docker" />
+  <img src="https://img.shields.io/badge/deployed-Vercel-11131D?style=flat-square&logo=vercel&logoColor=white" alt="Deployed on Vercel" />
 </p>
 
 <br />
@@ -36,7 +36,7 @@
 
 The application landed on 2026-07-26 and is deployed: `/app`, `/s/[token]` and `/console` all serve on `cue.krevo.io`.
 
-Cue still has no email delivery, no server-side PDF rendering (the final PDF is print-to-PDF), no object storage, and no billing. The public site deliberately still describes the product in the future tense until this is live.
+Cue still has no email delivery, server-side PDF rendering, object storage, or billing. A sealed record can be printed or saved through the browser. The public site distinguishes those working features from planned plan benefits.
 
 ## Run it locally
 
@@ -69,9 +69,14 @@ npm run build
 ## Ship to production
 
 ```bash
+npm run lint
+npx tsc --noEmit
+npm test
+npm run build
+git push origin main
 ```
 
-That command verifies, commits, pushes, and deploys `main` to production. There is no separate staging environment — one box serves the live site. Run it only with a clean working tree and a focused commit scope.
+A push to `main` deploys production through Vercel. There is no staging or rollback target. Apply reviewed migrations manually before code that depends on them, and push only a clean, focused, validated commit.
 
 ## Source of truth
 

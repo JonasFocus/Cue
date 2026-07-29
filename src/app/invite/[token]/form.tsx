@@ -20,9 +20,11 @@ const MIN_PASSWORD = 12;
 export function InviteSignupForm({
   name,
   email,
+  token,
 }: {
   name: string;
   email: string;
+  token: string;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,16 @@ export function InviteSignupForm({
     setPending(true);
     // The invited address, never a form field: the account has to be created
     // for the address the invite names, or the hook refuses it.
-    const { error } = await client.signUp.email({ email, password, name: studioName });
+    const { error } = await client.signUp.email({
+      email,
+      password,
+      name: studioName,
+    }, {
+      // Better Auth's generated signup type only exposes persisted user fields.
+      // Request options are merged into the JSON body, where the server hook
+      // can verify this non-persisted invite credential.
+      body: { inviteToken: token },
+    });
 
     if (error) {
       setError(

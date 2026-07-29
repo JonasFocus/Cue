@@ -164,7 +164,7 @@ export default async function InvitePage({
             </span>
           </div>
 
-          <InviteSignupForm name={invite.name} email={invite.email} />
+          <InviteSignupForm name={invite.name} email={invite.email} token={token} />
         </div>
       </div>
     </main>

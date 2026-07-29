@@ -11,6 +11,7 @@ import {
 } from "@/lib/invite";
 import { isValidEmail, normaliseEmail, MAX_EMAIL_LENGTH } from "@/lib/waitlist";
 import { isPlan } from "@/lib/cue";
+import { withDatabaseTransaction } from "@/lib/db";
 
 /* Operator writes against the invite list.
  *
@@ -92,30 +93,34 @@ export async function createInviteAction(
   }
 
   try {
-    const invite = await createInvite({
-      name,
-      email,
-      plan,
-      startsAt,
-      expiresAt,
-      invitedBy: operator.email,
-      note: text(formData.get("note"), 200) || null,
-    });
+    const invite = await withDatabaseTransaction(async (client) => {
+      const created = await createInvite({
+        name,
+        email,
+        plan,
+        startsAt,
+        expiresAt,
+        invitedBy: operator.email,
+        note: text(formData.get("note"), 200) || null,
+      }, client);
 
+      if (created === "duplicate") return created;
+
+      await recordAdminEvent({
+        operator,
+        action: "invite.create",
+        // The id, never the address — see the note above ADMIN_ACTIONS.
+        meta: {
+          inviteId: created.id,
+          plan,
+          expires: expiresAt ? "dated" : "open-ended",
+        },
+      }, client);
+      return created;
+    });
     if (invite === "duplicate") {
       return fail(`${email} already has an invite. Edit that one instead.`);
     }
-
-    await recordAdminEvent({
-      operator,
-      action: "invite.create",
-      // The id, never the address — see the note above ADMIN_ACTIONS.
-      meta: {
-        inviteId: invite.id,
-        plan,
-        expires: expiresAt ? "dated" : "open-ended",
-      },
-    });
   } catch (err) {
     console.error("[console] invite create failed", (err as Error).message);
     return fail(BROKE);
@@ -159,11 +164,15 @@ export async function manageInviteAction(
 
   try {
     if (intent === "delete") {
-      const removed = await deleteUnacceptedInvite(inviteId);
+      const removed = await withDatabaseTransaction(async (client) => {
+        const deleted = await deleteUnacceptedInvite(inviteId, client);
+        if (!deleted) return false;
+        await recordAdminEvent({ operator, action: "invite.delete", meta: { inviteId } }, client);
+        return true;
+      });
       if (!removed) {
         return fail("They've already signed up — revoke their access instead of deleting it.");
       }
-      await recordAdminEvent({ operator, action: "invite.delete", meta: { inviteId } });
       revalidatePath("/console/invites");
       return { status: "ok", message: "Invite removed." };
     }
@@ -186,14 +195,17 @@ export async function manageInviteAction(
       }
     }
 
-    const updated = await updateInviteAccess(inviteId, patch);
-    if (!updated) return fail("No invite with that id.");
-
-    await recordAdminEvent({
-      operator,
-      action: "invite.access",
-      meta: { inviteId, intent },
+    const updated = await withDatabaseTransaction(async (client) => {
+      const result = await updateInviteAccess(inviteId, patch, client);
+      if (!result) return null;
+      await recordAdminEvent({
+        operator,
+        action: "invite.access",
+        meta: { inviteId, intent },
+      }, client);
+      return result;
     });
+    if (!updated) return fail("No invite with that id.");
   } catch (err) {
     const message = (err as Error).message;
     console.error(`[console] invite ${inviteId} ${intent} failed`, message);

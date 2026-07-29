@@ -38,11 +38,8 @@ const CUE_COLUMNS = `id, studio_id, template_slug, title, client_name, client_em
                      to_char(shoot_date, 'YYYY-MM-DD') AS shoot_date,
                      location, vars, omitted_clauses, notes, status, share_token,
                      doc_hash, created_at, sent_at, opened_at, sealed_at,
-                     -- Microsecond-precision text, not the raw timestamptz: it is
-                     -- the optimistic-concurrency token for sendCue, and a JS Date
-                     -- round-trip truncates it to milliseconds. Two writes inside
-                     -- one millisecond would then compare equal and the guard would
-                     -- pass a stale snapshot through.
+                     -- Keep the database's microsecond precision for accurate
+                     -- ordering and display; a JS Date would truncate it.
                      to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS updated_at`;
 
 type CueRow = {
@@ -485,11 +482,24 @@ export async function updateCue(
 export async function deleteCue(studioId: number, id: number): Promise<boolean> {
   // Drafts only. A sent Cue is a record somebody may have read; voiding is the
   // remedy, and it keeps the audit trail.
-  const { rowCount } = await pool.query(
-    `DELETE FROM cue WHERE studio_id = $1 AND id = $2 AND status = 'draft'`,
-    [studioId, id],
-  );
-  return rowCount === 1;
+  return withTransaction(async (client) => {
+    const { rowCount: cueCount } = await client.query(
+      `SELECT id FROM cue
+        WHERE studio_id = $1 AND id = $2 AND status = 'draft'
+        FOR UPDATE`,
+      [studioId, id],
+    );
+    if (cueCount !== 1) return false;
+
+    // Migration 011 makes the event FK restrictive so a signed trail cannot
+    // disappear through a cascade. A draft's created event is removed explicitly.
+    await client.query(`DELETE FROM cue_event WHERE cue_id = $1`, [id]);
+    const { rowCount } = await client.query(
+      `DELETE FROM cue WHERE studio_id = $1 AND id = $2 AND status = 'draft'`,
+      [studioId, id],
+    );
+    return rowCount === 1;
+  });
 }
 
 /* ── Parties ── */
@@ -511,18 +521,24 @@ export async function addParty(
   cueId: number,
   input: { role: PartyRole; name: string; email?: string | null },
 ): Promise<Party | null> {
-  const { rows } = await pool.query<PartyRow>(
-    `INSERT INTO cue_party (cue_id, role, name, email, sort_order)
-          SELECT $1, $2, $3, $4,
-                 COALESCE((SELECT max(sort_order) + 1 FROM cue_party WHERE cue_id = $1), 0)
-           WHERE EXISTS (
-                 SELECT 1 FROM cue
-                  WHERE id = $1 AND studio_id = $5 AND status = 'draft'
-                 )
-       RETURNING ${PARTY_COLUMNS}`,
-    [cueId, input.role, input.name, input.email || null, studioId],
-  );
-  return rows[0] ? toParty(rows[0]) : null;
+  return withTransaction(async (client) => {
+    const { rowCount } = await client.query(
+      `SELECT id FROM cue
+        WHERE id = $1 AND studio_id = $2 AND status = 'draft'
+        FOR UPDATE`,
+      [cueId, studioId],
+    );
+    if (rowCount !== 1) return null;
+
+    const { rows } = await client.query<PartyRow>(
+      `INSERT INTO cue_party (cue_id, role, name, email, sort_order)
+            VALUES ($1, $2, $3, $4,
+                    COALESCE((SELECT max(sort_order) + 1 FROM cue_party WHERE cue_id = $1), 0))
+         RETURNING ${PARTY_COLUMNS}`,
+      [cueId, input.role, input.name, input.email || null],
+    );
+    return rows[0] ? toParty(rows[0]) : null;
+  });
 }
 
 export async function removeParty(
@@ -530,15 +546,24 @@ export async function removeParty(
   cueId: number,
   partyId: number,
 ): Promise<boolean> {
-  const { rowCount } = await pool.query(
-    `DELETE FROM cue_party p USING cue c
-      WHERE p.cue_id = c.id AND c.studio_id = $1 AND c.id = $2
-        AND p.id = $3 AND c.status = 'draft'
-        -- The client is not removable; a Cue with nobody to sign it is not a Cue.
-        AND p.role <> 'client'`,
-    [studioId, cueId, partyId],
-  );
-  return rowCount === 1;
+  return withTransaction(async (client) => {
+    const { rowCount: cueCount } = await client.query(
+      `SELECT id FROM cue
+        WHERE id = $1 AND studio_id = $2 AND status = 'draft'
+        FOR UPDATE`,
+      [cueId, studioId],
+    );
+    if (cueCount !== 1) return false;
+
+    const { rowCount } = await client.query(
+      `DELETE FROM cue_party
+        WHERE cue_id = $1 AND id = $2
+          -- The client is not removable; a Cue with nobody to sign it is not a Cue.
+          AND role <> 'client'`,
+      [cueId, partyId],
+    );
+    return rowCount === 1;
+  });
 }
 
 /* ── Send ──
@@ -551,68 +576,13 @@ export type SendResult =
   | { ok: false; error: "not_found" | "wrong_status" | "allowance" | "no_parties" | "has_blanks" };
 
 export async function sendCue(studio: Studio, id: number): Promise<SendResult> {
-  const cue = await getCue(studio.id, id);
-  if (!cue) return { ok: false, error: "not_found" };
-  if (!canTransition(cue.status, "sent")) return { ok: false, error: "wrong_status" };
-
-  /* No allowance pre-check here on purpose. The transaction below re-reads plan
+  /* No allowance pre-check here on purpose. The transaction below reads plan
      and sent_count under `SELECT … FOR UPDATE`, which is the real check; a
      second one against `studio` as it looked when the request started can only
      ever be *wrong* — an operator upgrading a plan mid-request would make it
      tell a paying customer they had used their five free Cues. The only thing
      it saved was one `renderAgreement` call, and `hasBlanks` below already
      runs after that anyway. */
-
-  const template = templateBySlug(cue.templateSlug);
-  if (!template) return { ok: false, error: "not_found" };
-
-  const parties = await getParties(cue.id);
-  if (!parties.length) return { ok: false, error: "no_parties" };
-
-  const identity: StudioIdentity = {
-    name: studio.name,
-    legalName: studio.legalName,
-    email: studio.email,
-    phone: studio.phone,
-    address: studio.address,
-  };
-
-  const snapshot: Snapshot = {
-    version: 1,
-    document: renderAgreement(
-      template,
-      identity,
-      {
-        title: cue.title,
-        clientName: cue.clientName,
-        clientEmail: cue.clientEmail,
-        shootDate: cue.shootDate,
-        location: cue.location,
-      },
-      cue.vars,
-      cue.omittedClauses,
-    ),
-    studio: identity,
-    cue: {
-      title: cue.title,
-      clientName: cue.clientName,
-      clientEmail: cue.clientEmail,
-      shootDate: cue.shootDate,
-      location: cue.location,
-    },
-    templateSlug: cue.templateSlug,
-    parties: parties.map((p) => ({ name: p.name, email: p.email ?? "", role: p.role })),
-  };
-
-  /* The authority on "is this ready to send", not the button's disabled state.
-     The client gate reads a debounced copy of the draft, so clearing a field and
-     hitting send inside that window would otherwise freeze a document with
-     ———— markers in it — permanently, since a sent Cue cannot be edited and the
-     only remedy is voiding and rebuilding. */
-  if (hasBlanks(snapshot.document)) return { ok: false, error: "has_blanks" };
-
-  const token = randomBytes(SHARE_TOKEN_BYTES).toString("base64url");
-  const docHash = createHash("sha256").update(canonicalise(snapshot)).digest("hex");
 
   return withTransaction(async (client) => {
     /* Lock the studio before touching the Cue. Two free-plan sends racing at
@@ -629,25 +599,75 @@ export async function sendCue(studio: Studio, id: number): Promise<SendResult> {
       return { ok: false, error: "allowance" } as const;
     }
 
-    /* `updated_at` is an optimistic guard on the CONTENT, not just the status.
-       Everything the snapshot is built from — the cue row and its parties — was
-       read before BEGIN, so a concurrent autosave from a second tab could
-       commit a new client name or fee in between and this would freeze a
-       document that no longer matches the row. The client would then sign a
-       page naming them one way in the prose and another in the signature block.
-       The `cue_touch` trigger maintains `updated_at` on every write, so this
-       costs nothing; a lost race is retryable and the builder already has copy
-       for it. */
+    /* Every writer that can change the signer roster takes this same row lock.
+       Read the Cue and parties only after it is held, so the snapshot and the
+       live signature block are one atomic version of the agreement. */
+    const { rows: cueRows } = await client.query<CueRow>(
+      `SELECT ${CUE_COLUMNS} FROM cue
+        WHERE studio_id = $1 AND id = $2
+        FOR UPDATE`,
+      [studio.id, id],
+    );
+    const cue = cueRows[0] ? toCue(cueRows[0]) : null;
+    if (!cue) return { ok: false, error: "not_found" } as const;
+    if (!canTransition(cue.status, "sent")) {
+      return { ok: false, error: "wrong_status" } as const;
+    }
+
+    const template = templateBySlug(cue.templateSlug);
+    if (!template) return { ok: false, error: "not_found" } as const;
+
+    const { rows: partyRows } = await client.query<PartyRow>(
+      `SELECT ${PARTY_COLUMNS} FROM cue_party
+        WHERE cue_id = $1 ORDER BY sort_order, id`,
+      [cue.id],
+    );
+    const parties = partyRows.map(toParty);
+    if (!parties.length) return { ok: false, error: "no_parties" } as const;
+
+    const identity: StudioIdentity = {
+      name: studio.name,
+      legalName: studio.legalName,
+      email: studio.email,
+      phone: studio.phone,
+      address: studio.address,
+    };
+    const snapshot: Snapshot = {
+      version: 1,
+      document: renderAgreement(
+        template,
+        identity,
+        {
+          title: cue.title,
+          clientName: cue.clientName,
+          clientEmail: cue.clientEmail,
+          shootDate: cue.shootDate,
+          location: cue.location,
+        },
+        cue.vars,
+        cue.omittedClauses,
+      ),
+      studio: identity,
+      cue: {
+        title: cue.title,
+        clientName: cue.clientName,
+        clientEmail: cue.clientEmail,
+        shootDate: cue.shootDate,
+        location: cue.location,
+      },
+      templateSlug: cue.templateSlug,
+      parties: parties.map((p) => ({ name: p.name, email: p.email ?? "", role: p.role })),
+    };
+    if (hasBlanks(snapshot.document)) return { ok: false, error: "has_blanks" } as const;
+
+    const token = randomBytes(SHARE_TOKEN_BYTES).toString("base64url");
+    const docHash = createHash("sha256").update(canonicalise(snapshot)).digest("hex");
+
     const { rowCount } = await client.query(
-      // `cue.updatedAt` is microsecond-precision text (see CUE_COLUMNS), so this
-      // compares losslessly. A millisecond-truncated version of this guard was
-      // written first and silently let stale snapshots through — in a tight
-      // race both writes land inside the same millisecond and compare equal.
       `UPDATE cue
           SET status = 'sent', share_token = $3, snapshot = $4, doc_hash = $5, sent_at = now()
-        WHERE studio_id = $1 AND id = $2 AND status = 'draft'
-          AND updated_at = $6::timestamptz`,
-      [studio.id, id, token, JSON.stringify(snapshot), docHash, cue.updatedAt],
+        WHERE studio_id = $1 AND id = $2 AND status = 'draft'`,
+      [studio.id, id, token, JSON.stringify(snapshot), docHash],
     );
     if (rowCount !== 1) return { ok: false, error: "wrong_status" } as const;
 
@@ -678,20 +698,44 @@ export async function voidCue(studioId: number, id: number): Promise<boolean> {
 
 /* ── The signing side ── */
 
-/** First open by the recipient. Idempotent: only the first one moves status. */
+/**
+ * Records a visible browser view. The cue lock makes the first-open transition
+ * exact, and repeat views are coalesced to one event per five-minute window.
+ */
 export async function markOpened(
   cueId: number,
   meta: { ipHash: string | null; userAgent: string | null },
 ): Promise<void> {
   await withTransaction(async (client) => {
+    const { rows } = await client.query<{ status: CueStatus }>(
+      `SELECT status FROM cue WHERE id = $1 FOR UPDATE`,
+      [cueId],
+    );
+    const status = rows[0]?.status;
+    if (!status || !["sent", "opened", "partially_signed", "signed"].includes(status)) return;
+
     const { rowCount } = await client.query(
       `UPDATE cue SET status = 'opened', opened_at = now()
         WHERE id = $1 AND status = 'sent'`,
       [cueId],
     );
-    // 'viewed' on every load, 'opened' only on the first — the audit trail
-    // should show that a client came back to read it again.
-    await logEvent(client, cueId, rowCount === 1 ? "opened" : "viewed", {}, meta);
+    if (rowCount === 1) {
+      await logEvent(client, cueId, "opened", {}, meta);
+      return;
+    }
+
+    await client.query(
+      `INSERT INTO cue_event (cue_id, kind, ip_hash, user_agent, meta)
+       SELECT $1, 'viewed', $2, $3, '{}'::jsonb
+        WHERE NOT EXISTS (
+          SELECT 1
+            FROM cue_event
+           WHERE cue_id = $1
+             AND kind = 'viewed'
+             AND created_at >= now() - interval '5 minutes'
+        )`,
+      [cueId, meta.ipHash, meta.userAgent],
+    );
   });
 }
 

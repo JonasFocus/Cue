@@ -2,12 +2,11 @@ import { createHash } from "node:crypto";
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { after } from "next/server";
 import { Ban, CircleSlash, Clock, ShieldCheck } from "lucide-react";
 import { AgreementView, type SignatureView } from "@/components/agreement-view";
-import { getCueByToken, markOpened } from "@/lib/cue-db";
+import { getCueByToken } from "@/lib/cue-db";
 import { rateLimit } from "@/lib/redis";
-import { clientIp, userAgent } from "@/lib/client-ip";
+import { clientIp } from "@/lib/client-ip";
 import {
   isSealed,
   isShareToken,
@@ -18,7 +17,7 @@ import {
   VIEW_RATE_WINDOW_SECONDS,
   type CueStatus,
 } from "@/lib/cue";
-import { PrintButton, SignPanel } from "./sign";
+import { PrintButton, SignPanel, ViewRecorder } from "./sign";
 
 /* The client-facing signing page.
  *
@@ -37,8 +36,6 @@ type Loaded =
   | {
       state: "ok";
       found: NonNullable<Awaited<ReturnType<typeof getCueByToken>>>;
-      ipHash: string | null;
-      userAgent: string | null;
     };
 
 /* Wrapped in React's per-request cache so generateMetadata and the page body
@@ -65,8 +62,6 @@ const load = cache(async (token: string): Promise<Loaded> => {
     .update(`${ip}:${salt ?? "unsalted"}`)
     .digest("hex")
     .slice(0, 32);
-  const ipHash = salt ? limiterKey : null;
-
   // Generous by design (240 per ten minutes). A client refreshing their own
   // contract on bad venue wifi must never be locked out of it; this is here to
   // blunt someone walking the token space, and 2^128 already does that.
@@ -78,12 +73,7 @@ const load = cache(async (token: string): Promise<Loaded> => {
   // "malformed". A stranger must not be able to tell them apart.
   if (!found) return { state: "gone" };
 
-  return {
-    state: "ok",
-    found,
-    ipHash,
-    userAgent: await userAgent(),
-  };
+  return { state: "ok", found };
 });
 
 export async function generateMetadata({
@@ -128,22 +118,8 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
     );
   }
 
-  const { found, ipHash, userAgent } = result;
+  const { found } = result;
   const { cue, snapshot, parties, studio } = found;
-
-  /* Logged after the response is flushed, so an audit write never sits between
-     a client on venue wifi and their contract. markOpened is idempotent: the
-     first view moves the status, every later one appends a `viewed` event.
-     ponytail: that means a determined refresher can add rows to cue_event, but
-     they are capped by the view limiter above and a client re-reading what they
-     signed is exactly the kind of thing the record should show. */
-  after(async () => {
-    try {
-      await markOpened(cue.id, { ipHash, userAgent });
-    } catch (err) {
-      console.error("[sign] markOpened", (err as Error).message);
-    }
-  });
 
   const signatures: SignatureView[] = parties.map((party) => ({
     id: party.id,
@@ -165,6 +141,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
 
   return (
     <Shell brandColor={studio.brandColor} status={cue.status} snapshot={snapshot}>
+      <ViewRecorder token={token} />
       {signable && (
         /* The keyboard and screen-reader route past a long contract. The gate
            is satisfied by reaching the sentinel this points at, so the same
@@ -365,4 +342,3 @@ function initials(name: string): string {
       .join("") || "C"
   );
 }
-

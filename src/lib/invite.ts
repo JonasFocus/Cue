@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import type { PoolClient } from "pg";
 // Type-only, so this stays a pure module: cue.ts holds the plan vocabulary and
 // the runtime isPlan() check lives at the action boundary.
 import type { Plan } from "./cue";
@@ -11,10 +12,10 @@ import type { Plan } from "./cue";
  *
  * Two gates enforce it, and they are deliberately different gates:
  *
- *   1. Account creation. A `user.create.before` hook in auth.ts refuses to make
- *      an account for an email with no active invite. It sits on the database
- *      hook rather than on the signup form because the form is markup anybody
- *      can skip — POSTing straight at /api/auth/sign-up/email has to fail too.
+ *   1. Account creation. A `user.create.before` hook in auth.ts requires the
+ *      exact live invite token and its matching email. It sits on the database
+ *      hook rather than on the signup form because markup is skippable — a POST
+ *      straight at /api/auth/sign-up/email has to fail too.
  *   2. Every request afterwards. `requireStudio()` re-derives the decision on
  *      each page load and each server action, so revoking access at 11:00 takes
  *      effect at 11:00 rather than whenever the session cookie happens to
@@ -120,12 +121,10 @@ export const ACCESS_MESSAGE: Record<
    The form uses a native <input type="date">, so what arrives is `YYYY-MM-DD`
    and nothing else.
 
-   Interpreted in UTC, not Central. An access period is measured in days — "let
-   Ana try it for a month" — and nobody can perceive a trial ending six hours
-   early. What they *can* perceive is a date that reads back differently from
-   the one they typed, which is exactly what happens when a local-midnight
-   boundary is stored and then rendered somewhere else. `"end"` takes the last
-   instant of the named day, so "expires 30 Aug" means access through the 30th.
+   Interpreted in the product's operating timezone, America/Chicago. The console
+   promises access through a calendar day; storing UTC end-of-day made that
+   promise expire at 6 or 7 p.m. Central. `"end"` takes the final instant of the
+   named Central day, including across daylight-saving transitions.
 
    Returns null for anything that is not a date, which every caller reads as
    "this field was left blank". */
@@ -135,24 +134,67 @@ export function parseAccessDate(
 ): Date | null {
   const value = (raw ?? "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const at = new Date(
-    edge === "start" ? `${value}T00:00:00.000Z` : `${value}T23:59:59.999Z`,
+  const [year, month, day] = value.split("-").map(Number);
+  const probe = new Date(Date.UTC(year!, month! - 1, day!));
+  if (probe.toISOString().slice(0, 10) !== value) return null;
+
+  const at = centralInstant(
+    year!,
+    month!,
+    day!,
+    edge === "start" ? 0 : 23,
+    edge === "start" ? 0 : 59,
+    edge === "start" ? 0 : 59,
+    edge === "start" ? 0 : 999,
   );
   if (Number.isNaN(at.getTime())) return null;
-  // Rejects 2026-02-31 and friends: the Date constructor rolls them forward
-  // rather than failing, so the round trip is the check.
-  return at.toISOString().slice(0, 10) === value ? at : null;
+  return at;
 }
 
 /** `YYYY-MM-DD` for a stored timestamp, for round-tripping into a date input. */
 export function toDateInput(iso: string | null): string {
-  return iso ? iso.slice(0, 10) : "";
+  if (!iso) return "";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(iso));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function centralInstant(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  millisecond: number,
+): Date {
+  const wallClockAsUtc = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+  const offsetName = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    timeZoneName: "longOffset",
+  })
+    .formatToParts(new Date(wallClockAsUtc))
+    .find((part) => part.type === "timeZoneName")?.value;
+  const match = /^GMT([+-])(\d{2}):(\d{2})$/.exec(offsetName ?? "");
+  if (!match) return new Date(Number.NaN);
+  const offsetMinutes = (Number(match[2]) * 60 + Number(match[3])) * (match[1] === "+" ? 1 : -1);
+  return new Date(wallClockAsUtc - offsetMinutes * 60_000);
 }
 
 /* 24 bytes, base64url — the same shape and the same source as cue.share_token.
    This one addresses a signup form rather than a contract, but it is still a
    bearer credential and there is no reason to make it a weaker one. */
 const INVITE_TOKEN_BYTES = 24;
+
+export function isInviteToken(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{32}$/.test(value);
+}
 
 export function newInviteToken(): string {
   return randomBytes(INVITE_TOKEN_BYTES).toString("base64url");
@@ -232,7 +274,7 @@ export async function listInvites(limit = 200): Promise<Invite[]> {
 
 /** Null when the token matches nothing. State is the caller's to judge. */
 export async function inviteByToken(token: string): Promise<Invite | null> {
-  if (!token) return null;
+  if (!isInviteToken(token)) return null;
   const pool = await db();
   const { rows } = await pool.query<InviteRow>(
     `SELECT ${INVITE_COLUMNS} FROM invite WHERE token = $1`,
@@ -260,9 +302,9 @@ export async function createInvite(input: {
   expiresAt: Date | null;
   invitedBy: string;
   note: string | null;
-}): Promise<Invite | "duplicate"> {
-  const pool = await db();
-  const { rows } = await pool.query<InviteRow>(
+}, client?: PoolClient): Promise<Invite | "duplicate"> {
+  const connection = client ?? (await db());
+  const { rows } = await connection.query<InviteRow>(
     `INSERT INTO invite (email, name, token, plan, starts_at, expires_at, invited_by, note)
           VALUES (lower($1), $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (email) DO NOTHING
@@ -288,6 +330,7 @@ export async function createInvite(input: {
 export async function updateInviteAccess(
   id: number,
   patch: { expiresAt?: Date | null; revoked?: boolean; plan?: Plan },
+  client?: PoolClient,
 ): Promise<Invite | null> {
   const assignments: string[] = [];
   const values: unknown[] = [id];
@@ -315,8 +358,8 @@ export async function updateInviteAccess(
   }
   if (!assignments.length) return null;
 
-  const pool = await db();
-  const { rows } = await pool.query<InviteRow>(
+  const connection = client ?? (await db());
+  const { rows } = await connection.query<InviteRow>(
     `UPDATE invite SET ${assignments.join(", ")} WHERE id = $1 RETURNING ${INVITE_COLUMNS}`,
     values,
   );
@@ -327,9 +370,9 @@ export async function updateInviteAccess(
    is the reason that account is allowed in, so deleting it would silently lock
    somebody out through a path with no audit story — revoke instead, which says
    what happened and can be undone. */
-export async function deleteUnacceptedInvite(id: number): Promise<boolean> {
-  const pool = await db();
-  const { rowCount } = await pool.query(
+export async function deleteUnacceptedInvite(id: number, client?: PoolClient): Promise<boolean> {
+  const connection = client ?? (await db());
+  const { rowCount } = await connection.query(
     `DELETE FROM invite WHERE id = $1 AND accepted_user_id IS NULL`,
     [id],
   );
@@ -399,8 +442,8 @@ export async function accessForUser(user: {
 /* The signup-time half of the same rule, by email rather than by session —
    there is no session yet. Used by the auth hook, which is the thing that
    actually closes public signup. */
-export async function emailMayCreateAccount(email: string): Promise<boolean> {
-  const invite = await inviteByEmail(email);
+export async function inviteMayCreateAccount(email: string, token: string): Promise<boolean> {
+  const invite = await inviteByToken(token);
   if (!invite) return false;
-  return inviteState(invite, new Date()) === "active";
+  return invite.email === email.trim().toLowerCase() && inviteState(invite, new Date()) === "active";
 }

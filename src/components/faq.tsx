@@ -18,7 +18,7 @@ const FAQS = [
   },
   {
     q: "Is a Cue legally binding?",
-    a: "That is the design. Every Cue captures signer identity, explicit consent to sign electronically, timestamps, open and view events, and a sealed document hash — a defensible audit trail without enterprise software. Cue is not a law firm and does not give legal advice — bring your own terms, or have a lawyer review your template.",
+    a: "Cue records the name a signer enters, explicit consent to sign electronically, timestamps, browser views, and a hash of the sealed document. Whether an agreement is legally enforceable depends on its terms, the parties, and the law that applies. Cue is not a law firm and does not give legal advice — bring your own terms, or have a lawyer review them.",
   },
   {
     q: "Does my client need an account?",
@@ -26,15 +26,15 @@ const FAQS = [
   },
   {
     q: "What is included for free?",
-    a: "Five sent Cues on real client work — every template, the full signing experience, a final PDF, and the complete audit trail on each one. No card, ever, unless you choose to upgrade. Enough to feel the workflow before you pay for it.",
+    a: "Five sent Cues on real client work — every current template, the signing experience, a browser-saveable sealed record, and the audit trail on each one. No card is required.",
   },
   {
     q: "What happens after my client signs?",
-    a: "The yes becomes the record. Cue seals the agreement, hashes the document, closes the audit trail, and files it in your library — searchable, downloadable as a final PDF, and untouchable once sealed.",
+    a: "The yes becomes the record. Cue seals the agreement, hashes the document, and keeps it in your library with its audit events. You or your client can use the browser's print dialog to save a copy; Cue does not generate or email a PDF.",
   },
   {
     q: "Can I use my own agreement wording?",
-    a: "Yes — your terms, your studio. Start from a template and edit it, or open the blank one and paste in what you already use. On Pro, saved templates and your studio branding keep every Cue looking like you.",
+    a: "Yes — your terms, your studio. Start from a template and edit it, or open the blank one and paste in what you already use. Saved reusable templates are planned, not available yet.",
   },
 ];
 

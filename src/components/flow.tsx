@@ -32,7 +32,7 @@ const TABS = [
     icon: Archive,
     title: "Keep the record",
     lede: "Signed means settled.",
-    body: "The moment it is signed, Cue freezes the agreement, hashes the document, and closes the audit trail. The sealed record and its final PDF sit in your library from then on.",
+    body: "The moment every required signer has signed, Cue seals the frozen agreement and keeps its document hash and audit events in your library. You can print or save the record from your browser.",
     statValue: "Immutable",
     statLabel: "Snapshot, hash, and audit trail",
     visual: <MockRecord />,
@@ -69,7 +69,7 @@ export function Flow() {
         <div className="cue-eyebrow-block">
           <h2 className="cue-h2">{"Three steps.\nOne Cue."}</h2>
           <p className="cue-lede">
-            From a template to a sealed PDF — built for the moments before a
+            From a template to a sealed record — built for the moments before a
             shoot.
           </p>
         </div>
@@ -164,7 +164,7 @@ const STEPS = [
   {
     label: "Step 03",
     title: "Get the yes on file",
-    body: "Your client signs and Cue seals the record — the final PDF and the full audit trail, kept in your library.",
+    body: "Your client signs and Cue seals the record — the frozen document, its hash, and its audit events stay in your library.",
     visual: <MockSeal />,
   },
 ];

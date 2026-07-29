@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { attachDatabasePool } from "@vercel/functions";
 import {
   type GuestStatus,
@@ -82,6 +82,24 @@ function createPool() {
 /* Stashed unconditionally, not only in dev: Next can evaluate a module more
    than once in production too, and a second pool is ten more connections. */
 export const pool = (globalThis.cuePool ??= createPool());
+
+/** One transaction helper for mutations that span modules or audit tables. */
+export async function withDatabaseTransaction<T>(
+  fn: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
 
 /* Better Auth inserts session rows and deletes them on sign-out, but nothing
    ever removes the ones that simply expired — a browser closed without signing

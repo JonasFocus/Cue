@@ -13,9 +13,9 @@ const PLANS = [
     blurb: "Try Cue on a real send before you commit to anything.",
     features: [
       "Five total sent Cues",
-      "Standard agreement templates",
-      "Final PDF on every signature",
-      "Full audit trail",
+      "Every agreement template",
+      "Browser-saveable sealed record",
+      "Document hash and audit trail",
     ],
     cta: "Request access",
     tone: "dark",
@@ -27,10 +27,9 @@ const PLANS = [
     blurb: "For independent photographers and videographers sending regularly.",
     features: [
       "Unlimited Cues",
-      "Custom branding",
-      "Saved templates",
-      "Every template, including commercial and video",
-      "Searchable agreement library",
+      "Everything currently in Free",
+      "Saved templates (planned)",
+      "Email reminders (planned)",
     ],
     cta: "Request access",
     tone: "accent",
@@ -42,10 +41,10 @@ const PLANS = [
     blurb: "For small creative businesses with more than one person sending.",
     features: [
       "Everything in Pro",
-      "Multiple users",
-      "Shared templates",
-      "Custom domain",
-      "Priority support",
+      "Multiple users (planned)",
+      "Shared templates (planned)",
+      "Custom domain (planned)",
+      "Priority support (planned)",
     ],
     cta: "Request access",
     tone: "dark",
@@ -54,11 +53,10 @@ const PLANS = [
 
 const COMPARISON = [
   ["Sent Cues", "5 total", "Unlimited", "Unlimited"],
-  ["Final PDF and audit trail", "yes", "yes", "yes"],
-  ["Custom branding", "—", "yes", "yes"],
-  ["Saved templates", "—", "yes", "Shared"],
-  ["Users", "1", "1", "Multiple"],
-  ["Support", "Email", "Email", "Priority"],
+  ["Templates and audit record", "yes", "yes", "yes"],
+  ["Saved templates", "—", "Planned", "Planned"],
+  ["Users", "1", "1", "Planned"],
+  ["Custom domain", "—", "—", "Planned"],
 ];
 
 function Cell({ value }: { value: string }) {
@@ -92,7 +90,8 @@ export function Pricing() {
             <h2 className="cue-h2">{"Start free,\npay when it sticks"}</h2>
             <p className="cue-lede">
               Five Cues free, no card required — the allowance is a total, not a
-              monthly reset. Upgrade when Cue has become the way you send.
+              monthly reset. Billing is not connected yet; paid prices describe
+              the planned launch offer.
             </p>
           </div>
         </Reveal>

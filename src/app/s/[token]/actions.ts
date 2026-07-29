@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
-import { declineCue, getCueByToken, signParty } from "@/lib/cue-db";
+import { declineCue, getCueByToken, markOpened, signParty } from "@/lib/cue-db";
 import { rateLimit } from "@/lib/redis";
 import { clientIp, userAgent } from "@/lib/client-ip";
 import {
@@ -13,6 +13,8 @@ import {
   isValidSignerName,
   SIGN_ATTEMPT_LIMIT,
   SIGN_RATE_WINDOW_SECONDS,
+  VIEW_ATTEMPT_LIMIT,
+  VIEW_RATE_WINDOW_SECONDS,
 } from "@/lib/cue";
 
 /* The only unauthenticated *write* in the product.
@@ -36,6 +38,36 @@ function fail(message: string): SignState {
    token that never existed from one that was withdrawn. The honest, specific
    copy lives on the page, which is only reachable with a real token. */
 const GONE = "This agreement is no longer open for signing. Reload the page to see where it stands.";
+
+/**
+ * Records an actual browser view, not a server render or metadata prefetch.
+ * The client calls this only after the document becomes visible. The database
+ * coalesces refreshes, so an unavailable rate limiter cannot grow the audit
+ * table without bound.
+ */
+export async function recordAgreementView(token: string): Promise<void> {
+  if (!isShareToken(token)) return;
+
+  const salt = process.env.IP_SALT;
+  const ip = await clientIp();
+  const limiterKey = createHash("sha256")
+    .update(`${ip}:${salt ?? "unsalted"}`)
+    .digest("hex")
+    .slice(0, 32);
+  const limit = await rateLimit(
+    `sv:${limiterKey}`,
+    VIEW_ATTEMPT_LIMIT,
+    VIEW_RATE_WINDOW_SECONDS,
+  );
+  if (!limit.ok) return;
+
+  const found = await getCueByToken(token);
+  if (!found) return;
+  await markOpened(found.cue.id, {
+    ipHash: salt ? limiterKey : null,
+    userAgent: await userAgent(),
+  });
+}
 
 export async function signAgreement(
   _prev: SignState,
@@ -178,5 +210,3 @@ export async function declineAgreement(
   // Back to the signing page, which now renders the declined state.
   redirect(`/s/${token}`);
 }
-
-

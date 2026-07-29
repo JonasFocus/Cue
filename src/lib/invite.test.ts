@@ -6,6 +6,7 @@ import {
   ACCESS_MESSAGE,
   inviteState,
   INVITE_STATES,
+  isInviteToken,
   newInviteToken,
   parseAccessDate,
   toDateInput,
@@ -141,11 +142,22 @@ test("each non-active state refuses with its own reason", () => {
 test("a start date is the first instant of that day, an end date the last", () => {
   assert.equal(
     parseAccessDate("2026-08-30", "start")?.toISOString(),
-    "2026-08-30T00:00:00.000Z",
+    "2026-08-30T05:00:00.000Z",
   );
   assert.equal(
     parseAccessDate("2026-08-30", "end")?.toISOString(),
-    "2026-08-30T23:59:59.999Z",
+    "2026-08-31T04:59:59.999Z",
+  );
+});
+
+test("Central access dates use the winter offset after daylight saving ends", () => {
+  assert.equal(
+    parseAccessDate("2026-12-15", "start")?.toISOString(),
+    "2026-12-15T06:00:00.000Z",
+  );
+  assert.equal(
+    parseAccessDate("2026-12-15", "end")?.toISOString(),
+    "2026-12-16T05:59:59.999Z",
   );
 });
 
@@ -174,8 +186,23 @@ test("toDateInput round-trips a stored timestamp back into the form", () => {
 test("invite tokens are URL-safe and not guessable", () => {
   const token = newInviteToken();
   assert.match(token, /^[A-Za-z0-9_-]{32}$/); // 24 bytes, base64url
+  assert.equal(isInviteToken(token), true);
+  assert.equal(isInviteToken("A".repeat(31)), false);
+  assert.equal(isInviteToken(`${"A".repeat(31)}+`), false);
   const many = new Set(Array.from({ length: 200 }, newInviteToken));
   assert.equal(many.size, 200);
+});
+
+test("account creation requires the invite token and its exact email", () => {
+  const authSource = readFileSync(new URL("./auth.ts", import.meta.url), "utf8");
+  const formSource = readFileSync(
+    new URL("../app/invite/[token]/form.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(authSource, /inviteMayCreateAccount\(user\.email, inviteToken\)/);
+  assert.match(source, /WHERE token = \$1/);
+  assert.match(source, /invite\.email === email\.trim\(\)\.toLowerCase\(\)/);
+  assert.match(formSource, /body: \{ inviteToken: token \}/);
 });
 
 /* ── Structure ──

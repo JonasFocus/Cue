@@ -23,10 +23,6 @@ const sql = [...source.matchAll(/`([^`]*)`/g)]
   .filter((s) => /\b(SELECT|INSERT INTO|UPDATE|DELETE FROM|WITH)\b/.test(s))
   .join("\n");
 
-const migration007 = readFileSync(
-  new URL("../../db/migrations/007_app_schema.sql", import.meta.url),
-  "utf8",
-);
 const migration008 = readFileSync(
   new URL("../../db/migrations/008_admin_events.sql", import.meta.url),
   "utf8",
@@ -40,8 +36,7 @@ const migration010 = readFileSync(
 
 /* 007 created studio.plan with the original vocabulary; 010 renamed `creator`
    to `pro` and added the same constraint to invite.plan. The *current* rule is
-   whatever 010 rebuilt, so that is what PLANS has to agree with — reading 007
-   here is how this test would keep passing while the database disagreed. */
+   whatever 010 rebuilt, so that is what PLANS has to agree with. */
 test("PLANS matches the SQL CHECK constraints on plan columns", () => {
   // A plan the console can write but the constraint rejects is a 500 at the
   // moment an operator is trying to fix somebody's account — or worse, at the

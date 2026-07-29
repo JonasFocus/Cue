@@ -5,6 +5,7 @@ import { requireOperator, updateStudio } from "@/lib/studio";
 import { recordAdminEvent, setStudioPlan, studioDetail } from "@/lib/admin";
 import { isPlan } from "@/lib/cue";
 import { isValidEmail, normaliseEmail } from "@/lib/waitlist";
+import { withDatabaseTransaction } from "@/lib/db";
 
 /* Operator writes against a customer's account.
  *
@@ -95,15 +96,18 @@ export async function updateStudioProfileAction(
     );
     if (!changed.length) return { status: "ok", message: "Nothing to change." };
 
-    const updated = await updateStudio(studioId, patch);
-    if (!updated) return fail("No customer with that id.");
-
-    await recordAdminEvent({
-      operator,
-      action: "studio.profile",
-      studioId,
-      meta: { fields: changed },
+    const updated = await withDatabaseTransaction(async (client) => {
+      const result = await updateStudio(studioId, patch, client);
+      if (!result) return null;
+      await recordAdminEvent({
+        operator,
+        action: "studio.profile",
+        studioId,
+        meta: { fields: changed },
+      }, client);
+      return result;
     });
+    if (!updated) return fail("No customer with that id.");
   } catch (err) {
     console.error(`[console] studio ${studioId} profile update failed`, (err as Error).message);
     return fail(BROKE);
@@ -132,15 +136,18 @@ export async function setStudioPlanAction(
     if (!before) return fail("No customer with that id.");
     if (before.plan === plan) return { status: "ok", message: "Already on that plan." };
 
-    const applied = await setStudioPlan(studioId, plan);
-    if (!applied) return fail("No customer with that id.");
-
-    await recordAdminEvent({
-      operator,
-      action: "studio.plan",
-      studioId,
-      meta: { from: before.plan, to: applied },
+    const applied = await withDatabaseTransaction(async (client) => {
+      const result = await setStudioPlan(studioId, plan, client);
+      if (!result) return null;
+      await recordAdminEvent({
+        operator,
+        action: "studio.plan",
+        studioId,
+        meta: { from: before.plan, to: result },
+      }, client);
+      return result;
     });
+    if (!applied) return fail("No customer with that id.");
   } catch (err) {
     console.error(`[console] studio ${studioId} plan change failed`, (err as Error).message);
     return fail(BROKE);

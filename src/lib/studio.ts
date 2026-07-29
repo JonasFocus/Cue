@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import type { PoolClient } from "pg";
 import { auth } from "./auth";
 import { pool } from "./db";
 import type { Plan } from "./cue";
@@ -167,6 +168,7 @@ export async function requireStudio(): Promise<Session> {
 export async function updateStudio(
   id: number,
   patch: Partial<Pick<Studio, "name" | "legalName" | "email" | "phone" | "address" | "brandColor">>,
+  client?: PoolClient,
 ): Promise<Studio | null> {
   /* Column names come from this literal map, never from the keys of the
      submitted form — the same rule as updateChangelogEntry in db.ts. */
@@ -191,7 +193,7 @@ export async function updateStudio(
 
   if (!assignments.length) return null;
 
-  const { rows } = await pool.query<StudioRow>(
+  const { rows } = await (client ?? pool).query<StudioRow>(
     `UPDATE studio SET ${assignments.join(", ")} WHERE id = $1 RETURNING ${STUDIO_COLUMNS}`,
     values,
   );

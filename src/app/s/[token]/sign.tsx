@@ -10,7 +10,12 @@ import {
 } from "react";
 import { ArrowDown, Check, Loader2, Printer, TriangleAlert } from "lucide-react";
 import { isValidSignerName, MAX_SIGNATURE_BYTES, ROLE_LABEL, type PartyRole } from "@/lib/cue";
-import { declineAgreement, signAgreement, type SignState } from "./actions";
+import {
+  declineAgreement,
+  recordAgreementView,
+  signAgreement,
+  type SignState,
+} from "./actions";
 import { SignaturePad, type SignaturePadHandle } from "./signature-pad";
 
 /* The route's only client module.
@@ -20,6 +25,30 @@ import { SignaturePad, type SignaturePadHandle } from "./signature-pad";
  * document has to paint on a phone on venue wifi before any of this arrives. */
 
 const IDLE: SignState = { status: "idle", message: "" };
+
+export function ViewRecorder({ token }: { token: string }) {
+  useEffect(() => {
+    let recorded = false;
+
+    function recordWhenVisible() {
+      if (recorded || document.visibilityState !== "visible") return;
+      recorded = true;
+      document.removeEventListener("visibilitychange", recordWhenVisible);
+      void recordAgreementView(token).catch((error: unknown) => {
+        console.error(
+          "[sign] recordAgreementView",
+          error instanceof Error ? error.message : "unknown error",
+        );
+      });
+    }
+
+    recordWhenVisible();
+    if (!recorded) document.addEventListener("visibilitychange", recordWhenVisible);
+    return () => document.removeEventListener("visibilitychange", recordWhenVisible);
+  }, [token]);
+
+  return null;
+}
 
 export type Signer = { id: number; name: string; role: PartyRole };
 

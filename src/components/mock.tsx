@@ -445,7 +445,7 @@ export function MockLibrary() {
 export function MockRecord() {
   return (
     <div className="cue-mock-card" aria-hidden>
-      <div style={{ fontWeight: 500 }}>Final PDF sealed</div>
+      <div style={{ fontWeight: 500 }}>Agreement record sealed</div>
       <div style={{ color: "var(--cue-muted)", fontSize: 11, marginBottom: 14 }}>
         Harper &amp; Wells · 4 pages
       </div>
