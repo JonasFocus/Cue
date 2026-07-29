@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Bug,
   Check,
@@ -9,7 +10,6 @@ import {
   CircleAlert,
   CornerDownLeft,
   Ellipsis,
-  LogOut,
   Pencil,
   Search,
   Sparkles,
@@ -37,7 +37,11 @@ import {
   type ChangeFields,
   type ChangeKind,
 } from "@/lib/changelog";
-import { CueMark } from "@/components/cue-mark";
+import { CONSOLE_TABS, ConsoleMasthead } from "./chrome";
+
+/** The three views this component swaps in place. The other two console tabs
+    are routes, so they are not part of this union. */
+type DashboardTab = "overview" | "guests" | "changelog";
 
 /* Built from the server's own types rather than hand-copied. A local copy
    drifted once already — it kept declaring `today` and `latest` after the API
@@ -63,14 +67,32 @@ type GuestPageResponse = {
 const POLL_MS = 30_000;
 
 export function Dashboard({ operator }: { operator: string }) {
-  const [tab, setTab] = useState<"overview" | "guests" | "changelog">("overview");
+  /* The tab lives in the URL as well as in state, so Customers and Invites can
+     link straight to Guest list or Changelog. State is still what drives the
+     render: these three swap in place on a polling component, and a real
+     navigation would remount it and restart the poll. */
+  const params = useSearchParams();
+  const [tab, setTab] = useState<DashboardTab>(() => {
+    const requested = params.get("tab");
+    return requested === "guests" || requested === "changelog" ? requested : "overview";
+  });
+
+  // replaceState, not pushState: a tab is a view of one page, and stacking a
+  // history entry per click would make Back walk the tabs instead of leaving.
+  const selectTab = useCallback((next: DashboardTab) => {
+    setTab(next);
+    window.history.replaceState(
+      null,
+      "",
+      next === "overview" ? "/console" : `/console?tab=${next}`,
+    );
+  }, []);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [guests, setGuests] = useState<Guest[] | null>(null);
   const [guestTotal, setGuestTotal] = useState<number | null>(null);
   const [nextBefore, setNextBefore] = useState<number | null>(null);
   const [newGuestIds, setNewGuestIds] = useState<Set<number>>(() => new Set());
   const [loadingMore, setLoadingMore] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState<string | null>(null);
   // Refreshed on each poll, not on a clock: it only feeds a relative-time
@@ -204,29 +226,6 @@ export function Dashboard({ operator }: { operator: string }) {
     }
   }, [load]);
 
-  // Better Auth rejects a body-less POST with 415 and never revokes the
-  // session. Without the header the operator was redirected to the login page
-  // while the session cookie stayed valid for its full life — on a shared
-  // machine, that is a live session handed to the next person.
-  const signOut = useCallback(async () => {
-    setSigningOut(true);
-    try {
-      const res = await fetch("/api/auth/sign-out", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: "{}",
-      });
-      if (!res.ok) throw new Error(`sign-out returned ${res.status}`);
-    } catch (err) {
-      setError(
-        `Sign-out failed (${(err as Error).message}) — you are STILL signed in. Try again.`,
-      );
-      setSigningOut(false);
-      return;
-    }
-    window.location.href = "/console/login";
-  }, []);
-
   /* Poll only while somebody is actually looking.
    *
    * This used to fire every 5 seconds forever, which is two function
@@ -277,64 +276,40 @@ export function Dashboard({ operator }: { operator: string }) {
   return (
     <div className="cx">
       <div className="cx-col" data-tab={tab}>
-        <header className="cx-top">
-          <span className="cx-mark">
-            <CueMark size={13} />
-          </span>
-          <span className="cx-wordmark">
-            Console<span>cue.krevo.io</span>
-          </span>
-          <span className="cx-who">{operator}</span>
-          <button
-            className="cx-signout"
-            onClick={signOut}
-            type="button"
-            disabled={signingOut}
-            aria-label="Sign out"
-            title="Sign out"
-          >
-            <LogOut size={13} strokeWidth={2} />
-          </button>
-        </header>
+        <ConsoleMasthead operator={operator} />
 
         {/* Plain toggle buttons, not an ARIA tablist: the pattern would need
             roving tabIndex, arrow keys and real tabpanels to be honest, and it
-            buys nothing over two buttons that announce their pressed state. */}
+            buys nothing over two buttons that announce their pressed state.
+
+            Buttons rather than the shared <ConsoleTabs>, which is all links:
+            these three swap in place, and navigating would remount this
+            component and restart the poll. Labels and order still come from
+            CONSOLE_TABS so the two strips cannot drift apart again. */}
         <nav className="cx-tabs" aria-label="Console views">
-          <button
-            type="button"
-            aria-pressed={tab === "overview"}
-            className="cx-tab"
-            onClick={() => setTab("overview")}
-          >
-            Overview
-          </button>
-          <button
-            type="button"
-            aria-pressed={tab === "guests"}
-            className="cx-tab"
-            onClick={() => setTab("guests")}
-          >
-            Guest list
-            {guestTotal !== null ? <b>{guestTotal.toLocaleString()}</b> : null}
-          </button>
-          <button
-            type="button"
-            aria-pressed={tab === "changelog"}
-            className="cx-tab"
-            onClick={() => setTab("changelog")}
-          >
-            Changelog
-          </button>
-          {/* Routes, not tabs: both surfaces are server-rendered and read across
-              every studio, so neither belongs in this polling client
-              component. */}
-          <Link className="cx-tab" href="/console/studios">
-            Customers
-          </Link>
-          <Link className="cx-tab" href="/console/invites">
-            Invites
-          </Link>
+          {CONSOLE_TABS.map(({ key, label, href }) =>
+            key === "overview" || key === "guests" || key === "changelog" ? (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={tab === key}
+                className="cx-tab"
+                onClick={() => selectTab(key)}
+              >
+                {label}
+                {key === "guests" && guestTotal !== null ? (
+                  <b>{guestTotal.toLocaleString()}</b>
+                ) : null}
+              </button>
+            ) : (
+              // Routes, not tabs: both surfaces are server-rendered and read
+              // across every studio, so neither belongs in this polling client
+              // component.
+              <Link className="cx-tab" key={key} href={href}>
+                {label}
+              </Link>
+            ),
+          )}
         </nav>
 
         {/* One region, always in the DOM, contents swapped. A `role="status"`

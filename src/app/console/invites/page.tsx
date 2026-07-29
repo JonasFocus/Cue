@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MailPlus, SearchX } from "lucide-react";
-import { CueMark } from "@/components/cue-mark";
+import { ConsoleMasthead, ConsoleTabs } from "../chrome";
 import { formatStamp } from "@/lib/agreement";
 import { adminOverview } from "@/lib/admin";
 import { PLAN_LABEL } from "@/lib/cue";
@@ -91,29 +90,11 @@ export default async function InvitesPage() {
   return (
     <div className="cx">
       <div className="cx-col cs-col">
-        <header className="cx-top">
-          <span className="cx-mark">
-            <CueMark size={13} />
-          </span>
-          <span className="cx-wordmark">
-            Console<span>cue.krevo.io</span>
-          </span>
-          <span className="cx-who">{operator.email}</span>
-        </header>
-
-        <nav className="cx-tabs" aria-label="Console views">
-          <Link className="cx-tab" href="/console">
-            Overview
-          </Link>
-          <Link className="cx-tab" href="/console/studios">
-            Customers
-            <b>{overview.studios.toLocaleString()}</b>
-          </Link>
-          <Link className="cx-tab" href="/console/invites" aria-current="page">
-            Invites
-            <b>{rows.length.toLocaleString()}</b>
-          </Link>
-        </nav>
+        <ConsoleMasthead operator={operator.email} />
+        <ConsoleTabs
+          current="invites"
+          counts={{ studios: overview.studios, invites: rows.length }}
+        />
 
         <main className="cx-pane">
           <section className="cx-hero">

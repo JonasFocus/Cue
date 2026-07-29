@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Search, SearchX, Users } from "lucide-react";
-import { CueMark } from "@/components/cue-mark";
+import { ConsoleMasthead, ConsoleTabs } from "../chrome";
 import { formatStamp } from "@/lib/agreement";
 import { adminOverview, parseStudioCursor, studioList } from "@/lib/admin";
 import { PLAN_LABEL } from "@/lib/cue";
@@ -80,28 +80,8 @@ export default async function StudiosPage({
   return (
     <div className="cx">
       <div className="cx-col cs-col">
-        <header className="cx-top">
-          <span className="cx-mark">
-            <CueMark size={13} />
-          </span>
-          <span className="cx-wordmark">
-            Console<span>cue.krevo.io</span>
-          </span>
-          <span className="cx-who">{operator.email}</span>
-        </header>
-
-        <nav className="cx-tabs" aria-label="Console views">
-          <Link className="cx-tab" href="/console">
-            Overview
-          </Link>
-          <Link className="cx-tab" href="/console/studios" aria-current="page">
-            Customers
-            <b>{overview.studios.toLocaleString()}</b>
-          </Link>
-          <Link className="cx-tab" href="/console/invites">
-            Invites
-          </Link>
-        </nav>
+        <ConsoleMasthead operator={operator.email} />
+        <ConsoleTabs current="studios" counts={{ studios: overview.studios }} />
 
         <main className="cx-pane">
           <section className="cx-hero">
