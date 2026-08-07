@@ -235,8 +235,8 @@ export const ROLE_LABEL: Record<PartyRole, string> = {
    ponytail: v1 refuses to create a `creator` party at all (see
    `addPartyAction`), rather than creating one that no built surface can ever
    sign — that would leave a Cue waiting forever on a signature nobody can give.
-   Upgrade path, in order of rigour: an authenticated countersign action inside
-   /app, then a per-party `share_token` so each link signs exactly one line. */
+   Per-party `share_token`s (migration 012) already make each link sign exactly
+   one line; the remaining upgrade is an authenticated countersign inside /app. */
 export function isPubliclySignable(role: PartyRole): boolean {
   return role === "client" || role === "additional";
 }

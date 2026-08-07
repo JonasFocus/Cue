@@ -100,7 +100,7 @@ for f in db/migrations/*.sql; do
     fi
   else
     pending+=("$f")
-    [ "${1:-}" = "--status" ] && echo "  PENDING  $name"
+    case "${1:-}" in --status|--check) echo "  PENDING  $name" ;; esac
   fi
 done
 

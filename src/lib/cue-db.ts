@@ -318,7 +318,13 @@ export async function getCueByToken(
        FROM cue c
        JOIN studio s ON s.id = c.studio_id
       JOIN cue_party signing_party ON signing_party.cue_id = c.id
-      WHERE signing_party.share_token = $1`,
+      WHERE signing_party.share_token = $1
+         /* A Cue sent by pre-012 code carries only the cue-level token. Accept
+            it for the client line alone — the same line it always signed — so
+            no shared link ever reaches another party's row. */
+         OR (c.share_token = $1 AND signing_party.role = 'client')
+      ORDER BY (signing_party.share_token = $1) DESC NULLS LAST
+      LIMIT 1`,
     [token],
   );
 
