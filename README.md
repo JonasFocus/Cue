@@ -73,10 +73,11 @@ npm run lint
 npx tsc --noEmit
 npm test
 npm run build
+./scripts/migrate.sh --check
 git push origin main
 ```
 
-A push to `main` deploys production through Vercel. There is no staging or rollback target. Apply reviewed migrations manually before code that depends on them, and push only a clean, focused, validated commit.
+A push to `main` deploys production through Vercel. There is no staging or rollback target. For a schema release, first pull production environment variables, run `./scripts/migrate.sh --status`, take and verify a recoverable database snapshot, apply the reviewed migration manually, then run `./scripts/migrate.sh --check` before the code deploy. A revert redeploys prior application code but does not undo schema changes: use a forward-compatible migration or restore a verified snapshot. Push only a clean, focused, validated commit.
 
 ## Source of truth
 
