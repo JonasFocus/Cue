@@ -119,7 +119,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
   }
 
   const { found } = result;
-  const { cue, snapshot, parties, studio } = found;
+  const { cue, snapshot, parties, studio, publicPartyId } = found;
 
   const signatures: SignatureView[] = parties.map((party) => ({
     id: party.id,
@@ -130,13 +130,13 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
     signedAt: party.signedAt,
   }));
 
-  /* Only parties this link is allowed to sign. A `creator` party is never one
-     of them — the share link is the client's side of the agreement, and
-     offering the photographer's line here is offering to forge it. The server
-     action refuses it too; this keeps it off the page. */
-  const unsigned = parties.filter(
-    (party) => !party.signedAt && isPubliclySignable(party.role),
+  /* A signing URL is deliberately bound to one party. Never derive this from
+     a form choice: a bearer of Alice's link must not be able to sign Bob's
+     line simply because both lines belong to the same Cue. */
+  const authorisedParty = parties.find(
+    (party) => party.id === publicPartyId && isPubliclySignable(party.role),
   );
+  const unsigned = authorisedParty && !authorisedParty.signedAt ? [authorisedParty] : [];
   const signable = isSignable(cue.status) && unsigned.length > 0;
 
   return (
@@ -206,12 +206,12 @@ function TerminalState({ status }: { status: CueStatus }) {
     );
   }
 
-  /* Unreachable today and kept anyway: voidCue clears share_token in the same
-     statement that sets the status, so a voided Cue cannot be loaded by token
-     at all and lands on the 404 above. That is the stronger behaviour — it
-     leaks nothing — but it is a property of one line in cue-db.ts, and if
-     voiding ever stops clearing the token this is the screen it should get
-     rather than a blank one. */
+  /* Unreachable today and kept anyway: voidCue clears both cue.share_token
+     and every cue_party.share_token in the voiding transaction, so a voided
+     Cue cannot be loaded by token at all and lands on the 404 above. That is
+     the stronger behaviour — it leaks nothing — but if voiding ever stops
+     revoking the tokens this is the screen it should get rather than a blank
+     one. */
   if (status === "voided") {
     return (
       <Notice

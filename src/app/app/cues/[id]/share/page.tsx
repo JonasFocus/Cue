@@ -67,7 +67,12 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const url = `${SITE_URL}/s/${cue.shareToken}`;
+  const clientParty = parties.find((party) => party.role === "client");
+  const url = clientParty?.shareToken ? `${SITE_URL}/s/${clientParty.shareToken}` : null;
+  // Sent Cues from before per-party links were introduced only have a client
+  // token. Keep that recipient's original link usable, but do not expose an
+  // unsafe shared credential for every additional signer.
+  if (!url) notFound();
   const when = cue.shootDate ? ` on ${formatDate(cue.shootDate)}` : "";
   const message =
     `Hi ${firstName(cue.clientName)} — here is the agreement for ${cue.title}${when}. ` +
@@ -116,6 +121,31 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
           </span>
         </p>
       </section>
+
+      {parties.filter((party) => party.role === "additional" && party.shareToken).length > 0 && (
+        <section className="ca-card ca-card-pad bf-share-card">
+          <h2 className="ca-h2">
+            <Link2 size={16} strokeWidth={2} aria-hidden /> Additional signer links
+          </h2>
+          <p className="bf-help">Send each person only their own link. Each link can sign one line.</p>
+          <ul className="bf-party-list">
+            {parties
+              .filter((party) => party.role === "additional" && party.shareToken)
+              .map((party) => {
+                const partyUrl = `${SITE_URL}/s/${party.shareToken}`;
+                return (
+                  <li className="bf-party" key={party.id}>
+                    <div className="bf-party-text">
+                      <span className="bf-party-name ca-truncate">{party.name}</span>
+                      <span className="bf-party-meta ca-truncate">{party.email ?? "Additional signer"}</span>
+                    </div>
+                    <CopyButton text={partyUrl} label="Copy link" done="Link copied" variant="ca-btn-ghost" />
+                  </li>
+                );
+              })}
+          </ul>
+        </section>
+      )}
 
       <section className="ca-card ca-card-pad bf-share-card">
         <h2 className="ca-h2">

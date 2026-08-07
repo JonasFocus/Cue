@@ -116,6 +116,7 @@ export type Party = {
   role: PartyRole;
   name: string;
   email: string | null;
+  shareToken: string | null;
   sortOrder: number;
   typedName: string | null;
   signaturePng: string | null;
@@ -123,7 +124,7 @@ export type Party = {
   signedAt: string | null;
 };
 
-const PARTY_COLUMNS = `id, cue_id, role, name, email, sort_order, typed_name,
+const PARTY_COLUMNS = `id, cue_id, role, name, email, share_token, sort_order, typed_name,
                        signature_png, consent_at, signed_at`;
 
 type PartyRow = {
@@ -132,6 +133,7 @@ type PartyRow = {
   role: PartyRole;
   name: string;
   email: string | null;
+  share_token: string | null;
   sort_order: number;
   typed_name: string | null;
   signature_png: string | null;
@@ -146,6 +148,7 @@ function toParty(row: PartyRow): Party {
     role: row.role,
     name: row.name,
     email: row.email,
+    shareToken: row.share_token,
     sortOrder: row.sort_order,
     typedName: row.typed_name,
     signaturePng: row.signature_png,
@@ -291,11 +294,14 @@ export async function getCueByToken(
   cue: Cue;
   snapshot: Snapshot;
   parties: Party[];
+  /** The sole party the bearer credential authorises. */
+  publicPartyId: number;
   studio: Pick<Studio, "name" | "legalName" | "email" | "brandColor">;
 } | null> {
   const { rows } = await pool.query<
     CueRow & {
       snapshot: Snapshot | null;
+      public_party_id: string;
       s_name: string;
       s_legal_name: string | null;
       s_email: string | null;
@@ -304,13 +310,15 @@ export async function getCueByToken(
   >(
     `SELECT ${CUE_COLUMNS_C},
             c.snapshot,
+            signing_party.id AS public_party_id,
             s.name         AS s_name,
             s.legal_name   AS s_legal_name,
             s.email        AS s_email,
             s.brand_color  AS s_brand_color
        FROM cue c
        JOIN studio s ON s.id = c.studio_id
-      WHERE c.share_token = $1`,
+      JOIN cue_party signing_party ON signing_party.cue_id = c.id
+      WHERE signing_party.share_token = $1`,
     [token],
   );
 
@@ -326,6 +334,7 @@ export async function getCueByToken(
     cue: toCue(row),
     snapshot,
     parties: await getParties(Number(row.id)),
+    publicPartyId: Number(row.public_party_id),
     studio: {
       name: row.s_name,
       legalName: row.s_legal_name,
@@ -660,8 +669,25 @@ export async function sendCue(studio: Studio, id: number): Promise<SendResult> {
     };
     if (hasBlanks(snapshot.document)) return { ok: false, error: "has_blanks" } as const;
 
-    const token = randomBytes(SHARE_TOKEN_BYTES).toString("base64url");
+    /* Each party receives a distinct bearer credential. The client token is
+       mirrored to cue.share_token for compatibility with existing creator
+       screens, but the public route always resolves the party token. */
+    const partyTokens = new Map(
+      parties.map((party) => [party.id, randomBytes(SHARE_TOKEN_BYTES).toString("base64url")]),
+    );
+    const clientParty = parties.find((party) => party.role === "client");
+    const token = clientParty ? partyTokens.get(clientParty.id) : undefined;
+    if (!token) return { ok: false, error: "no_parties" } as const;
     const docHash = createHash("sha256").update(canonicalise(snapshot)).digest("hex");
+
+    // This is deliberately before the status transition: migration 012 makes
+    // party credentials immutable once the Cue has been sent.
+    for (const party of parties) {
+      await client.query(
+        `UPDATE cue_party SET share_token = $2 WHERE id = $1 AND cue_id = $3`,
+        [party.id, partyTokens.get(party.id), cue.id],
+      );
+    }
 
     const { rowCount } = await client.query(
       `UPDATE cue
@@ -691,6 +717,9 @@ export async function voidCue(studioId: number, id: number): Promise<boolean> {
       [studioId, id],
     );
     if (rowCount !== 1) return false;
+    /* A voided Cue must be unreachable by any link: the public route resolves
+       cue_party.share_token, so revoke every party credential too. */
+    await client.query(`UPDATE cue_party SET share_token = NULL WHERE cue_id = $1`, [id]);
     await logEvent(client, id, "voided", {});
     return true;
   });
