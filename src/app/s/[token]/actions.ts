@@ -126,16 +126,8 @@ export async function signAgreement(
   if (!found) return fail(GONE);
   if (!isSignable(found.cue.status)) return fail(GONE);
 
-  const partyId = Number(formData.get("party"));
-  const party = Number.isInteger(partyId)
-    ? found.parties.find((p) => p.id === partyId)
-    : undefined;
-  if (!party) return fail("Choose who is signing, then try again.");
-  /* Defence in depth behind `addPartyAction`: even if a `creator` party exists
-     (added before this rule, or by a future code path), the share link must
-     never be able to sign it. Signing the photographer's line from the client's
-     link is forging the counterparty's signature. */
-  if (!isPubliclySignable(party.role)) return fail(GONE);
+  const party = found.parties.find((p) => p.id === found.publicPartyId);
+  if (!party || !isPubliclySignable(party.role)) return fail(GONE);
 
   // A double-tap on a slow connection is the single most likely way to reach
   // this, and it is not a failure — the first tap worked. Land on the same
@@ -190,12 +182,8 @@ export async function declineAgreement(
   if (!found) return fail(GONE);
   if (!isSignable(found.cue.status)) return fail(GONE);
 
-  const partyId = Number(formData.get("party"));
-  const party = Number.isInteger(partyId)
-    ? found.parties.find((p) => p.id === partyId)
-    : undefined;
-  if (!party) return fail("Choose who is declining, then try again.");
-  if (!isPubliclySignable(party.role)) return fail(GONE);
+  const party = found.parties.find((p) => p.id === found.publicPartyId);
+  if (!party || !isPubliclySignable(party.role)) return fail(GONE);
 
   const reason = String(formData.get("reason") ?? "")
     .trim()

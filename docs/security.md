@@ -80,21 +80,10 @@ The only unauthenticated **write** in the product, and the most consequential
 row it writes. It is treated accordingly.
 
 **The token is the entire credential.** Every fact is re-derived from it
-server-side — the Cue, its status, the party list. Nothing from the form is
-trusted except the token and a party id, and the party id only ever *selects*
-from the parties that token's Cue actually has. A forged party id selects
-nothing; a forged cue id has nowhere to land, because the form never carries one.
-
-**The link signs one side of the agreement, not any line on it.** "A forged
-party id selects nothing" is true and was once mistaken for sufficient — an
-attacker never needed to forge one, because the page rendered a radio button per
-unsigned party. A `creator` party was therefore signable by whoever held the
-client's link, producing a sealed, hash-stamped record showing the photographer
-signed when they never did. `isPubliclySignable()` now restricts the link to
-`client` and `additional`, enforced in the signing action, the declining action,
-`addPartyAction`, and the page that renders the list. `creator` cannot be
-created at all in v1. Upgrade path: an authenticated countersign inside `/app`,
-then a per-party `share_token` so each link signs exactly one line.
+server-side. A signing token resolves to exactly one `cue_party` row; the
+server ignores a party value supplied by the browser and records evidence only
+for that bound party. New Cues receive a distinct link for each client-side
+signer. `creator` parties remain unavailable through public links.
 
 | Control | Detail |
 | --- | --- |
@@ -190,7 +179,7 @@ Honest list. These are not hypothetical.
 
 | Gap | Severity |
 | --- | --- |
-| **No backup beyond Neon PITR.** | **Medium, accepted 2026-07-28.** Neon point-in-time restore covers an accidental delete or a bad migration; there is no second, independent copy. Know the retention window your plan gives. |
+| **No independent backup beyond Neon PITR.** | **Medium.** Neon point-in-time restore covers an accidental delete or a bad migration; there is no second, independent copy. Confirm the plan's retention and run the documented quarterly restore drill. |
 | No email ownership verification | Medium. Signup requires the exact live invite token and address, but a forwarded invite can still create the account for that address without proving inbox control. |
 | No 2FA, no password reset | Medium. Reset requires an email provider, which is not wired. |
 | Share tokens in request logs | Medium. The token is a path segment, so any full-URI log records every signing link. Caddy's access log is gone with the VPS; the equivalent now is Vercel's runtime logs and any log drain attached to the project. |
@@ -202,7 +191,8 @@ Honest list. These are not hypothetical.
 
 ## If something goes wrong
 
-There is no documented incident owner, tested restore drill, external uptime
-check, or application error monitor. Before broad access: confirm Neon PITR
-retention, perform and record a restore test, configure an external check for
-`/api/ping`, and route Vercel runtime errors somewhere the operator will see.
+The repository now contains the incident, monitoring, and recovery runbook in
+[`operations.md`](./operations.md). The provider-side work remains required:
+confirm Neon PITR retention, perform and record the restore drill, configure an
+external check for `/api/ping`, and route Vercel runtime errors to the incident
+owner before broad access.
