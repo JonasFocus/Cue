@@ -59,3 +59,4 @@ skills-lock.json
 # Database dumps — they carry email addresses and password hashes
 *.sql
 !db/migrations/*.sql
+codenames.md

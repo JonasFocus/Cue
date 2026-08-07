@@ -7,6 +7,7 @@
 #
 #   ./scripts/migrate.sh            apply pending
 #   ./scripts/migrate.sh --status   list applied vs pending, change nothing
+#   ./scripts/migrate.sh --check    fail unless the migration history is clean
 #
 # A migration whose FIRST line is exactly `-- no-transaction` is piped to psql
 # without BEGIN/COMMIT, for the statements Postgres refuses to run inside a
@@ -84,7 +85,9 @@ for f in db/migrations/*.sql; do
   row="$(awk -F'|' -v n="$name" '$1 == n { print "=" $2; exit }' <<<"$applied")"
 
   if [ -n "$row" ]; then
-    [ "${1:-}" = "--status" ] || continue
+    # Both inspection modes must compare recorded checksums. `--check` uses
+    # the result below to stop a release when an applied file has been edited.
+    [ "${1:-}" = "--status" ] || [ "${1:-}" = "--check" ] || continue
     recorded="${row#=}"
     if [ -z "$recorded" ]; then
       echo "  applied  $name  (applied before checksums existed — content unverified)"
@@ -101,7 +104,7 @@ for f in db/migrations/*.sql; do
   fi
 done
 
-if [ "${1:-}" = "--status" ]; then
+if [ "${1:-}" = "--status" ] || [ "${1:-}" = "--check" ]; then
   # A recorded name with no file behind it means a migration was renamed or
   # deleted. The rename then shows up as PENDING and re-runs — survivable only
   # because every file is re-runnable, so say it out loud.
@@ -111,6 +114,19 @@ if [ "${1:-}" = "--status" ]; then
       echo "  ORPHAN   $recorded_name  — recorded as applied, no such file"
   done <<<"$applied"
   [ "$drifted" -eq 0 ] || echo "  $drifted applied migration(s) no longer match their file"
+
+  if [ "${1:-}" = "--check" ]; then
+    orphaned="$(while IFS='|' read -r recorded_name _; do
+      if [ -n "$recorded_name" ] && [ ! -f "db/migrations/$recorded_name" ]; then
+        echo "$recorded_name"
+      fi
+    done <<<"$applied")"
+    if [ ${#pending[@]} -gt 0 ] || [ "$drifted" -gt 0 ] || [ -n "$orphaned" ]; then
+      echo "migration check failed: resolve pending, changed, or orphaned migrations before release." >&2
+      exit 1
+    fi
+    echo "migration check: clean"
+  fi
   exit 0
 fi
 
