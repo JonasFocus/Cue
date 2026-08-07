@@ -8,8 +8,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS cue_party_share_token_unique
 
 -- Extend the existing immutable-record trigger for the new credential. A
 -- sent party's credential may be REVOKED (set to NULL — voiding revokes every
--- link) but never replaced with a different token. NULL → token remains
--- allowed as a one-time legacy backfill by this migration.
+-- link) but never replaced with a different token. NULL → token stays open on
+-- live sent Cues (the backfill below writes through it, and declined Cues keep
+-- their links to show the terminal state) but is refused on a voided Cue, so a
+-- revoked link can never be re-armed.
 CREATE OR REPLACE FUNCTION cue_party_record_guard() RETURNS trigger AS $$
 DECLARE
   cue_status text;
@@ -30,8 +32,9 @@ BEGIN
     IF ROW(NEW.typed_name, NEW.signature_png, NEW.consent_at, NEW.signed_at, NEW.ip_hash, NEW.user_agent) IS DISTINCT FROM ROW(OLD.typed_name, OLD.signature_png, OLD.consent_at, OLD.signed_at, OLD.ip_hash, OLD.user_agent) THEN RAISE EXCEPTION 'a draft cannot carry signature evidence'; END IF;
     RETURN NEW;
   END IF;
-  IF ROW(NEW.cue_id, NEW.role, NEW.name, NEW.email, NEW.sort_order) IS DISTINCT FROM ROW(OLD.cue_id, OLD.role, OLD.name, OLD.email, OLD.sort_order) THEN RAISE EXCEPTION 'sent Cue parties are immutable'; END IF;
+  IF ROW(NEW.id, NEW.cue_id, NEW.role, NEW.name, NEW.email, NEW.sort_order) IS DISTINCT FROM ROW(OLD.id, OLD.cue_id, OLD.role, OLD.name, OLD.email, OLD.sort_order) THEN RAISE EXCEPTION 'sent Cue parties are immutable'; END IF;
   IF OLD.share_token IS NOT NULL AND NEW.share_token IS NOT NULL AND NEW.share_token IS DISTINCT FROM OLD.share_token THEN RAISE EXCEPTION 'a sent Cue party signing link can be revoked but not replaced'; END IF;
+  IF OLD.share_token IS NULL AND NEW.share_token IS NOT NULL AND cue_status = 'voided' THEN RAISE EXCEPTION 'a voided Cue cannot regain a signing link'; END IF;
   IF ROW(NEW.typed_name, NEW.signature_png, NEW.consent_at, NEW.signed_at, NEW.ip_hash, NEW.user_agent) IS DISTINCT FROM ROW(OLD.typed_name, OLD.signature_png, OLD.consent_at, OLD.signed_at, OLD.ip_hash, OLD.user_agent) THEN
     IF OLD.signed_at IS NOT NULL OR NEW.signed_at IS NULL OR NEW.consent_at IS NULL OR NEW.typed_name IS NULL THEN RAISE EXCEPTION 'signature evidence may be written exactly once'; END IF;
   END IF;

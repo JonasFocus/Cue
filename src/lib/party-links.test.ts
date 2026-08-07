@@ -1,3 +1,7 @@
+/* Source-text tripwires, not behaviour tests: the invariants live in SQL
+   triggers and transactional I/O that a frameworkless unit test cannot
+   exercise. These pin the load-bearing strings so a refactor that drops one
+   fails loudly; they cannot prove the SQL is right. */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -26,6 +30,12 @@ test("party credentials are unique, revocable but never replaceable after send",
     /OLD\.share_token IS NOT NULL AND NEW\.share_token IS NOT NULL AND NEW\.share_token IS DISTINCT FROM OLD\.share_token/,
   );
   assert.match(migration, /a sent Cue party signing link can be revoked but not replaced/);
+  assert.match(migration, /a voided Cue cannot regain a signing link/);
+  assert.match(migration, /ROW\(NEW\.id, NEW\.cue_id/);
+});
+
+test("a legacy cue-level token reaches only the client line", () => {
+  assert.match(db, /c\.share_token = \$1 AND signing_party\.role = 'client'/);
 });
 
 test("voiding revokes every party signing link", () => {

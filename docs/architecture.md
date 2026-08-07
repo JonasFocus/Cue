@@ -103,7 +103,7 @@ admin_event   (append-only; operator actions. Deliberately NO foreign keys —
 | --- | --- |
 | `cue.snapshot` (jsonb) | The rendered document, frozen at send. Everything after that point reads this, never the template — so editing a template next year cannot alter what somebody signed last year. |
 | `cue.doc_hash` | SHA-256 over *canonical JSON* of the snapshot, not HTML. Hashing HTML would make the hash hostage to every whitespace change in a React component. |
-| `cue.share_token` | `NULL` until sent, `UNIQUE` otherwise. Postgres allows many NULLs in a unique column, so a draft simply has no link. |
+| `cue.share_token` | `NULL` until sent, `UNIQUE` otherwise. Postgres allows many NULLs in a unique column, so a draft simply has no link. Since migration `012` the credential the public route resolves is `cue_party.share_token` — one per signer, revocable but never replaceable after send; the cue-level token survives as the client's line only, for links issued before per-party tokens. |
 | `cue.shoot_date` | A real `date`, but always read through `to_char(…, 'YYYY-MM-DD')`. node-postgres parses `date` to local midnight, and `.toISOString()` then prints the *previous day* for every US timezone. |
 | `studio.sent_count` | Denormalised. The free allowance is five sends *forever*, so the alternative is counting every historical Cue on every page load. |
 | money everywhere | Integer cents. Never float. |

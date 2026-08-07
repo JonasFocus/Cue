@@ -19,13 +19,12 @@ import {
 
 /* The only unauthenticated *write* in the product.
  *
- * The share token is the entire credential, so every fact about this request is
- * re-derived from it server-side: the Cue, its status, and the set of people who
- * may sign it. Nothing that arrives in the form is trusted except the token and
- * a party id, and the party id is only ever used to *select* from the parties
- * that the token's Cue actually has. A forged `party` value therefore selects
- * nothing, and a forged cue id has nowhere to land because the form never
- * carries one. */
+ * The share token is the entire credential, and it is bound to one party:
+ * every fact about this request is re-derived from it server-side — the Cue,
+ * its status, and the single line this link may sign. Nothing that arrives in
+ * the form is trusted; the signing party comes from the token alone, so a
+ * forged party value changes nothing and a forged cue id has nowhere to land
+ * because the form never carries one. */
 
 export type SignState = { status: "idle" | "error"; message: string };
 

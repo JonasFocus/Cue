@@ -68,11 +68,9 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
   }
 
   const clientParty = parties.find((party) => party.role === "client");
-  const url = clientParty?.shareToken ? `${SITE_URL}/s/${clientParty.shareToken}` : null;
-  // Sent Cues from before per-party links were introduced only have a client
-  // token. Keep that recipient's original link usable, but do not expose an
-  // unsafe shared credential for every additional signer.
-  if (!url) notFound();
+  // A Cue sent by pre-party-link code has only the cue-level token; the public
+  // route accepts it for the client line, so the share screen keeps working.
+  const url = `${SITE_URL}/s/${clientParty?.shareToken ?? cue.shareToken}`;
   const when = cue.shootDate ? ` on ${formatDate(cue.shootDate)}` : "";
   const message =
     `Hi ${firstName(cue.clientName)} — here is the agreement for ${cue.title}${when}. ` +
