@@ -747,6 +747,24 @@
   text-overflow: ellipsis;
 }
 
+/* Which pricing CTA the signup came through (waitlist.plan_interest). */
+.cx-plan {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--faint);
+}
+
+.cx-plan[data-plan="pro"] {
+  border-color: transparent;
+  background: rgb(0 134 255 / 0.12);
+  color: #6db4ff;
+}
+
 .cx-guest-mail,
 .cx-guest-date {
   font-size: 12.5px;

@@ -25,13 +25,14 @@ const PLANS = [
     name: "Pro",
     badge: "$19/month",
     blurb: "For independent photographers and videographers sending regularly.",
+    note: "One booked shoot covers the year.",
     features: [
-      "Unlimited Cues",
-      "Everything currently in Free",
+      "Unlimited Cues — never stall a booking on an allowance",
+      "Everything in Free",
       "Saved templates (planned)",
       "Email reminders (planned)",
     ],
-    cta: "Join the waitlist",
+    cta: "Get Pro at launch",
     tone: "accent",
   },
   {
@@ -90,8 +91,7 @@ export function Pricing() {
             <h2 className="cue-h2">{"Start free,\npay when it sticks"}</h2>
             <p className="cue-lede">
               Five Cues free. No card required. The allowance is total, not
-              monthly. Billing is not connected yet. Paid prices show the
-              planned launch offer.
+              monthly.
             </p>
           </div>
         </Reveal>
@@ -101,6 +101,9 @@ export function Pricing() {
             {PLANS.map((plan) => (
               <div className="cue-price-card" key={plan.name}>
                 <div className="cue-price-media" data-plan={plan.key} aria-hidden />
+                {plan.key === "pro" && (
+                  <span className="cue-price-tag">Most popular</span>
+                )}
 
                 <div className="cue-price-body">
                   <div className="cue-price-head">
@@ -111,6 +114,9 @@ export function Pricing() {
                   </div>
 
                   <p className="cue-price-blurb">{plan.blurb}</p>
+                  {"note" in plan && (
+                    <p className="cue-price-value">{plan.note}</p>
+                  )}
 
                   <p className="cue-price-what">What you get:</p>
                   <ul className="cue-feature-list">
@@ -130,7 +136,7 @@ export function Pricing() {
 
                 <div className="cue-price-foot">
                   <a
-                    href="#waitlist"
+                    href={`/?plan=${plan.key}#waitlist`}
                     className={`cue-btn cue-btn-block ${
                       plan.tone === "accent" ? "cue-btn-accent" : "cue-btn-dark"
                     }`}
@@ -141,6 +147,10 @@ export function Pricing() {
               </div>
             ))}
           </div>
+          <p className="cue-price-note">
+            Billing is not connected yet. Paid prices show the planned launch
+            offer.
+          </p>
         </Reveal>
 
         <Reveal>

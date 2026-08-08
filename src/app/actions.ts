@@ -26,6 +26,11 @@ export async function joinWaitlist(
     .trim()
     .slice(0, 120);
 
+  // Which pricing CTA they came through, if any. Allowlisted, not passed
+  // through — the field is client-writable like everything else in the form.
+  const rawPlan = String(formData.get("plan") ?? "");
+  const plan = ["free", "pro", "studio"].includes(rawPlan) ? rawPlan : null;
+
   // Honeypot. Named so no autofill heuristic recognises it: the old name
   // `company` maps to the `organization` autocomplete token, which password
   // managers happily filled — silently discarding real signups with a success
@@ -84,20 +89,24 @@ export async function joinWaitlist(
 
   try {
     await pool.query(
-      `INSERT INTO waitlist (email, name, ip_hash, user_agent)
-            VALUES ($1, NULLIF($2, ''), $3, $4)
+      `INSERT INTO waitlist (email, name, ip_hash, user_agent, plan_interest)
+            VALUES ($1, NULLIF($2, ''), $3, $4, $5)
        -- Infers waitlist_email_key (001), not waitlist_email_lower_key (004).
        -- Both are kept: the check constraint pins email = lower(email), so they
        -- are equivalent, and the duplicate index costs nothing at this size.
        -- Whoever drops waitlist_email_key must change this to
        -- ON CONFLICT (lower(email)) in the SAME deploy, or every signup 42P10s.
        ON CONFLICT (email) DO UPDATE
-              SET name = COALESCE(waitlist.name, EXCLUDED.name)`,
+              SET name = COALESCE(waitlist.name, EXCLUDED.name),
+                  -- Latest expressed intent wins; absence never erases it.
+                  plan_interest = COALESCE(EXCLUDED.plan_interest,
+                                           waitlist.plan_interest)`,
       [
         email,
         name,
         ipHash,
         await userAgent(),
+        plan,
       ],
     );
   } catch (err) {

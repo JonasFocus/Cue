@@ -611,6 +611,11 @@ function GuestList({
                     {initials(g.name)}
                   </i>
                   <b>{g.name}</b>
+                  {g.plan && (
+                    <span className="cx-plan" data-plan={g.plan}>
+                      {g.plan}
+                    </span>
+                  )}
                 </td>
                 {/* The span is load-bearing: `.cx-table td` is display:flex, and
                     text-overflow cannot apply to a flex container — a bare text

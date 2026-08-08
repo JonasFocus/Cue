@@ -1,11 +1,22 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { Suspense, useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { joinWaitlist, type WaitlistState } from "@/app/actions";
 
 const INITIAL: WaitlistState = { status: "idle", message: "" };
+
+/* The pricing CTAs link to /?plan=pro#waitlist so the signup records which
+   plan the visitor reached for. Reading the URL suspends static prerender, so
+   it lives in its own component under Suspense — the form itself stays in the
+   static HTML and only this hidden field waits for the client. */
+function PlanField() {
+  const plan = useSearchParams().get("plan");
+  if (!plan) return null;
+  return <input type="hidden" name="plan" value={plan} />;
+}
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -81,6 +92,10 @@ export function Waitlist() {
             aria-hidden
             className="cue-honeypot"
           />
+
+          <Suspense fallback={null}>
+            <PlanField />
+          </Suspense>
 
           <Submit />
         </form>

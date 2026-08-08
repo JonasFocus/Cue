@@ -133,6 +133,7 @@ export type Guest = {
   email: string;
   status: GuestStatus;
   createdAt: string;
+  plan: string | null;
 };
 
 /* Only what the overview actually renders. A "signups today" count (in
@@ -178,8 +179,9 @@ export async function guestList(limit = 200, beforeId?: number): Promise<GuestPa
       name: string | null;
       status: GuestStatus;
       created_at: Date;
+      plan_interest: string | null;
     }>(
-      `SELECT id, email, name, status, created_at
+      `SELECT id, email, name, status, created_at, plan_interest
          FROM waitlist
          ${where}
         ORDER BY id DESC
@@ -197,6 +199,7 @@ export async function guestList(limit = 200, beforeId?: number): Promise<GuestPa
     email: r.email,
     status: r.status,
     createdAt: r.created_at.toISOString(),
+    plan: r.plan_interest,
   }));
 
   return {
@@ -219,9 +222,10 @@ export async function setGuestStatus(
     name: string | null;
     status: GuestStatus;
     created_at: Date;
+    plan_interest: string | null;
   }>(
     `UPDATE waitlist SET status = $2 WHERE id = $1
-       RETURNING id, email, name, status, created_at`,
+       RETURNING id, email, name, status, created_at, plan_interest`,
     [id, status],
   );
 
@@ -234,6 +238,7 @@ export async function setGuestStatus(
     email: r.email,
     status: r.status,
     createdAt: r.created_at.toISOString(),
+    plan: r.plan_interest,
   };
 }
 

@@ -1629,30 +1629,14 @@
     linear-gradient(105deg, #ecdcff 0%, #d3e7ff 100%);
 }
 
+/* Same soft-radial family as free and studio, but deeper blue with a warm
+   sunrise — the one card that should pull the eye. */
 .cue-price-media[data-plan="pro"] {
-  position: relative;
   background:
-    radial-gradient(
-      42% 110% at 50% 128%,
-      #ffd571 0%,
-      rgb(255 164 60 / 0.85) 26%,
-      rgb(255 164 60 / 0.28) 52%,
-      transparent 76%
-    ),
-    linear-gradient(165deg, #a9cdf0 0%, #7fb2e6 100%);
-}
-
-/* Fine dot texture over the Pro art, as in the reference. */
-.cue-price-media[data-plan="pro"]::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(
-    circle,
-    rgb(255 255 255 / 0.4) 1px,
-    transparent 1px
-  );
-  background-size: 6px 6px;
+    radial-gradient(95% 130% at 20% 112%, #ffcf6e 0%, rgb(255 156 84 / 0.7) 30%, transparent 64%),
+    radial-gradient(110% 140% at 88% -12%, #2f7fe0 0%, transparent 66%),
+    radial-gradient(70% 90% at 55% 38%, rgb(255 255 255 / 0.55) 0%, transparent 62%),
+    linear-gradient(115deg, #8ec1f5 0%, #549bea 100%);
 }
 
 .cue-price-media[data-plan="studio"] {
@@ -1691,6 +1675,36 @@
 .cue-price-badge[data-tone="accent"] {
   background: rgb(0 134 255 / 0.1);
   color: var(--cue-accent-deep);
+}
+
+/* "Most popular" — sits on the Pro card's gradient header. */
+.cue-price-tag {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.85);
+  color: var(--cue-accent-deep);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Price translated into the buyer's terms, under the blurb. */
+.cue-price-value {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cue-accent-deep);
+}
+
+/* The billing disclaimer, demoted from the section lede. */
+.cue-price-note {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--cue-muted);
 }
 
 .cue-price-blurb {
