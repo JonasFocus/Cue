@@ -28,7 +28,7 @@ const PLANS = [
     blurb: "For independent photographers and videographers sending regularly.",
     note: "$19 a month, whatever your season looks like.",
     features: [
-      "Unlimited Cues — never stall a booking on a send limit",
+      "Unlimited Cues. Never stall a booking on a send limit.",
       "Everything in Free",
     ],
     cta: "Get Pro at launch",
@@ -41,7 +41,7 @@ const PLANS = [
     blurb: "For small creative businesses with more than one person sending.",
     features: [
       "Everything in Pro",
-      "Built for teams — reach out and tell us what yours needs",
+      "Built for teams. Reach out and tell us what yours needs.",
     ],
     cta: "Join the waitlist",
     tone: "dark",

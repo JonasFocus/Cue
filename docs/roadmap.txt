@@ -7,6 +7,15 @@ of "(planned)" sold the roadmap instead of the product). When something below
 ships, move it into the pricing card copy and the changelog; don't re-add
 "planned" verbiage to the public site.
 
+One deliberate exception (2026-08-08): cloud storage. The rename strip and the
+#storage section announce it for this fall, and the terms page carries the
+"dates can move" caveat. That is the only future claim the site makes.
+
+Announced publicly
+------------------
+- Cloud storage returns inside Cue, this fall (Krevo's original product;
+  landing #storage section + topbar strip)
+
 Pro
 ---
 - Saved templates (also referenced in the FAQ answer about custom terms)

@@ -1900,6 +1900,116 @@
   }
 }
 
+/* ── Topbar ── */
+
+/* The rename strip. Sits above the sticky nav, so it scrolls away with the
+   page; static, no dismiss state. */
+.cue-topbar {
+  background: var(--cue-ink);
+  color: #fff;
+  text-align: center;
+  padding: 10px 20px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.cue-topbar strong {
+  font-weight: 600;
+}
+
+.cue-topbar a {
+  color: rgb(255 255 255 / 0.75);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 160ms var(--cue-ease);
+}
+
+.cue-topbar a:hover,
+.cue-topbar a:focus-visible {
+  color: #fff;
+}
+
+/* ── Storage announcement ── */
+
+#storage {
+  /* The topbar link jumps here; clear the sticky desktop nav. */
+  scroll-margin-top: 12px;
+}
+
+@media (min-width: 900px) {
+  #storage {
+    scroll-margin-top: 64px;
+  }
+}
+
+.cue-storage {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--cue-r-card);
+  background:
+    radial-gradient(70% 130% at 50% 118%, rgb(0 134 255 / 0.38) 0%, transparent 65%),
+    #0b0b0c;
+  padding: 64px 24px;
+  text-align: center;
+  color: #fff;
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  .cue-storage {
+    padding: 84px 24px;
+  }
+}
+
+.cue-storage .cue-h2 {
+  color: #fff;
+}
+
+.cue-storage .cue-lede {
+  max-width: 46ch;
+  margin: 14px auto 0;
+  color: rgb(255 255 255 / 0.72);
+}
+
+/* Same blueprint overlay as the CTA card, in white for the dark panel. */
+.cue-storage-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size: 88px 88px;
+  mask-image: radial-gradient(80% 100% at 50% 100%, #000 10%, transparent 80%);
+}
+
+.cue-storage-pill {
+  display: inline-flex;
+  margin-bottom: 20px;
+  padding: 5px 14px;
+  border-radius: var(--cue-r-pill);
+  border: 1px solid rgb(255 255 255 / 0.24);
+  background: rgb(255 255 255 / 0.08);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cue-storage-cta {
+  margin-top: 26px;
+  font-size: 14.5px;
+}
+
+.cue-storage-cta a {
+  color: rgb(255 255 255 / 0.85);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 160ms var(--cue-ease);
+}
+
+.cue-storage-cta a:hover,
+.cue-storage-cta a:focus-visible {
+  color: #fff;
+}
+
 /* ── CTA ── */
 
 .cue-cta {

@@ -119,3 +119,32 @@ export function Capability() {
     </section>
   );
 }
+
+/* The one future claim the site makes on purpose (see docs/roadmap.txt):
+   Krevo's original product, announced as returning inside Cue. Styled as an
+   announcement panel, not a feature, so the pricing cards stay present-tense. */
+export function Storage() {
+  return (
+    <section id="storage" className="cue-section">
+      <div className="cue-shell">
+        <Reveal>
+          <div className="cue-storage">
+            <div className="cue-storage-grid" aria-hidden />
+            <div style={{ position: "relative" }}>
+              <p className="cue-storage-pill">Coming this fall</p>
+              <h2 className="cue-h2">{"Cloud storage\nreturns to Cue"}</h2>
+              <p className="cue-lede">
+                Krevo began as cloud storage. This fall it comes back, rebuilt
+                inside Cue: the agreement, the shoot, and every file it
+                produced, in one place.
+              </p>
+              <p className="cue-storage-cta">
+                <a href="#waitlist">Join the waitlist to hear it first</a>
+              </p>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}

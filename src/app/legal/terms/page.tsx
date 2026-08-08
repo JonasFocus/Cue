@@ -103,8 +103,10 @@ export default function TermsPage() {
           The plans and prices shown on the pricing section describe what Cue
           intends to charge. <strong>Nothing is charged today.</strong> Cue
           does not generate or email PDF files; the current record can be
-          printed or saved with your browser. Asking for access does not
-          reserve a price or create an obligation on either side.
+          printed or saved with your browser. Cloud storage is announced for
+          this fall; dates can move, and an announcement is not a promise of
+          what ships or when. Asking for access does not reserve a price or
+          create an obligation on either side.
         </p>
 
         <h2 style={heading}>Using the site</h2>
