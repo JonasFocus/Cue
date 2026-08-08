@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { joinWaitlist, type WaitlistState } from "@/app/actions";
+import { PLAN_LABEL } from "@/lib/cue";
 
 const INITIAL: WaitlistState = { status: "idle", message: "" };
 
@@ -112,10 +113,23 @@ export function Waitlist() {
               <Check size={14} strokeWidth={3} />
             </span>
             <div>
-              <strong>You&rsquo;re on the waitlist.</strong>
-              <p>
-                We&rsquo;ll be in touch when Cue is ready for you.
-              </p>
+              {state.plan ? (
+                <>
+                  <strong>
+                    You&rsquo;re on the waitlist &mdash; noted for{" "}
+                    {PLAN_LABEL[state.plan]}.
+                  </strong>
+                  <p>
+                    When billing opens you&rsquo;ll get the launch offer first.
+                    Nothing to pay until then.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <strong>You&rsquo;re on the waitlist.</strong>
+                  <p>We&rsquo;ll be in touch when Cue is ready for you.</p>
+                </>
+              )}
             </div>
           </div>
         ) : state.status === "error" ? (

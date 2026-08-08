@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Check, CircleCheck } from "lucide-react";
 import { Reveal } from "./reveal";
 
@@ -25,9 +26,9 @@ const PLANS = [
     name: "Pro",
     badge: "$19/month",
     blurb: "For independent photographers and videographers sending regularly.",
-    note: "One booked shoot covers the year.",
+    note: "$19 a month, whatever your season looks like.",
     features: [
-      "Unlimited Cues — never stall a booking on an allowance",
+      "Unlimited Cues — never stall a booking on a send limit",
       "Everything in Free",
     ],
     cta: "Get Pro at launch",
@@ -93,20 +94,26 @@ export function Pricing() {
             {PLANS.map((plan) => (
               <div className="cue-price-card" key={plan.name}>
                 <div className="cue-price-media" data-plan={plan.key} aria-hidden />
-                {plan.key === "pro" && (
-                  <span className="cue-price-tag">Most popular</span>
-                )}
 
                 <div className="cue-price-body">
                   <div className="cue-price-head">
                     <h3 className="cue-price-name">{plan.name}</h3>
+                    {/* Absolutely positioned onto the media panel; it lives
+                        after the heading so a screen reader hears the plan's
+                        name before the endorsement. */}
+                    {plan.key === "pro" && (
+                      <span className="cue-price-tag">Best for solo shooters</span>
+                    )}
                     <span className="cue-price-badge" data-tone={plan.tone}>
                       {plan.badge}
                     </span>
                   </div>
+                  {plan.key !== "free" && (
+                    <p className="cue-price-nocharge">Nothing to pay today.</p>
+                  )}
 
                   <p className="cue-price-blurb">{plan.blurb}</p>
-                  {"note" in plan && (
+                  {plan.key === "pro" && (
                     <p className="cue-price-value">{plan.note}</p>
                   )}
 
@@ -127,14 +134,17 @@ export function Pricing() {
                 </div>
 
                 <div className="cue-price-foot">
-                  <a
+                  {/* Link, not <a>: the query string makes this a different
+                      URL, and a plain anchor would cross-document navigate —
+                      reloading the page and wiping a just-submitted signup. */}
+                  <Link
                     href={`/?plan=${plan.key}#waitlist`}
                     className={`cue-btn cue-btn-block ${
                       plan.tone === "accent" ? "cue-btn-accent" : "cue-btn-dark"
                     }`}
                   >
                     {plan.cta}
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}

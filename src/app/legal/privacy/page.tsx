@@ -26,7 +26,7 @@ export const metadata: Metadata = {
    single rented virtual server" for a day after the move to Vercel and Neon.
    Both are the exact failure this rule exists to prevent. */
 
-const UPDATED = "29 July 2026";
+const UPDATED = "7 August 2026";
 
 const body: React.CSSProperties = {
   marginTop: 14,
@@ -73,6 +73,11 @@ export default function PrivacyPage() {
           </li>
           <li>The user-agent string your browser sends, truncated.</li>
           <li>The date and time you submitted the form.</li>
+          <li>
+            Which pricing plan you clicked through from, if any — so that when
+            billing opens, we can write to you about the plan you actually
+            asked about instead of guessing.
+          </li>
         </ul>
         <p style={body}>
           That is the entire record. If we invite you, the same row also holds
@@ -175,9 +180,11 @@ export default function PrivacyPage() {
         <h2 style={heading}>What we do with all of it</h2>
         <p style={body}>
           We use it to run the product and nothing else. We do not sell or share
-          it, add anyone to a newsletter, or use it for advertising or profiling.
-          There is no analytics tool, no tracking pixel, and no third-party
-          script on any page.
+          it, add anyone to a newsletter, or use it for advertising. The one
+          piece of preference data we hold — the plan you clicked through from —
+          is used to write you the launch email you asked for, and for nothing
+          beyond it. There is no analytics tool, no tracking pixel, and no
+          third-party script on any page.
         </p>
         <p style={body}>
           Being straight about the current state:{" "}

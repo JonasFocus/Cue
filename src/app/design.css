@@ -1677,26 +1677,36 @@
   color: var(--cue-accent-deep);
 }
 
-/* "Most popular" — sits on the Pro card's gradient header. */
+/* "Best for solo shooters" — sits on the Pro card's gradient header. Same
+   geometry as .cue-price-badge so the two pills read as one component, and an
+   opaque background so contrast doesn't depend on the gradient underneath. */
 .cue-price-tag {
   position: absolute;
   top: 14px;
   right: 14px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.85);
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: #fff;
   color: var(--cue-accent-deep);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-/* Price translated into the buyer's terms, under the blurb. */
+/* Price translated into the buyer's terms, under the blurb. Ink, not accent:
+   accent-colored body copy reads as a hyperlink. */
 .cue-price-value {
   margin-top: 6px;
   font-size: 14px;
-  font-weight: 500;
-  color: var(--cue-accent-deep);
+  font-weight: 600;
+  color: var(--cue-ink);
+}
+
+/* The no-charge reassurance at the decision point, hanging under the badge. */
+.cue-price-nocharge {
+  margin-top: 6px;
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--cue-muted);
 }
 
 /* The billing disclaimer, demoted from the section lede. */

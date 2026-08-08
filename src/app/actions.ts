@@ -1,6 +1,7 @@
 "use server";
 
 import { createHash } from "node:crypto";
+import { isPlan, type Plan } from "@/lib/cue";
 import { pool, signupCeilingReached } from "@/lib/db";
 import { rateLimit } from "@/lib/redis";
 import { clientIp, userAgent } from "@/lib/client-ip";
@@ -14,6 +15,9 @@ import {
 export type WaitlistState = {
   status: "idle" | "ok" | "error";
   message: string;
+  /** The plan the row actually holds after the write (first intent wins),
+      echoed so the confirmation can close the loop. */
+  plan?: Plan | null;
 };
 
 export async function joinWaitlist(
@@ -29,7 +33,7 @@ export async function joinWaitlist(
   // Which pricing CTA they came through, if any. Allowlisted, not passed
   // through — the field is client-writable like everything else in the form.
   const rawPlan = String(formData.get("plan") ?? "");
-  const plan = ["free", "pro", "studio"].includes(rawPlan) ? rawPlan : null;
+  const plan = isPlan(rawPlan) ? rawPlan : null;
 
   // Honeypot. Named so no autofill heuristic recognises it: the old name
   // `company` maps to the `organization` autocomplete token, which password
@@ -98,9 +102,13 @@ export async function joinWaitlist(
        -- ON CONFLICT (lower(email)) in the SAME deploy, or every signup 42P10s.
        ON CONFLICT (email) DO UPDATE
               SET name = COALESCE(waitlist.name, EXCLUDED.name),
-                  -- Latest expressed intent wins; absence never erases it.
-                  plan_interest = COALESCE(EXCLUDED.plan_interest,
-                                           waitlist.plan_interest)`,
+                  -- First expressed intent wins, same shape as name. The form
+                  -- is unauthenticated, so newest-wins would let anyone who
+                  -- knows an email blindly rewrite that signup's recorded
+                  -- plan — and ON CONFLICT updates never consume the signup
+                  -- ceiling, so nothing bounds the rewrites.
+                  plan_interest = COALESCE(waitlist.plan_interest,
+                                           EXCLUDED.plan_interest)`,
       [
         email,
         name,
@@ -109,6 +117,12 @@ export async function joinWaitlist(
         plan,
       ],
     );
+    // A duplicate returns the same success state as a new signup: telling a
+    // stranger whether an address is already registered leaks the list. That
+    // is also why the echo is the SUBMITTED plan, never the stored one — a
+    // response derived from the row would reveal what an existing signup
+    // chose to anyone who typed their email.
+    return { status: "ok", message: "Request received.", plan };
   } catch (err) {
     console.error("[waitlist]", (err as Error).message);
     return {
@@ -116,9 +130,5 @@ export async function joinWaitlist(
       message: "Something broke on our end. Try again in a moment.",
     };
   }
-
-  // A duplicate returns the same success state as a new signup: telling a
-  // stranger whether an address is already registered leaks the list.
-  return { status: "ok", message: "Request received." };
 }
 

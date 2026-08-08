@@ -1,5 +1,6 @@
 import { Pool, type PoolClient } from "pg";
 import { attachDatabasePool } from "@vercel/functions";
+import { type Plan } from "./cue";
 import {
   type GuestStatus,
   nameFromEmail,
@@ -133,7 +134,7 @@ export type Guest = {
   email: string;
   status: GuestStatus;
   createdAt: string;
-  plan: string | null;
+  plan: Plan | null;
 };
 
 /* Only what the overview actually renders. A "signups today" count (in
@@ -179,7 +180,8 @@ export async function guestList(limit = 200, beforeId?: number): Promise<GuestPa
       name: string | null;
       status: GuestStatus;
       created_at: Date;
-      plan_interest: string | null;
+      // Narrow, not string: the CHECK constraint (013) pins the column to PLANS.
+      plan_interest: Plan | null;
     }>(
       `SELECT id, email, name, status, created_at, plan_interest
          FROM waitlist
@@ -222,7 +224,7 @@ export async function setGuestStatus(
     name: string | null;
     status: GuestStatus;
     created_at: Date;
-    plan_interest: string | null;
+    plan_interest: Plan | null;
   }>(
     `UPDATE waitlist SET status = $2 WHERE id = $1
        RETURNING id, email, name, status, created_at, plan_interest`,

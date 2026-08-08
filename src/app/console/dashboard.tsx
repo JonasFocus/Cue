@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { Guest, WaitlistStats } from "@/lib/db";
 import type { Probe } from "@/app/api/health/route";
+import { PLAN_LABEL } from "@/lib/cue";
 import { GUEST_STATUSES, joinedStamp, type GuestStatus } from "@/lib/waitlist";
 import {
   STATUS_SELECT_INITIAL,
@@ -500,7 +501,9 @@ function GuestList({
     if (!needle) return guests;
     return guests.filter(
       (g) =>
-        g.name.toLowerCase().includes(needle) || g.email.toLowerCase().includes(needle),
+        g.name.toLowerCase().includes(needle) ||
+        g.email.toLowerCase().includes(needle) ||
+        (g.plan ?? "").includes(needle),
     );
   }, [guests, q]);
 
@@ -537,7 +540,7 @@ function GuestList({
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search name or email"
+              placeholder="Search name, email, or plan"
               aria-label="Search the guest list"
             />
           </label>
@@ -612,8 +615,12 @@ function GuestList({
                   </i>
                   <b>{g.name}</b>
                   {g.plan && (
-                    <span className="cx-plan" data-plan={g.plan}>
-                      {g.plan}
+                    <span
+                      className="cx-plan"
+                      data-plan={g.plan}
+                      aria-label={`Interested in ${PLAN_LABEL[g.plan]}`}
+                    >
+                      {PLAN_LABEL[g.plan]}
                     </span>
                   )}
                 </td>

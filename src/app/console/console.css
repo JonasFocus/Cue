@@ -747,15 +747,18 @@
   text-overflow: ellipsis;
 }
 
-/* Which pricing CTA the signup came through (waitlist.plan_interest). */
+/* Which pricing CTA the signup came through (waitlist.plan_interest).
+   Rendered via PLAN_LABEL, so no text-transform. The faint background is what
+   makes the non-pro variants read as a pill at all — var(--line) alone is the
+   1.23:1 decorative separator documented above. */
 .cx-plan {
   flex: none;
   padding: 2px 7px;
   border-radius: 999px;
   border: 1px solid var(--line);
+  background: rgb(255 255 255 / 0.05);
   font-size: 10.5px;
   font-weight: 600;
-  text-transform: capitalize;
   color: var(--faint);
 }
 

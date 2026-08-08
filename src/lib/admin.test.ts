@@ -31,6 +31,10 @@ const migration010 = readFileSync(
   new URL("../../db/migrations/010_plans_and_invite_plan.sql", import.meta.url),
   "utf8",
 );
+const migration013 = readFileSync(
+  new URL("../../db/migrations/013_waitlist_plan_interest.sql", import.meta.url),
+  "utf8",
+);
 
 /* ── Plans ── */
 
@@ -48,6 +52,17 @@ test("PLANS matches the SQL CHECK constraints on plan columns", () => {
     const inSql = match[1]!.split(",").map((s) => s.trim().replace(/'/g, ""));
     assert.deepEqual([...inSql].sort(), [...PLANS].sort());
   }
+});
+
+/* 013 added a third plan CHECK, on waitlist.plan_interest. joinWaitlist gates
+   on isPlan() before the INSERT, so a plan in PLANS that the constraint
+   rejects 500s every signup through that pricing CTA — the only public write
+   path. */
+test("PLANS matches the plan_interest CHECK constraint (013)", () => {
+  const match = migration013.match(/plan_interest IN \(([^)]+)\)/);
+  assert.ok(match, "013 no longer contains a plan_interest allowlist");
+  const inSql = match![1]!.split(",").map((s) => s.trim().replace(/'/g, ""));
+  assert.deepEqual([...inSql].sort(), [...PLANS].sort());
 });
 
 test("010 leaves no studio on the old plan name", () => {
