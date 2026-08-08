@@ -34,7 +34,7 @@ const FAQS = [
   },
   {
     q: "Can I use my own agreement wording?",
-    a: "Yes. Your terms, your studio. Start from a template and edit it, or open the blank one and paste in what you already use. Saved reusable templates are planned, not available yet.",
+    a: "Yes. Your terms, your studio. Start from a template and edit it, or open the blank one and paste in what you already use.",
   },
 ];
 

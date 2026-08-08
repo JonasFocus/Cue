@@ -29,8 +29,6 @@ const PLANS = [
     features: [
       "Unlimited Cues — never stall a booking on an allowance",
       "Everything in Free",
-      "Saved templates (planned)",
-      "Email reminders (planned)",
     ],
     cta: "Get Pro at launch",
     tone: "accent",
@@ -42,10 +40,7 @@ const PLANS = [
     blurb: "For small creative businesses with more than one person sending.",
     features: [
       "Everything in Pro",
-      "Multiple users (planned)",
-      "Shared templates (planned)",
-      "Custom domain (planned)",
-      "Priority support (planned)",
+      "Built for teams — reach out and tell us what yours needs",
     ],
     cta: "Join the waitlist",
     tone: "dark",
@@ -55,9 +50,6 @@ const PLANS = [
 const COMPARISON = [
   ["Sent Cues", "5 total", "Unlimited", "Unlimited"],
   ["Templates and audit record", "yes", "yes", "yes"],
-  ["Saved templates", "No", "Planned", "Planned"],
-  ["Users", "1", "1", "Planned"],
-  ["Custom domain", "No", "No", "Planned"],
 ];
 
 function Cell({ value }: { value: string }) {
@@ -148,7 +140,7 @@ export function Pricing() {
             ))}
           </div>
           <p className="cue-price-note">
-            Billing is not connected yet. Paid prices show the planned launch
+            Billing is not connected yet. Paid prices show the intended launch
             offer.
           </p>
         </Reveal>

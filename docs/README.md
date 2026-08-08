@@ -13,6 +13,7 @@ bug.
 | [`operations.md`](./operations.md) | Incident ownership, uptime and error-monitoring setup, and the recovery drill. |
 | [`ideal-customer.md`](./ideal-customer.md) | Who it is for — a hypothesis, deliberately written to be falsified. |
 | [`private-changelog.md`](./private-changelog.md) | Internal history. Decisions, reversals, accepted risks. Not published. |
+| [`roadmap.txt`](./roadmap.txt) | Planned features. Internal only — the public site deliberately names none. |
 
 ## Not in here
 

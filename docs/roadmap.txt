@@ -1,0 +1,26 @@
+Cue — internal roadmap
+======================
+
+Internal only. Nothing here is promised publicly: the pricing page, FAQ, and
+terms deliberately name no future features (removed 2026-08-08 — a card full
+of "(planned)" sold the roadmap instead of the product). When something below
+ships, move it into the pricing card copy and the changelog; don't re-add
+"planned" verbiage to the public site.
+
+Pro
+---
+- Saved templates (also referenced in the FAQ answer about custom terms)
+- Email reminders (nudge an unsigned party)
+
+Studio
+------
+- Multiple users per studio
+- Shared templates across the studio
+- Custom domain for signing links
+- Priority support
+
+Platform
+--------
+- Stripe billing (the gate for everything above; plans are provisioned on the
+  invite until then — see docs/solution.md "Launch billing decision")
+- PDF export of the sealed record (terms currently disclaim this explicitly)
